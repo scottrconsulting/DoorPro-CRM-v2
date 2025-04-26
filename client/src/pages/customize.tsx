@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { Customization, CONTACT_STATUSES, PIN_COLORS, QUICK_ACTIONS } from "@shared/schema";
 
 import {
@@ -224,9 +225,14 @@ export default function Customize() {
           </p>
         </div>
         
-        <Button onClick={handleSaveSettings} disabled={saveCustomizationMutation.isPending}>
-          {saveCustomizationMutation.isPending ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/customize-message-templates")}>
+            Message Templates
+          </Button>
+          <Button onClick={handleSaveSettings} disabled={saveCustomizationMutation.isPending}>
+            {saveCustomizationMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
