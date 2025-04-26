@@ -33,6 +33,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     }
   }, [isLoading, isAuthenticated, navigate]);
   
+  useEffect(() => {
+    // Log authentication state for debugging
+    console.log("Auth state:", { isAuthenticated, isLoading });
+  }, [isAuthenticated, isLoading]);
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -41,36 +46,38 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
   
-  // Adding a console log to help debug authentication issues
-  console.log("Auth state:", { isAuthenticated, isLoading });
-  
-  return isAuthenticated ? <Component /> : null;
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Include the component directly in render, not as function call
+  return <Component />;
 }
 
 function AuthRouter() {
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
+    <>
+      <Route path="/login"><Login /></Route>
+      <Route path="/register"><Register /></Route>
+      
+      {/* Protected routes */}
       <Route path="/">
         <ProtectedRoute component={() => (
           <AppShell>
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/territories" component={Territories} />
-              <Route path="/contacts" component={Contacts} />
-              <Route path="/contacts/:id" component={ContactDetail} />
-              <Route path="/schedule" component={Schedule} />
-              <Route path="/teams" component={Teams} />
-              <Route path="/reports" component={Reports} />
-              <Route path="/upgrade" component={Upgrade} />
-              <Route path="/settings" component={Settings} />
-              <Route component={NotFound} />
-            </Switch>
+            <Route path="/"><Dashboard /></Route>
+            <Route path="/territories"><Territories /></Route>
+            <Route path="/contacts"><Contacts /></Route>
+            <Route path="/contacts/:id"><ContactDetail /></Route>
+            <Route path="/schedule"><Schedule /></Route>
+            <Route path="/teams"><Teams /></Route>
+            <Route path="/reports"><Reports /></Route>
+            <Route path="/upgrade"><Upgrade /></Route>
+            <Route path="/settings"><Settings /></Route>
+            <Route path="/:rest*"><NotFound /></Route>
           </AppShell>
         )} />
       </Route>
-    </Switch>
+    </>
   );
 }
 
@@ -86,8 +93,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
         <TooltipProvider>
-          <Toaster />
-          {mounted && <AuthRouter />}
+          <Router>
+            <Toaster />
+            {mounted && <AuthRouter />}
+          </Router>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
