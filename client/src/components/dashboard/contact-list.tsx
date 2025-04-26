@@ -109,8 +109,8 @@ export default function ContactList() {
                 search
               </span>
             </div>
-            <Link href="/contacts">
-              <a className="text-sm text-primary hover:text-primary-dark">View All</a>
+            <Link href="/contacts" className="text-sm text-primary hover:text-primary-dark">
+              View All
             </Link>
           </div>
         </div>
@@ -122,8 +122,8 @@ export default function ContactList() {
         ) : filteredContacts.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-neutral-500">No contacts found</p>
-            <Link href="/contacts">
-              <a className="mt-2 inline-block text-primary hover:underline">Add your first contact</a>
+            <Link href="/contacts" className="mt-2 inline-block text-primary hover:underline">
+              Add your first contact
             </Link>
           </div>
         ) : (
@@ -170,10 +170,8 @@ export default function ContactList() {
 
         <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50">
           <div className="text-center">
-            <Link href="/contacts">
-              <a className="px-3 py-1 border border-neutral-300 rounded text-sm text-neutral-600 hover:bg-neutral-100 inline-block">
-                View All Contacts
-              </a>
+            <Link href="/contacts" className="px-3 py-1 border border-neutral-300 rounded text-sm text-neutral-600 hover:bg-neutral-100 inline-block">
+              View All Contacts
             </Link>
           </div>
         </div>
