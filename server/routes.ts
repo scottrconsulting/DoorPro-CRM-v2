@@ -168,6 +168,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // User search endpoint for teams feature
+  app.get("/api/users/search", ensureAuthenticated, async (req, res) => {
+    try {
+      const username = req.query.username as string;
+      
+      if (!username) {
+        return res.status(400).json({ message: "Username is required" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't return sensitive information
+      return res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        teamId: user.teamId,
+        isManager: user.isManager
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to search for user" });
+    }
+  });
+
   // Upgrade user to pro (in real app, this would involve payment processing)
   app.post("/api/users/upgrade", ensureAuthenticated, async (req, res) => {
     try {
@@ -612,6 +642,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Team members routes
+  app.get("/api/teams/:id/members", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can access team members
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this team's members" });
+      }
+      
+      const members = await storage.getTeamMembers(teamId);
+      return res.json(members);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+  
+  // Add a user to a team
+  app.post("/api/teams/:id/members", ensureProAccess, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can add team members
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to add members to this team" });
+      }
+      
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const userToAdd = await storage.getUser(userId);
+      if (!userToAdd) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if user is already in a team
+      if (userToAdd.teamId) {
+        return res.status(400).json({ message: "User is already a member of a team" });
+      }
+      
+      // Add user to team
+      const updatedUser = await storage.updateUser(userId, { teamId });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to add user to team" });
+      }
+      
+      return res.json(updatedUser);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to add team member" });
+    }
+  });
+  
+  // Remove a user from a team
+  app.delete("/api/teams/:teamId/members/:userId", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId, 10);
+      const userId = parseInt(req.params.userId, 10);
+      
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can remove team members
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to remove members from this team" });
+      }
+      
+      const userToRemove = await storage.getUser(userId);
+      if (!userToRemove) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (userToRemove.teamId !== teamId) {
+        return res.status(400).json({ message: "User is not a member of this team" });
+      }
+      
+      // Remove user from team
+      const updatedUser = await storage.updateUser(userId, { teamId: null });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to remove user from team" });
+      }
+      
+      return res.json({ message: "User removed from team successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to remove team member" });
+    }
+  });
+
   // Territory routes
   app.get("/api/territories", ensureAuthenticated, async (req, res) => {
     try {

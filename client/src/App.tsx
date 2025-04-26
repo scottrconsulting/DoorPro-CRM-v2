@@ -9,6 +9,7 @@ import Territories from "@/pages/territories";
 import Contacts from "@/pages/contacts";
 import ContactDetail from "@/pages/contact-detail";
 import Schedule from "@/pages/schedule";
+import Teams from "@/pages/teams";
 import Reports from "@/pages/reports";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -57,6 +58,7 @@ function AuthRouter() {
               <Route path="/contacts" component={Contacts} />
               <Route path="/contacts/:id" component={ContactDetail} />
               <Route path="/schedule" component={Schedule} />
+              <Route path="/teams" component={Teams} />
               <Route path="/reports" component={Reports} />
               <Route path="/upgrade" component={Upgrade} />
               <Route path="/settings" component={Settings} />
