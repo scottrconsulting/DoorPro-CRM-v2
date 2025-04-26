@@ -35,17 +35,15 @@ export default function AppShell({ children }: AppShellProps) {
             <span className="material-icons">menu</span>
           </button>
           <div className="flex items-center">
-            <Link href="/">
-              <a className="font-sans text-lg font-semibold text-primary">DoorPro CRM</a>
+            <Link href="/" className="font-sans text-lg font-semibold text-primary">
+              DoorPro CRM
             </Link>
             <span className="ml-1 text-xs bg-neutral-200 px-1.5 py-0.5 rounded-md text-neutral-700">
               {getPlanName(user?.role)}
             </span>
           </div>
-          <Link href="/settings">
-            <a className="p-2 rounded-full hover:bg-neutral-100" aria-label="User menu">
-              <span className="material-icons">account_circle</span>
-            </a>
+          <Link href="/settings" className="p-2 rounded-full hover:bg-neutral-100" aria-label="User menu">
+            <span className="material-icons">account_circle</span>
           </Link>
         </div>
       </header>
