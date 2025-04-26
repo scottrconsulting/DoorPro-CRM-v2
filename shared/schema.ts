@@ -2,6 +2,16 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, doublePrecisi
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Teams model for grouping users
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  managerId: integer("manager_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // User model with different subscription levels
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -10,6 +20,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
   role: text("role").notNull().default("free"), // free, pro, admin
+  teamId: integer("team_id").references(() => teams.id),
+  isManager: boolean("is_manager").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -124,6 +136,12 @@ export const documents = pgTable("documents", {
 });
 
 // Schema Validation
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -167,6 +185,9 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
 });
 
 // Types
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type Team = typeof teams.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 

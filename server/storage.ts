@@ -31,12 +31,21 @@ import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
 export interface IStorage {
+  // Team operations
+  getTeam(id: number): Promise<Team | undefined>;
+  getTeamsByManager(managerId: number): Promise<Team[]>;
+  createTeam(team: InsertTeam): Promise<Team>;
+  updateTeam(id: number, updates: Partial<Team>): Promise<Team | undefined>;
+  deleteTeam(id: number): Promise<boolean>;
+  getTeamMembers(teamId: number): Promise<User[]>;
+  
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  getUsersByTeam(teamId: number): Promise<User[]>;
   
   // Contact operations
   getContact(id: number): Promise<Contact | undefined>;
