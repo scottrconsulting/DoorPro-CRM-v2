@@ -113,6 +113,13 @@ export interface IStorage {
   updateDocument(id: number, updates: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: number): Promise<boolean>;
   
+  // Customization operations
+  getCustomization(id: number): Promise<Customization | undefined>;
+  getCustomizationByUser(userId: number): Promise<Customization | undefined>;
+  getCustomizationByTeam(teamId: number): Promise<Customization | undefined>;
+  createCustomization(customization: InsertCustomization): Promise<Customization>;
+  updateCustomization(id: number, updates: Partial<Customization>): Promise<Customization | undefined>;
+  
   // Session store for authentication
   sessionStore: session.Store;
 }
@@ -919,6 +926,66 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting document:", error);
       return false;
+    }
+  }
+
+  // Customization operations
+  async getCustomization(id: number): Promise<Customization | undefined> {
+    try {
+      const result = await db.select().from(customizations).where(eq(customizations.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching customization:", error);
+      return undefined;
+    }
+  }
+
+  async getCustomizationByUser(userId: number): Promise<Customization | undefined> {
+    try {
+      const result = await db.select().from(customizations).where(eq(customizations.userId, userId));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching customization by user:", error);
+      return undefined;
+    }
+  }
+
+  async getCustomizationByTeam(teamId: number): Promise<Customization | undefined> {
+    try {
+      const result = await db.select().from(customizations).where(eq(customizations.teamId, teamId));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching customization by team:", error);
+      return undefined;
+    }
+  }
+
+  async createCustomization(insertCustomization: InsertCustomization): Promise<Customization> {
+    try {
+      const result = await db.insert(customizations).values(insertCustomization).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating customization:", error);
+      throw new Error('Failed to create customization');
+    }
+  }
+
+  async updateCustomization(id: number, updates: Partial<Customization>): Promise<Customization | undefined> {
+    try {
+      // Always update the updatedAt field
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(customizations)
+        .set(updatesWithTimestamp)
+        .where(eq(customizations.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating customization:", error);
+      return undefined;
     }
   }
 }

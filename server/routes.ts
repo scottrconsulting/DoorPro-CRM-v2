@@ -868,6 +868,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customization routes
+  app.get("/api/customizations/current", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const customization = await storage.getCustomizationByUser(user.id);
+      
+      if (!customization) {
+        // Return default customization settings
+        return res.json({
+          id: 0,
+          userId: user.id,
+          teamId: null,
+          theme: "light",
+          primaryColor: "blue",
+          pinColors: Object.fromEntries(CONTACT_STATUSES.map((status, i) => [status, PIN_COLORS[i % PIN_COLORS.length]])),
+          quickActions: QUICK_ACTIONS,
+          customStatuses: [],
+          customFields: [],
+          appointmentTypes: ["Sales Presentation", "Product Demo", "Follow-up Meeting", "Installation"],
+          confirmationOptions: {
+            sms: true,
+            email: true,
+            reminderTime: 30
+          },
+          noteTemplates: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+      
+      return res.json(customization);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch customization settings" });
+    }
+  });
+  
+  app.put("/api/customizations/current", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const existingCustomization = await storage.getCustomizationByUser(user.id);
+      
+      if (existingCustomization) {
+        // Update existing customization
+        const updatedCustomization = await storage.updateCustomization(existingCustomization.id, {
+          ...req.body,
+          userId: user.id
+        });
+        return res.json(updatedCustomization);
+      } else {
+        // Create new customization
+        const customization = await storage.createCustomization({
+          ...req.body,
+          userId: user.id
+        });
+        return res.status(201).json(customization);
+      }
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update customization settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
