@@ -57,6 +57,9 @@ type Team = {
   managerId: number;
   createdAt: string;
   updatedAt: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: 'active' | 'past_due' | 'incomplete' | 'incomplete_expired' | 'trialing' | 'canceled' | 'unpaid';
 };
 
 type TeamMember = {
@@ -452,6 +455,7 @@ function TeamMembersManager({ teamId }: { teamId: number | null }) {
   const { user } = useAuth();
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("members");
+  const [subscriptionInProgress, setSubscriptionInProgress] = useState(false);
   
   // Fetch team details
   const { data: team, isLoading: isLoadingTeam } = useQuery<Team>({
@@ -598,6 +602,48 @@ function TeamMembersManager({ teamId }: { teamId: number | null }) {
       setSelectedMembers([]);
     } else {
       setSelectedMembers(members.map(member => member.id));
+    }
+  };
+  
+  // Subscription handling
+  const subscriptionMutation = useMutation({
+    mutationFn: async () => {
+      if (!teamId) throw new Error("Team ID is required");
+      
+      const res = await apiRequest('POST', `/api/teams/${teamId}/subscription`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/teams', teamId] });
+      
+      // If we got a clientSecret back, we need to handle Stripe payment
+      if (data.clientSecret) {
+        setSubscriptionInProgress(true);
+        // Redirect to payment page or open a dialog
+        window.location.href = `/subscription/checkout?client_secret=${data.clientSecret}&subscription_id=${data.subscriptionId}`;
+      } else {
+        toast({
+          title: "Subscription updated",
+          description: "Your team subscription has been updated",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update subscription",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleManageSubscription = () => {
+    if (team?.stripeSubscriptionId && team?.subscriptionStatus === 'active') {
+      // Redirect to Stripe customer portal to manage existing subscription
+      window.location.href = `/api/teams/${teamId}/subscription/portal`;
+    } else {
+      // Create new subscription
+      subscriptionMutation.mutate();
     }
   };
   
@@ -920,9 +966,20 @@ function TeamMembersManager({ teamId }: { teamId: number | null }) {
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full mt-4">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Manage Subscription
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={() => handleManageSubscription()}
+                  disabled={subscriptionMutation.isPending}
+                >
+                  {subscriptionMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  {team?.stripeSubscriptionId && team?.subscriptionStatus === 'active'
+                    ? 'Manage Subscription'
+                    : 'Activate Subscription'}
                 </Button>
               </div>
             </div>
