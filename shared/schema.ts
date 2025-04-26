@@ -13,6 +13,9 @@ export const teams = pgTable("teams", {
   name: text("name").notNull(),
   description: text("description"),
   managerId: integer("manager_id").notNull(),
+  stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for team billing
+  stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID
+  subscriptionStatus: text("subscription_status"), // active, past_due, unpaid, canceled, etc.
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -27,7 +30,13 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("free"), // free, pro, admin
   teamId: integer("team_id").references(() => teams.id),
   isManager: boolean("is_manager").default(false),
+  status: text("status").default("active").notNull(), // active, pending, inactive
+  title: text("title"), // job title for team members
+  stripeCustomerId: text("stripe_customer_id"), // Individual customer ID (if not part of a team)
+  invitationToken: text("invitation_token"), // For team member invitations
+  invitationExpiry: timestamp("invitation_expiry"), // Expiry time for invitations
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Contact model for storing customers/leads
@@ -199,6 +208,10 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+  stripeCustomerId: true,
+  invitationToken: true,
+  invitationExpiry: true,
 });
 
 export const insertContactSchema = createInsertSchema(contacts).omit({
