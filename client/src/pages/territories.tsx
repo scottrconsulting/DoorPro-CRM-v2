@@ -189,7 +189,7 @@ export default function Territories() {
   };
 
   // Show territory on map
-  const showTerritoryOnMap = (territory: Territory) => {
+  const showTerritoryOnMap = (territory: Territory, editable = false) => {
     if (!map || !territory.coordinates || !territory.coordinates.length || !window.google) return;
     
     setSelectedTerritory(territory);
@@ -208,12 +208,47 @@ export default function Territories() {
       fillOpacity: 0.3,
       strokeColor: "#2563EB",
       strokeWeight: 2,
-      editable: false,
+      editable: editable,
+      draggable: editable,
       map: map,
     });
     
+    // Listen for polygon changes if editable
+    if (editable && window.google) {
+      // Update points when polygon is modified
+      window.google.maps.event.addListener(polygon.getPath(), 'set_at', function() {
+        updatePolygonCoordinates(polygon);
+      });
+      window.google.maps.event.addListener(polygon.getPath(), 'insert_at', function() {
+        updatePolygonCoordinates(polygon);
+      });
+      window.google.maps.event.addListener(polygon.getPath(), 'remove_at', function() {
+        updatePolygonCoordinates(polygon);
+      });
+      window.google.maps.event.addListener(polygon, 'dragend', function() {
+        updatePolygonCoordinates(polygon);
+      });
+    }
+    
     setPolygons([polygon]);
     map.fitBounds(bounds);
+    
+    // If not editable, show a brief info toast
+    if (!editable) {
+      toast({
+        title: "Territory Viewed",
+        description: "Click 'Edit' to modify this territory",
+      });
+    }
+  };
+  
+  // Update polygon coordinates when polygon is edited
+  const updatePolygonCoordinates = (polygon: google.maps.Polygon) => {
+    const points = polygon.getPath().getArray().map(point => ({
+      lat: point.lat(),
+      lng: point.lng(),
+    }));
+    setDrawingPoints(points);
   };
 
   // Create territory
@@ -243,6 +278,55 @@ export default function Territories() {
       coordinates: drawingPoints,
       coverage: 0,
     });
+  };
+  
+  // Handle territory edit
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTerritoryName, setEditTerritoryName] = useState("");
+  const [editTerritoryDescription, setEditTerritoryDescription] = useState("");
+  
+  // Start editing territory
+  const startEditingTerritory = (territory: Territory) => {
+    setSelectedTerritory(territory);
+    setEditTerritoryName(territory.name);
+    setEditTerritoryDescription(territory.description || "");
+    setDrawingPoints(territory.coordinates || []);
+    showTerritoryOnMap(territory, true);
+    setIsEditDialogOpen(true);
+  };
+  
+  // Save territory edit
+  const handleSaveEdit = () => {
+    if (!selectedTerritory) return;
+    
+    if (!editTerritoryName.trim()) {
+      toast({
+        title: "Territory name required",
+        description: "Please enter a name for your territory",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (drawingPoints.length < 3) {
+      toast({
+        title: "Define territory area",
+        description: "Your territory must have at least 3 points",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateTerritoryMutation.mutate({
+      id: selectedTerritory.id,
+      updates: {
+        name: editTerritoryName,
+        description: editTerritoryDescription,
+        coordinates: drawingPoints,
+      }
+    });
+    
+    setIsEditDialogOpen(false);
   };
 
   // Check if user is at territory limit
@@ -320,7 +404,13 @@ export default function Territories() {
                   <Progress value={territory.coverage || 0} className="h-2 mt-1" />
                 </div>
                 <div className="flex justify-end mt-4 space-x-2">
-                  <Button variant="outline" size="sm">Edit</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => startEditingTerritory(territory)}
+                  >
+                    Edit
+                  </Button>
                   <Button 
                     variant="destructive" 
                     size="sm"
@@ -419,6 +509,81 @@ export default function Territories() {
               disabled={createTerritoryMutation.isPending}
             >
               {createTerritoryMutation.isPending ? "Creating..." : "Create Territory"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Territory Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Edit Territory</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-territory-name">Territory Name</Label>
+                  <Input
+                    id="edit-territory-name"
+                    value={editTerritoryName}
+                    onChange={(e) => setEditTerritoryName(e.target.value)}
+                    placeholder="e.g., North Seattle"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit-territory-description">Description</Label>
+                  <Textarea
+                    id="edit-territory-description"
+                    value={editTerritoryDescription}
+                    onChange={(e) => setEditTerritoryDescription(e.target.value)}
+                    placeholder="Optional description of this territory"
+                    rows={4}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Territory Drawing</Label>
+                  <div className="mt-2 bg-neutral-50 p-3 rounded border text-sm">
+                    <p>You can modify your territory by:</p>
+                    <ul className="list-disc ml-5 mt-2 text-neutral-600 space-y-1">
+                      <li>Dragging the entire shape</li>
+                      <li>Clicking and dragging any point</li>
+                      <li>Adding new points by clicking on the lines</li>
+                    </ul>
+                  </div>
+                  
+                  {drawingPoints.length > 0 && (
+                    <div className="mt-2 text-xs text-neutral-500">
+                      Territory area defined with {drawingPoints.length} points
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="lg:col-span-2 h-[400px] rounded-md overflow-hidden border">
+              <div ref={mapRef} className="w-full h-full" />
+              {mapLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit}
+              disabled={updateTerritoryMutation.isPending}
+            >
+              {updateTerritoryMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
