@@ -129,6 +129,15 @@ export interface IStorage {
   createCustomization(customization: InsertCustomization): Promise<Customization>;
   updateCustomization(id: number, updates: Partial<Customization>): Promise<Customization | undefined>;
   
+  // Message Template operations
+  getMessageTemplate(id: number): Promise<MessageTemplate | undefined>;
+  getMessageTemplatesByUser(userId: number): Promise<MessageTemplate[]>;
+  getMessageTemplatesByType(userId: number, type: string): Promise<MessageTemplate[]>;
+  getDefaultMessageTemplate(userId: number, type: string): Promise<MessageTemplate | undefined>;
+  createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
+  updateMessageTemplate(id: number, updates: Partial<MessageTemplate>): Promise<MessageTemplate | undefined>;
+  deleteMessageTemplate(id: number): Promise<boolean>;
+  
   // Session store for authentication
   sessionStore: session.Store;
 }
@@ -1055,6 +1064,135 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error updating customization:", error);
       return undefined;
+    }
+  }
+
+  // Message Template operations
+  async getMessageTemplate(id: number): Promise<MessageTemplate | undefined> {
+    try {
+      const result = await db.select().from(messageTemplates).where(eq(messageTemplates.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching message template:", error);
+      return undefined;
+    }
+  }
+
+  async getMessageTemplatesByUser(userId: number): Promise<MessageTemplate[]> {
+    try {
+      return await db.select()
+        .from(messageTemplates)
+        .where(eq(messageTemplates.userId, userId))
+        .orderBy(asc(messageTemplates.type), asc(messageTemplates.name));
+    } catch (error) {
+      console.error("Error fetching message templates by user:", error);
+      return [];
+    }
+  }
+
+  async getMessageTemplatesByType(userId: number, type: string): Promise<MessageTemplate[]> {
+    try {
+      return await db.select()
+        .from(messageTemplates)
+        .where(
+          and(
+            eq(messageTemplates.userId, userId),
+            eq(messageTemplates.type, type)
+          )
+        )
+        .orderBy(asc(messageTemplates.name));
+    } catch (error) {
+      console.error("Error fetching message templates by type:", error);
+      return [];
+    }
+  }
+
+  async getDefaultMessageTemplate(userId: number, type: string): Promise<MessageTemplate | undefined> {
+    try {
+      const result = await db.select()
+        .from(messageTemplates)
+        .where(
+          and(
+            eq(messageTemplates.userId, userId),
+            eq(messageTemplates.type, type),
+            eq(messageTemplates.isDefault, true)
+          )
+        );
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching default message template:", error);
+      return undefined;
+    }
+  }
+
+  async createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate> {
+    try {
+      // If this template is marked as default, unset any existing default templates of the same type
+      if (template.isDefault) {
+        await db.update(messageTemplates)
+          .set({ isDefault: false })
+          .where(
+            and(
+              eq(messageTemplates.userId, template.userId),
+              eq(messageTemplates.type, template.type),
+              eq(messageTemplates.isDefault, true)
+            )
+          );
+      }
+      
+      const result = await db.insert(messageTemplates).values(template).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating message template:", error);
+      throw new Error('Failed to create message template');
+    }
+  }
+
+  async updateMessageTemplate(id: number, updates: Partial<MessageTemplate>): Promise<MessageTemplate | undefined> {
+    try {
+      // If this template is being set as default, unset any existing default templates of the same type
+      if (updates.isDefault) {
+        const currentTemplate = await this.getMessageTemplate(id);
+        if (currentTemplate) {
+          await db.update(messageTemplates)
+            .set({ isDefault: false })
+            .where(
+              and(
+                eq(messageTemplates.userId, currentTemplate.userId),
+                eq(messageTemplates.type, currentTemplate.type),
+                eq(messageTemplates.isDefault, true),
+                sql`${messageTemplates.id} != ${id}`
+              )
+            );
+        }
+      }
+      
+      // Always update the updatedAt field
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(messageTemplates)
+        .set(updatesWithTimestamp)
+        .where(eq(messageTemplates.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating message template:", error);
+      return undefined;
+    }
+  }
+
+  async deleteMessageTemplate(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(messageTemplates)
+        .where(eq(messageTemplates.id, id))
+        .returning({ id: messageTemplates.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting message template:", error);
+      return false;
     }
   }
 }

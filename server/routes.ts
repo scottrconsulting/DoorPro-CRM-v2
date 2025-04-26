@@ -929,6 +929,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to update customization settings" });
     }
   });
+  
+  // Message Template routes
+  app.get("/api/message-templates", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const templates = await storage.getMessageTemplatesByUser(user.id);
+      return res.json(templates);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch message templates" });
+    }
+  });
+
+  app.get("/api/message-templates/type/:type", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const templateType = req.params.type;
+      
+      if (templateType !== 'email' && templateType !== 'text') {
+        return res.status(400).json({ message: "Invalid template type. Type must be 'email' or 'text'" });
+      }
+      
+      const templates = await storage.getMessageTemplatesByType(user.id, templateType);
+      return res.json(templates);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch message templates" });
+    }
+  });
+
+  app.get("/api/message-templates/default/:type", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const templateType = req.params.type;
+      
+      if (templateType !== 'email' && templateType !== 'text') {
+        return res.status(400).json({ message: "Invalid template type. Type must be 'email' or 'text'" });
+      }
+      
+      const template = await storage.getDefaultMessageTemplate(user.id, templateType);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Default template not found" });
+      }
+      
+      return res.json(template);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch default message template" });
+    }
+  });
+
+  app.get("/api/message-templates/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id, 10);
+      const template = await storage.getMessageTemplate(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Message template not found" });
+      }
+      
+      const user = req.user as any;
+      if (template.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this template" });
+      }
+      
+      return res.json(template);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch message template" });
+    }
+  });
+
+  app.post("/api/message-templates", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Limit number of templates for free users
+      if (user.role === "free") {
+        const existingTemplates = await storage.getMessageTemplatesByUser(user.id);
+        if (existingTemplates.length >= 3) {
+          return res.status(403).json({ message: "Free plan limited to 3 message templates. Please upgrade to Pro." });
+        }
+      }
+      
+      const templateData = insertMessageTemplateSchema.parse({ 
+        ...req.body, 
+        userId: user.id 
+      });
+      
+      // Validate template type
+      if (templateData.type !== 'email' && templateData.type !== 'text') {
+        return res.status(400).json({ message: "Invalid template type. Type must be 'email' or 'text'" });
+      }
+      
+      // If it's an email template with isHtml = true, ensure the body has valid HTML
+      if (templateData.type === 'email' && templateData.isHtml && !templateData.body.includes('<')) {
+        return res.status(400).json({ message: "HTML templates must contain valid HTML markup" });
+      }
+      
+      const template = await storage.createMessageTemplate(templateData);
+      return res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create message template" });
+    }
+  });
+
+  app.put("/api/message-templates/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id, 10);
+      const existingTemplate = await storage.getMessageTemplate(templateId);
+      
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Message template not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTemplate.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this template" });
+      }
+      
+      // Validate template type if being changed
+      if (req.body.type && req.body.type !== 'email' && req.body.type !== 'text') {
+        return res.status(400).json({ message: "Invalid template type. Type must be 'email' or 'text'" });
+      }
+      
+      // If it's an email template with isHtml = true, ensure the body has valid HTML
+      if (
+        (existingTemplate.type === 'email' || req.body.type === 'email') &&
+        (req.body.isHtml || (existingTemplate.isHtml && req.body.isHtml !== false)) &&
+        req.body.body && !req.body.body.includes('<')
+      ) {
+        return res.status(400).json({ message: "HTML templates must contain valid HTML markup" });
+      }
+      
+      const updatedTemplate = await storage.updateMessageTemplate(templateId, req.body);
+      return res.json(updatedTemplate);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update message template" });
+    }
+  });
+
+  app.delete("/api/message-templates/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id, 10);
+      const existingTemplate = await storage.getMessageTemplate(templateId);
+      
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Message template not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTemplate.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this template" });
+      }
+      
+      await storage.deleteMessageTemplate(templateId);
+      return res.json({ message: "Message template deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete message template" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
