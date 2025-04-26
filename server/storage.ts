@@ -50,6 +50,7 @@ import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import crypto from "crypto";
 
 export interface IStorage {
   // Team operations
@@ -59,6 +60,8 @@ export interface IStorage {
   updateTeam(id: number, updates: Partial<Team>): Promise<Team | undefined>;
   deleteTeam(id: number): Promise<boolean>;
   getTeamMembers(teamId: number): Promise<User[]>;
+  updateTeamStripeInfo(id: number, stripeCustomerId: string, stripeSubscriptionId?: string, subscriptionStatus?: string): Promise<Team | undefined>;
+  getTeamByStripeCustomerId(stripeCustomerId: string): Promise<Team | undefined>;
   
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -67,6 +70,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   getUsersByTeam(teamId: number): Promise<User[]>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<User | undefined>;
+  createInvitedUser(email: string, fullName: string, teamId: number, title?: string): Promise<User | undefined>;
   
   // Contact operations
   getContact(id: number): Promise<Contact | undefined>;
@@ -267,6 +273,51 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+  
+  async updateTeamStripeInfo(
+    id: number,
+    stripeCustomerId: string,
+    stripeSubscriptionId?: string,
+    subscriptionStatus?: string
+  ): Promise<Team | undefined> {
+    try {
+      const updates: Partial<Team> = {
+        stripeCustomerId,
+        updatedAt: new Date()
+      };
+      
+      if (stripeSubscriptionId) {
+        updates.stripeSubscriptionId = stripeSubscriptionId;
+      }
+      
+      if (subscriptionStatus) {
+        updates.subscriptionStatus = subscriptionStatus;
+      }
+      
+      const result = await db.update(teams)
+        .set(updates)
+        .where(eq(teams.id, id))
+        .returning();
+        
+      return result[0];
+    } catch (error) {
+      console.error("Error updating team stripe info:", error);
+      return undefined;
+    }
+  }
+  
+  async getTeamByStripeCustomerId(stripeCustomerId: string): Promise<Team | undefined> {
+    try {
+      const result = await db.select()
+        .from(teams)
+        .where(eq(teams.stripeCustomerId, stripeCustomerId));
+        
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching team by stripe customer ID:", error);
+      return undefined;
+    }
+  }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
@@ -320,13 +371,93 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     try {
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
       const result = await db.update(users)
-        .set(updates)
+        .set(updatesWithTimestamp)
         .where(eq(users.id, id))
         .returning();
       return result[0];
     } catch (error) {
       console.error("Error updating user:", error);
+      return undefined;
+    }
+  }
+  
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    try {
+      const result = await db.select()
+        .from(users)
+        .where(eq(users.stripeCustomerId, stripeCustomerId));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user by Stripe customer ID:", error);
+      return undefined;
+    }
+  }
+  
+  async updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<User | undefined> {
+    try {
+      const result = await db.update(users)
+        .set({ 
+          stripeCustomerId,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user Stripe customer ID:", error);
+      return undefined;
+    }
+  }
+  
+  async createInvitedUser(
+    email: string, 
+    fullName: string, 
+    teamId: number, 
+    title?: string
+  ): Promise<User | undefined> {
+    try {
+      // Check if user with this email already exists
+      const existingUser = await this.getUserByEmail(email);
+      if (existingUser) {
+        return undefined;
+      }
+      
+      // Generate a random token for invitation
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date();
+      expiry.setHours(expiry.getHours() + 72); // Token expires in 72 hours
+      
+      // Create a temporary username based on email
+      const tempUsername = `invite_${email.split('@')[0]}_${Math.floor(Math.random() * 1000)}`;
+      
+      // Create a temporary password
+      const tempPassword = crypto.randomBytes(16).toString('hex');
+      
+      const newUser = await db.insert(users)
+        .values({
+          username: tempUsername,
+          password: tempPassword, // This will be reset when the user accepts the invitation
+          email,
+          fullName,
+          teamId,
+          title,
+          status: 'pending',
+          invitationToken: token,
+          invitationExpiry: expiry,
+          role: 'user',
+          isManager: false
+        })
+        .returning();
+        
+      return newUser[0];
+    } catch (error) {
+      console.error("Error creating invited user:", error);
       return undefined;
     }
   }
