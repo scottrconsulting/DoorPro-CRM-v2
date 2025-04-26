@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Navigation, MapPin, CheckCircle2 } from "lucide-react";
-import { useGoogleMaps } from "@/lib/maps";
+import { getCurrentLocation, getOptimalRoute } from "@/lib/maps";
 
 // Type for optimized route
 interface RouteStop {
