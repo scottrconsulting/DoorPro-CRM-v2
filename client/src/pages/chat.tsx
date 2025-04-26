@@ -1,0 +1,809 @@
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, SendHorizontal, PlusCircle, MoreVertical, Search, AlertCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+// Define the types for our data
+interface Conversation {
+  id: number;
+  name: string | null;
+  teamId: number | null;
+  isTeamChannel: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Participant {
+  id: number;
+  conversationId: number;
+  userId: number;
+  isAdmin: boolean;
+  lastReadTimestamp: string | null;
+  createdAt: string;
+  user: {
+    id: number;
+    username: string;
+    fullName: string;
+    isManager: boolean;
+  } | null;
+}
+
+interface Message {
+  id: number;
+  conversationId: number;
+  senderId: number;
+  content: string;
+  attachmentUrl: string | null;
+  isRead: boolean;
+  isUrgent: boolean;
+  createdAt: string;
+  sender: {
+    id: number;
+    username: string;
+    fullName: string;
+  } | null;
+}
+
+interface User {
+  id: number;
+  username: string;
+  fullName: string;
+  isManager?: boolean;
+  teamId?: number;
+}
+
+// Schema for creating a new conversation
+const newConversationSchema = z.object({
+  name: z.string().min(1, "Conversation name is required"),
+  isTeamChannel: z.boolean().default(false),
+  teamId: z.number().nullable().optional(),
+});
+
+// Schema for sending a message
+const sendMessageSchema = z.object({
+  content: z.string().min(1, "Message cannot be empty"),
+  isUrgent: z.boolean().default(false),
+  attachmentUrl: z.string().nullable().optional(),
+});
+
+export default function ChatPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const [isAddParticipantOpen, setIsAddParticipantOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Form for creating a new conversation
+  const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
+    resolver: zodResolver(newConversationSchema),
+    defaultValues: {
+      name: "",
+      isTeamChannel: false,
+      teamId: null,
+    },
+  });
+
+  // Form for adding a participant to a conversation
+  const addParticipantForm = useForm({
+    defaultValues: {
+      userId: 0,
+      isAdmin: false,
+    },
+  });
+
+  // Queries for fetching data
+  const { data: conversations, isLoading: conversationsLoading } = useQuery<Conversation[]>({
+    queryKey: ["/api/chat/conversations"],
+    enabled: !!user,
+  });
+
+  const { data: participants, isLoading: participantsLoading } = useQuery<Participant[]>({
+    queryKey: ["/api/chat/conversations", selectedConversation, "participants"],
+    enabled: !!selectedConversation,
+  });
+
+  const { data: messages, isLoading: messagesLoading } = useQuery<Message[]>({
+    queryKey: ["/api/chat/conversations", selectedConversation, "messages"],
+    enabled: !!selectedConversation,
+    refetchInterval: 5000, // Poll for new messages every 5 seconds
+  });
+
+  const { data: teamMembers } = useQuery<User[]>({
+    queryKey: ["/api/teams/members", user?.teamId],
+    enabled: !!user?.teamId,
+  });
+
+  const { data: unreadCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/chat/unread-count"],
+    enabled: !!user,
+    refetchInterval: 10000, // Check for unread messages every 10 seconds
+  });
+
+  // Mutations for making changes
+  const createConversationMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof newConversationSchema>) => {
+      const res = await apiRequest("POST", "/api/chat/conversations", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
+      setIsNewConversationOpen(false);
+      newConversationForm.reset();
+      toast({
+        title: "Conversation created",
+        description: "Your new conversation has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating conversation",
+        description: error.message || "Failed to create conversation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof sendMessageSchema> & { conversationId: number }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/chat/conversations/${data.conversationId}/messages`,
+        {
+          content: data.content,
+          isUrgent: data.isUrgent,
+          attachmentUrl: data.attachmentUrl,
+        }
+      );
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", selectedConversation, "messages"],
+      });
+      setNewMessage("");
+      setIsUrgent(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error sending message",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addParticipantMutation = useMutation({
+    mutationFn: async (data: { conversationId: number; userId: number; isAdmin: boolean }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/chat/conversations/${data.conversationId}/participants`,
+        {
+          userId: data.userId,
+          isAdmin: data.isAdmin,
+        }
+      );
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", selectedConversation, "participants"],
+      });
+      setIsAddParticipantOpen(false);
+      addParticipantForm.reset();
+      toast({
+        title: "Participant added",
+        description: "The participant has been added to the conversation.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error adding participant",
+        description: error.message || "Failed to add participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeParticipantMutation = useMutation({
+    mutationFn: async (data: { conversationId: number; userId: number }) => {
+      const res = await apiRequest(
+        "DELETE",
+        `/api/chat/conversations/${data.conversationId}/participants/${data.userId}`
+      );
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", selectedConversation, "participants"],
+      });
+      toast({
+        title: "Participant removed",
+        description: "The participant has been removed from the conversation.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error removing participant",
+        description: error.message || "Failed to remove participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      const res = await apiRequest("DELETE", `/api/chat/messages/${messageId}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", selectedConversation, "messages"],
+      });
+      toast({
+        title: "Message deleted",
+        description: "The message has been deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting message",
+        description: error.message || "Failed to delete message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-scroll to the bottom of the messages when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Handle sending a message
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    sendMessageMutation.mutate({
+      conversationId: selectedConversation,
+      content: newMessage,
+      isUrgent,
+      attachmentUrl: null,
+    });
+  };
+
+  // Handle creating a new conversation
+  const onSubmitNewConversation = (data: z.infer<typeof newConversationSchema>) => {
+    createConversationMutation.mutate(data);
+  };
+
+  // Handle adding a participant
+  const onSubmitAddParticipant = (data: { userId: number; isAdmin: boolean }) => {
+    if (!selectedConversation) return;
+
+    addParticipantMutation.mutate({
+      conversationId: selectedConversation,
+      userId: data.userId,
+      isAdmin: data.isAdmin,
+    });
+  };
+
+  // Handle removing a participant
+  const handleRemoveParticipant = (userId: number) => {
+    if (!selectedConversation) return;
+
+    removeParticipantMutation.mutate({
+      conversationId: selectedConversation,
+      userId,
+    });
+  };
+
+  // Handle deleting a message
+  const handleDeleteMessage = (messageId: number) => {
+    deleteMessageMutation.mutate(messageId);
+  };
+
+  // Filter conversations by search term
+  const filteredConversations = conversations?.filter(
+    (conversation) =>
+      conversation.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get the current conversation
+  const currentConversation = conversations?.find(
+    (conversation) => conversation.id === selectedConversation
+  );
+
+  // Get participants for the conversation sidebar
+  const participantsWithoutCurrentUser = participants?.filter(
+    (participant) => participant.userId !== user?.id
+  );
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Conversations List */}
+        <div className="w-80 border-r flex flex-col">
+          <div className="p-4 border-b">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Messages</h2>
+              <div className="flex items-center space-x-2">
+                {unreadCount && unreadCount.count > 0 && (
+                  <div className="px-2 py-1 text-xs font-semibold rounded-full bg-red-500 text-white">
+                    {unreadCount.count}
+                  </div>
+                )}
+                <Dialog open={isNewConversationOpen} onOpenChange={setIsNewConversationOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      New
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New Conversation</DialogTitle>
+                    </DialogHeader>
+                    <Form {...newConversationForm}>
+                      <form
+                        onSubmit={newConversationForm.handleSubmit(onSubmitNewConversation)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={newConversationForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Conversation Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter a name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button type="submit" disabled={createConversationMutation.isPending}>
+                            {createConversationMutation.isPending && (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            )}
+                            Create Conversation
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search conversations..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-auto">
+            {conversationsLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : filteredConversations && filteredConversations.length > 0 ? (
+              <div className="divide-y">
+                {filteredConversations.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    className={`w-full text-left px-4 py-3 hover:bg-accent/50 transition-colors ${
+                      selectedConversation === conversation.id ? "bg-accent" : ""
+                    }`}
+                    onClick={() => setSelectedConversation(conversation.id)}
+                  >
+                    <div className="flex items-start">
+                      <Avatar className="h-10 w-10 mr-3">
+                        <AvatarFallback>
+                          {conversation.name
+                            ? conversation.name.substring(0, 2).toUpperCase()
+                            : "CH"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-semibold truncate">
+                            {conversation.name || "Unnamed Conversation"}
+                          </h3>
+                          {conversation.isTeamChannel && (
+                            <span className="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
+                              Team
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {conversation.updatedAt
+                            ? new Date(conversation.updatedAt).toLocaleDateString()
+                            : "No messages yet"}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4 text-muted-foreground">
+                {searchTerm
+                  ? "No conversations match your search"
+                  : "No conversations yet. Create one to get started."}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 flex flex-col">
+          {!selectedConversation ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-4">
+              <div className="text-center space-y-4 max-w-md">
+                <h2 className="text-2xl font-bold">Welcome to Chat</h2>
+                <p className="text-muted-foreground">
+                  Select a conversation from the sidebar or create a new one to start messaging.
+                </p>
+                <Button
+                  onClick={() => setIsNewConversationOpen(true)}
+                  className="mt-4"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create New Conversation
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Conversation Header */}
+              <div className="border-b p-4 flex justify-between items-center">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarFallback>
+                      {currentConversation?.name
+                        ? currentConversation.name.substring(0, 2).toUpperCase()
+                        : "CH"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="font-semibold">
+                      {currentConversation?.name || "Unnamed Conversation"}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {participants?.length || 0} participants
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <Dialog open={isAddParticipantOpen} onOpenChange={setIsAddParticipantOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        Add Participant
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Participant</DialogTitle>
+                      </DialogHeader>
+                      <form
+                        onSubmit={addParticipantForm.handleSubmit(onSubmitAddParticipant)}
+                        className="space-y-4"
+                      >
+                        <div className="space-y-2">
+                          <FormLabel>Select User</FormLabel>
+                          <select
+                            className="w-full border rounded-md p-2"
+                            {...addParticipantForm.register("userId", {
+                              required: true,
+                              valueAsNumber: true,
+                            })}
+                          >
+                            <option value="">Select a user</option>
+                            {teamMembers?.map((member) => (
+                              <option key={member.id} value={member.id}>
+                                {member.fullName} ({member.username})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="isAdmin"
+                            {...addParticipantForm.register("isAdmin")}
+                          />
+                          <label htmlFor="isAdmin">Make admin</label>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit" disabled={addParticipantMutation.isPending}>
+                            {addParticipantMutation.isPending && (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            )}
+                            Add
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              {/* Messages List */}
+              <div className="flex-1 overflow-auto p-4">
+                {messagesLoading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : messages && messages.length > 0 ? (
+                  <div className="space-y-4">
+                    {messages.map((message) => {
+                      const isSelf = message.senderId === user?.id;
+                      return (
+                        <div
+                          key={message.id}
+                          className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`flex max-w-[70%] ${
+                              isSelf ? "flex-row-reverse" : "flex-row"
+                            }`}
+                          >
+                            {!isSelf && (
+                              <Avatar className={`h-8 w-8 ${isSelf ? "ml-2" : "mr-2"}`}>
+                                <AvatarFallback>
+                                  {message.sender?.fullName.substring(0, 2).toUpperCase() || "??"}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <div>
+                              <div className="flex items-center mb-1">
+                                {!isSelf && (
+                                  <span className="text-sm font-semibold mr-2">
+                                    {message.sender?.fullName || "Unknown"}
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(message.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                {message.isUrgent && (
+                                  <AlertCircle
+                                    className="h-4 w-4 text-red-500 ml-1"
+                                    title="Urgent message"
+                                  />
+                                )}
+                                {isSelf && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            Delete Message
+                                          </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete this message? This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => handleDeleteMessage(message.id)}
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+                              <div
+                                className={`py-2 px-3 rounded-lg ${
+                                  isSelf
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                } ${message.isUrgent ? "border-2 border-red-500" : ""}`}
+                              >
+                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                {message.attachmentUrl && (
+                                  <a
+                                    href={message.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline block mt-1"
+                                  >
+                                    View Attachment
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                ) : (
+                  <div className="text-center p-4 text-muted-foreground h-full flex items-center justify-center">
+                    <p>No messages yet. Be the first to send a message!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Message Input */}
+              <div className="border-t p-4">
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <Textarea
+                      placeholder="Type your message here..."
+                      className="resize-none"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <div className="flex items-center mt-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="urgent"
+                          checked={isUrgent}
+                          onChange={(e) => setIsUrgent(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <label htmlFor="urgent" className="text-sm">
+                          Mark as urgent
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    className="self-start"
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                  >
+                    {sendMessageMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <SendHorizontal className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">Send</span>
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Participants Sidebar (only shown when a conversation is selected) */}
+        {selectedConversation && (
+          <div className="w-64 border-l">
+            <div className="p-4 border-b">
+              <h3 className="font-semibold mb-2">Participants</h3>
+              {participantsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {participants?.map((participant) => (
+                    <div key={participant.id} className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Avatar className="h-6 w-6 mr-2">
+                          <AvatarFallback>
+                            {participant.user?.fullName.substring(0, 2).toUpperCase() || "??"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm truncate max-w-[120px]">
+                          {participant.user?.fullName}
+                          {participant.isAdmin && (
+                            <span className="text-xs ml-1 text-muted-foreground">(Admin)</span>
+                          )}
+                        </span>
+                      </div>
+                      {/* Only admins or the current user (for themselves) can remove participants */}
+                      {(participants?.some(
+                        (p) => p.userId === user?.id && p.isAdmin
+                      ) ||
+                        user?.id === participant.userId) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove Participant</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to remove this participant from the conversation?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleRemoveParticipant(participant.userId)}
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
