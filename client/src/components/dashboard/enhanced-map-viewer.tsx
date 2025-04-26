@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -38,13 +39,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
   const [userAvatar, setUserAvatar] = useState<'male' | 'female'>('male');
   const [activeStatus, setActiveStatus] = useState<string>("not_visited");
+  const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
+  const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
+  const [showSchedulingFields, setShowSchedulingFields] = useState(false);
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
     phone: "",
     email: "",
     status: "not_visited",
-    notes: ""
+    notes: "",
+    // Scheduling fields
+    scheduleDate: "",
+    scheduleTime: "",
+    sendConfirmation: false,
+    confirmationType: "none", // none, text, email, both
+    reminderTime: 30 // minutes before appointment
   });
   
   // Work timer state - using refs to avoid render loops 
@@ -217,20 +227,29 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     });
   }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact]);
 
-  // Set up click listener for adding houses - can click anywhere on the map
+  // Set up mouse down/up listeners for detecting click vs hold on the map
   useEffect(() => {
     if (!isLoaded || !map || !window.google) return;
     
-    const mapClickListener = map.addListener("click", async (e: any) => {
+    // Track when the mouse is pressed down
+    const mouseDownListener = map.addListener("mousedown", (e: any) => {
       if (!e.latLng) return;
+      setMouseDownTime(Date.now());
+    });
+    
+    // Handle click with click vs hold detection
+    const clickListener = map.addListener("click", async (e: any) => {
+      if (!e.latLng) return;
+      setMouseUpTime(Date.now());
       
       // Check if the click is on an existing contact marker
       // If it is, the existing marker's click handler will handle it
       const clickedFeature = map.data?.getFeatureAt?.(e.latLng);
       if (clickedFeature) return;
       
-      // If we're not in adding house mode, don't add a new marker, but still show the form
-      // This way users can click anywhere on map without toggling "Add House" mode
+      // Calculate click duration
+      const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
+      const isLongClick = clickDuration > 1000; // Threshold of 1 second for a long click/hold
       
       // Remove the previous marker if it exists
       if (newHouseMarker) {
@@ -242,6 +261,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         title: "New Contact",
         draggable: true,
         animation: window.google.maps.Animation.DROP,
+        icon: getMarkerIcon(activeStatus),
       });
       
       setNewHouseMarker(marker);
@@ -257,14 +277,49 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           const address = results[0].formatted_address;
           setNewContactAddress(address);
           setNewContactCoords(e.latLng.toJSON());
-          setNewContactForm((prev) => ({ 
-            ...prev, 
+          
+          // Create the base newContactForm data
+          const newFormData = {
+            ...newContactForm,
             address,
-            status: activeStatus, // Use the selected active status
-            // Add current timestamp for visited
+            status: activeStatus,
             notes: `Initial contact: ${new Date().toLocaleString()}`
-          }));
-          setShowNewContactDialog(true);
+          };
+          
+          setNewContactForm(newFormData);
+          
+          // For quick click, automatically add contact without showing form
+          if (!isLongClick) {
+            // Auto generate a name based on address if it's a quick click
+            const streetNumber = results[0].address_components.find((c: any) => 
+              c.types.includes('street_number'))?.short_name || '';
+            const street = results[0].address_components.find((c: any) => 
+              c.types.includes('route'))?.short_name || '';
+            const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+            
+            // Create the contact with minimal info
+            createContactMutation.mutate({
+              userId: user?.id || 0,
+              fullName: autoName,
+              address: address,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+              notes: `Quick add: ${new Date().toLocaleString()}`
+            });
+            
+            toast({
+              title: "Contact added",
+              description: `Quick-added pin at ${address}`,
+            });
+          } else {
+            // For long click/hold, show the form
+            setShowNewContactDialog(true);
+            
+            // Check if the selected status needs scheduling fields
+            const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
+            setShowSchedulingFields(needsScheduling);
+          }
         } else {
           toast({
             title: "Could not find address",
@@ -276,10 +331,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     });
     
     return () => {
-      // Clean up the listener when the component unmounts
-      window.google.maps.event.removeListener(mapClickListener);
+      // Clean up the listeners when the component unmounts
+      window.google.maps.event.removeListener(mouseDownListener);
+      window.google.maps.event.removeListener(clickListener);
     };
-  }, [isLoaded, map, addMarker, newHouseMarker, toast, activeStatus]);
+  }, [isLoaded, map, addMarker, newHouseMarker, toast, activeStatus, mouseDownTime, newContactForm, user?.id, createContactMutation]);
 
   // Work timer implementation (using refs to avoid render issues)
   useEffect(() => {
@@ -415,6 +471,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Handle status change
   const handleStatusChange = (value: string) => {
     setNewContactForm((prev) => ({ ...prev, status: value }));
+    
+    // Show scheduling fields for certain statuses
+    const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(value);
+    setShowSchedulingFields(needsScheduling);
   };
   
   // Set active status for next pin
@@ -864,6 +924,115 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Scheduling Fields - Conditionally shown based on status */}
+            {showSchedulingFields && (
+              <div className="border rounded-md p-3 bg-slate-50 mt-2">
+                <h4 className="text-sm font-medium mb-2">Scheduling Information</h4>
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 items-center gap-1">
+                      <label htmlFor="scheduleDate" className="text-xs font-medium">
+                        Date
+                      </label>
+                      <Input
+                        id="scheduleDate"
+                        name="scheduleDate"
+                        type="date"
+                        value={newContactForm.scheduleDate}
+                        onChange={handleFormChange}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 items-center gap-1">
+                      <label htmlFor="scheduleTime" className="text-xs font-medium">
+                        Time
+                      </label>
+                      <Input
+                        id="scheduleTime"
+                        name="scheduleTime"
+                        type="time"
+                        value={newContactForm.scheduleTime}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="sendConfirmation" 
+                        checked={newContactForm.sendConfirmation}
+                        onCheckedChange={(checked) => {
+                          setNewContactForm(prev => ({
+                            ...prev,
+                            sendConfirmation: checked === true
+                          }));
+                        }}
+                      />
+                      <label htmlFor="sendConfirmation" className="text-xs font-medium cursor-pointer">
+                        Send confirmation message
+                      </label>
+                    </div>
+                    
+                    {newContactForm.sendConfirmation && (
+                      <div className="grid gap-2 mt-1">
+                        <div className="grid grid-cols-1 items-center gap-1">
+                          <label htmlFor="confirmationType" className="text-xs font-medium">
+                            Confirmation Type
+                          </label>
+                          <Select 
+                            value={newContactForm.confirmationType} 
+                            onValueChange={(value) => {
+                              setNewContactForm(prev => ({
+                                ...prev,
+                                confirmationType: value
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="text">Text Message</SelectItem>
+                              <SelectItem value="email">Email</SelectItem>
+                              <SelectItem value="both">Both Text & Email</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 items-center gap-1">
+                          <label htmlFor="reminderTime" className="text-xs font-medium">
+                            Send reminder (minutes before)
+                          </label>
+                          <Select 
+                            value={newContactForm.reminderTime.toString()} 
+                            onValueChange={(value) => {
+                              setNewContactForm(prev => ({
+                                ...prev,
+                                reminderTime: parseInt(value)
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10 minutes</SelectItem>
+                              <SelectItem value="30">30 minutes</SelectItem>
+                              <SelectItem value="60">1 hour</SelectItem>
+                              <SelectItem value="120">2 hours</SelectItem>
+                              <SelectItem value="1440">1 day</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 items-center gap-2">
               <label htmlFor="notes" className="text-sm font-medium">
                 Notes (optional)

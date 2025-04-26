@@ -16,6 +16,7 @@ import Register from "@/pages/register";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
 import Customize from "@/pages/customize";
+import CustomizeMessageTemplates from "@/pages/customize-message-templates";
 import AppShell from "@/components/layout/app-shell";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
