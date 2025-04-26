@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -30,8 +30,11 @@ import {
   updateSubscriptionQuantity, 
   cancelSubscription, 
   createTeamMemberCheckoutSession, 
-  createSetupIntent 
+  createSetupIntent,
+  constructEventFromPayload,
+  TEAM_MEMBER_PRICE_ID
 } from "./stripe";
+import type Stripe from 'stripe';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session setup using PostgreSQL for persistent sessions
@@ -757,9 +760,331 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to remove user from team" });
       }
       
+      // If the team has a Stripe subscription, we should adjust the quantity
+      if (team.stripeSubscriptionId && team.stripeCustomerId) {
+        try {
+          // Get current team members count
+          const members = await storage.getTeamMembers(teamId);
+          
+          // Update subscription quantity
+          await updateSubscriptionQuantity(team.stripeSubscriptionId, members.length);
+        } catch (stripeError) {
+          console.error("Failed to update subscription quantity:", stripeError);
+          // We still return success for the user removal since that worked
+        }
+      }
+      
       return res.json({ message: "User removed from team successfully" });
     } catch (error) {
       return res.status(500).json({ message: "Failed to remove team member" });
+    }
+  });
+
+  // Team Subscription routes
+  app.post("/api/teams/:id/subscription", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can create a subscription
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to create a subscription for this team" });
+      }
+      
+      // Check if the team already has a subscription
+      if (team.stripeSubscriptionId && team.subscriptionStatus === 'active') {
+        return res.status(400).json({ message: "Team already has an active subscription" });
+      }
+      
+      // Get or create Stripe customer
+      let stripeCustomerId = team.stripeCustomerId;
+      if (!stripeCustomerId) {
+        stripeCustomerId = await getOrCreateCustomer({
+          email: user.email,
+          name: team.name,
+          userId: user.id
+        });
+        
+        // Save the customer ID to the team
+        await storage.updateTeamStripeInfo(teamId, stripeCustomerId);
+      }
+      
+      // Get number of team members for initial quantity
+      const members = await storage.getTeamMembers(teamId);
+      
+      // Create a subscription
+      const subscription = await createSubscription({
+        customerId: stripeCustomerId,
+        priceId: TEAM_MEMBER_PRICE_ID,
+        quantity: members.length || 1 // At least 1 team member (the manager)
+      });
+      
+      // Update team with subscription info
+      await storage.updateTeamStripeInfo(
+        teamId, 
+        stripeCustomerId, 
+        subscription.id,
+        subscription.status
+      );
+      
+      // Send back the client secret for the frontend to confirm the payment
+      const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
+      
+      return res.json({
+        subscriptionId: subscription.id,
+        clientSecret,
+        status: subscription.status
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to create subscription", error: error.message });
+    }
+  });
+  
+  app.get("/api/teams/:id/subscription", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can view subscription details
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to view subscription details for this team" });
+      }
+      
+      if (!team.stripeSubscriptionId) {
+        return res.json({ status: "no_subscription" });
+      }
+      
+      // Retrieve current subscription status from Stripe
+      const subscription = await stripe.subscriptions.retrieve(team.stripeSubscriptionId);
+      
+      // If status changed, update in our database
+      if (subscription.status !== team.subscriptionStatus) {
+        await storage.updateTeamStripeInfo(
+          teamId,
+          team.stripeCustomerId,
+          team.stripeSubscriptionId,
+          subscription.status
+        );
+      }
+      
+      return res.json({
+        subscriptionId: subscription.id,
+        status: subscription.status,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        items: subscription.items.data
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to retrieve subscription", error: error.message });
+    }
+  });
+  
+  app.post("/api/teams/:id/subscription/cancel", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can cancel a subscription
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to cancel subscription for this team" });
+      }
+      
+      if (!team.stripeSubscriptionId) {
+        return res.status(400).json({ message: "Team has no active subscription" });
+      }
+      
+      // Cancel the subscription at the end of the current period
+      const updatedSubscription = await stripe.subscriptions.update(team.stripeSubscriptionId, {
+        cancel_at_period_end: true
+      });
+      
+      await storage.updateTeamStripeInfo(
+        teamId,
+        team.stripeCustomerId,
+        team.stripeSubscriptionId,
+        updatedSubscription.status
+      );
+      
+      return res.json({
+        status: updatedSubscription.status,
+        cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+        currentPeriodEnd: updatedSubscription.current_period_end
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to cancel subscription", error: error.message });
+    }
+  });
+  
+  app.post("/api/teams/:id/subscription/reactivate", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can reactivate a subscription
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to reactivate subscription for this team" });
+      }
+      
+      if (!team.stripeSubscriptionId) {
+        return res.status(400).json({ message: "Team has no subscription to reactivate" });
+      }
+      
+      // Reactivate by setting cancel_at_period_end to false
+      const updatedSubscription = await stripe.subscriptions.update(team.stripeSubscriptionId, {
+        cancel_at_period_end: false
+      });
+      
+      await storage.updateTeamStripeInfo(
+        teamId,
+        team.stripeCustomerId,
+        team.stripeSubscriptionId,
+        updatedSubscription.status
+      );
+      
+      return res.json({
+        status: updatedSubscription.status,
+        cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+        currentPeriodEnd: updatedSubscription.current_period_end
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to reactivate subscription", error: error.message });
+    }
+  });
+  
+  app.post("/api/teams/:id/subscription/update-quantity", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can update subscription quantity
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update subscription for this team" });
+      }
+      
+      if (!team.stripeSubscriptionId) {
+        return res.status(400).json({ message: "Team has no active subscription" });
+      }
+      
+      const { quantity } = req.body;
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ message: "Invalid quantity. Must be at least 1." });
+      }
+      
+      // Update subscription quantity
+      const updatedSubscription = await updateSubscriptionQuantity(team.stripeSubscriptionId, quantity);
+      
+      return res.json({
+        status: updatedSubscription.status,
+        quantity: updatedSubscription.items.data[0].quantity,
+        currentPeriodEnd: updatedSubscription.current_period_end
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to update subscription quantity", error: error.message });
+    }
+  });
+  
+  app.post("/api/teams/:id/members/invite", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can invite members
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to invite members to this team" });
+      }
+      
+      const { email, fullName, title } = req.body;
+      
+      if (!email || !fullName) {
+        return res.status(400).json({ message: "Email and full name are required" });
+      }
+      
+      // Check if user with this email already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        if (existingUser.teamId) {
+          return res.status(400).json({ message: "User is already a member of a team" });
+        }
+        
+        // Add existing user to team
+        const updatedUser = await storage.updateUser(existingUser.id, { teamId });
+        if (!updatedUser) {
+          return res.status(500).json({ message: "Failed to add user to team" });
+        }
+        
+        // Update subscription quantity if applicable
+        if (team.stripeSubscriptionId) {
+          const members = await storage.getTeamMembers(teamId);
+          await updateSubscriptionQuantity(team.stripeSubscriptionId, members.length);
+        }
+        
+        return res.json({
+          message: "Existing user added to team successfully",
+          user: {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            fullName: updatedUser.fullName
+          }
+        });
+      }
+      
+      // Create a new invited user
+      const invitedUser = await storage.createInvitedUser(email, fullName, teamId, title);
+      
+      if (!invitedUser) {
+        return res.status(500).json({ message: "Failed to create invitation" });
+      }
+      
+      // Update subscription quantity if applicable
+      if (team.stripeSubscriptionId) {
+        const members = await storage.getTeamMembers(teamId);
+        await updateSubscriptionQuantity(team.stripeSubscriptionId, members.length);
+      }
+      
+      // TODO: Send email invitation using SendGrid or other email service
+      
+      return res.status(201).json({
+        message: "Invitation sent successfully",
+        user: {
+          id: invitedUser.id,
+          email: invitedUser.email,
+          fullName: invitedUser.fullName,
+          invitationToken: invitedUser.invitationToken,
+          invitationExpiry: invitedUser.invitationExpiry
+        }
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Failed to invite team member", error: error.message });
     }
   });
 
@@ -1445,6 +1770,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res.status(500).json({ message: "Failed to fetch unread message count" });
     }
+  });
+
+  // Stripe webhook endpoint
+  app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+    const signature = req.headers["stripe-signature"] as string;
+    
+    if (!signature) {
+      return res.status(400).json({ message: "Missing stripe-signature header" });
+    }
+    
+    let event;
+    
+    try {
+      event = constructEventFromPayload(signature, req.body);
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid signature" });
+    }
+    
+    // Handle the event
+    switch (event.type) {
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        const subscription = event.data.object as Stripe.Subscription;
+        // Update subscription status in our database
+        try {
+          const stripeCustomerId = subscription.customer as string;
+          
+          // Try to find the team with this customer ID first
+          const team = await storage.getTeamByStripeCustomerId(stripeCustomerId);
+          
+          if (team) {
+            await storage.updateTeamStripeInfo(
+              team.id,
+              stripeCustomerId,
+              subscription.id,
+              subscription.status
+            );
+          } else {
+            // If no team found, maybe it's a user subscription
+            const user = await storage.getUserByStripeCustomerId(stripeCustomerId);
+            
+            if (user) {
+              await storage.updateUser(user.id, {
+                stripeSubscriptionId: subscription.id,
+                subscriptionStatus: subscription.status
+              });
+            } else {
+              console.error("No team or user found for customer ID:", stripeCustomerId);
+            }
+          }
+        } catch (error) {
+          console.error("Error updating subscription status:", error);
+        }
+        break;
+        
+      case "invoice.payment_succeeded":
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.subscription) {
+          // Update payment status for the subscription
+          console.log("Payment succeeded for subscription:", invoice.subscription);
+        }
+        break;
+        
+      case "invoice.payment_failed":
+        const failedInvoice = event.data.object as Stripe.Invoice;
+        if (failedInvoice.subscription) {
+          // Handle failed payment
+          console.error("Payment failed for subscription:", failedInvoice.subscription);
+          // Could send an email notification here
+        }
+        break;
+        
+      // Handle other event types
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+    
+    // Return a 200 response to acknowledge receipt of the event
+    res.json({ received: true });
   });
 
   const httpServer = createServer(app);
