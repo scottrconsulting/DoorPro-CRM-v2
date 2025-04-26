@@ -33,6 +33,8 @@ export const users = pgTable("users", {
   status: text("status").default("active").notNull(), // active, pending, inactive
   title: text("title"), // job title for team members
   stripeCustomerId: text("stripe_customer_id"), // Individual customer ID (if not part of a team)
+  stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for individual subscriptions
+  subscriptionStatus: text("subscription_status"), // active, past_due, unpaid, canceled, etc.
   invitationToken: text("invitation_token"), // For team member invitations
   invitationExpiry: timestamp("invitation_expiry"), // Expiry time for invitations
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -210,6 +212,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
   stripeCustomerId: true,
+  stripeSubscriptionId: true,
+  subscriptionStatus: true,
   invitationToken: true,
   invitationExpiry: true,
 });

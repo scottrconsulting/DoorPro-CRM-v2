@@ -72,6 +72,7 @@ export interface IStorage {
   getUsersByTeam(teamId: number): Promise<User[]>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<User | undefined>;
+  updateUserStripeInfo(id: number, stripeCustomerId: string, stripeSubscriptionId?: string, subscriptionStatus?: string): Promise<User | undefined>;
   createInvitedUser(email: string, fullName: string, teamId: number, title?: string): Promise<User | undefined>;
   
   // Contact operations
@@ -411,6 +412,38 @@ export class DatabaseStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error("Error updating user Stripe customer ID:", error);
+      return undefined;
+    }
+  }
+  
+  async updateUserStripeInfo(
+    id: number,
+    stripeCustomerId: string,
+    stripeSubscriptionId?: string,
+    subscriptionStatus?: string
+  ): Promise<User | undefined> {
+    try {
+      const updates: Partial<User> = {
+        stripeCustomerId,
+        updatedAt: new Date()
+      };
+      
+      if (stripeSubscriptionId) {
+        updates.stripeSubscriptionId = stripeSubscriptionId;
+      }
+      
+      if (subscriptionStatus) {
+        updates.subscriptionStatus = subscriptionStatus;
+      }
+      
+      const result = await db.update(users)
+        .set(updates)
+        .where(eq(users.id, id))
+        .returning();
+        
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user stripe info:", error);
       return undefined;
     }
   }
