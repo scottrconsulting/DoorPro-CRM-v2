@@ -62,8 +62,8 @@ export default function ContactDetailModal({
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("follow_up");
   
-  // Active tab state
-  const [activeTab, setActiveTab] = useState("notes");
+  // Active tab state - ensure it's initialized with a valid value
+  const [activeTab, setActiveTab] = useState<string>("notes");
   
   // Sale state
   const [saleAmount, setSaleAmount] = useState("");
@@ -522,7 +522,7 @@ export default function ContactDetailModal({
             </div>
 
             <div className="md:w-2/3 md:pl-4">
-              <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-4 grid grid-cols-5 w-full">
                   <TabsTrigger value="notes" className="flex items-center">
                     <FileText className="h-4 w-4 mr-2" />

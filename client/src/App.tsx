@@ -41,6 +41,9 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
   
+  // Adding a console log to help debug authentication issues
+  console.log("Auth state:", { isAuthenticated, isLoading });
+  
   return isAuthenticated ? <Component /> : null;
 }
 

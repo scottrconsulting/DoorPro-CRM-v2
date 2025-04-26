@@ -40,8 +40,10 @@ const contactFormSchema = insertContactSchema.extend({
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export default function Contacts() {
+  console.log("Contacts component is rendering");
   const { toast } = useToast();
   const { user } = useAuth();
+  console.log("User in Contacts:", user);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
