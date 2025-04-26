@@ -71,7 +71,7 @@ function App() {
                   <ProtectedRoute>
                     <AppShell>
                       <Switch>
-                        <Route path="/" exact>
+                        <Route path="/">
                           <Dashboard />
                         </Route>
                         <Route path="/territories">
