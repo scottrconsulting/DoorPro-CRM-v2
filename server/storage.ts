@@ -10,6 +10,9 @@ import {
   teams,
   customizations,
   messageTemplates,
+  chatConversations,
+  chatParticipants,
+  chatMessages,
   PIN_COLORS,
   CONTACT_STATUSES,
   QUICK_ACTIONS,
@@ -34,7 +37,13 @@ import {
   type Customization,
   type InsertCustomization,
   type MessageTemplate,
-  type InsertMessageTemplate
+  type InsertMessageTemplate,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatParticipant,
+  type InsertChatParticipant,
+  type ChatMessage,
+  type InsertChatMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
@@ -137,6 +146,27 @@ export interface IStorage {
   createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
   updateMessageTemplate(id: number, updates: Partial<MessageTemplate>): Promise<MessageTemplate | undefined>;
   deleteMessageTemplate(id: number): Promise<boolean>;
+  
+  // Chat operations
+  getChatConversation(id: number): Promise<ChatConversation | undefined>;
+  getChatConversationsByUser(userId: number): Promise<ChatConversation[]>;
+  getChatConversationsByTeam(teamId: number): Promise<ChatConversation[]>;
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+  updateChatConversation(id: number, updates: Partial<ChatConversation>): Promise<ChatConversation | undefined>;
+  deleteChatConversation(id: number): Promise<boolean>;
+  
+  // Chat participants operations
+  getChatParticipants(conversationId: number): Promise<ChatParticipant[]>;
+  addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant>;
+  removeChatParticipant(conversationId: number, userId: number): Promise<boolean>;
+  updateChatParticipant(conversationId: number, userId: number, updates: Partial<ChatParticipant>): Promise<ChatParticipant | undefined>;
+  
+  // Chat messages operations
+  getChatMessages(conversationId: number, limit?: number, before?: Date): Promise<ChatMessage[]>;
+  getUnreadChatMessageCount(userId: number): Promise<number>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  markChatMessagesAsRead(conversationId: number, userId: number): Promise<boolean>;
+  deleteChatMessage(id: number): Promise<boolean>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -1192,6 +1222,287 @@ export class DatabaseStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error("Error deleting message template:", error);
+      return false;
+    }
+  }
+
+  // Chat operations
+  async getChatConversation(id: number): Promise<ChatConversation | undefined> {
+    try {
+      const result = await db.select().from(chatConversations).where(eq(chatConversations.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching chat conversation:", error);
+      return undefined;
+    }
+  }
+
+  async getChatConversationsByUser(userId: number): Promise<ChatConversation[]> {
+    try {
+      // Get conversations where the user is a participant
+      const participations = await db.select({
+        conversationId: chatParticipants.conversationId
+      })
+      .from(chatParticipants)
+      .where(eq(chatParticipants.userId, userId));
+      
+      const conversationIds = participations.map(p => p.conversationId);
+      
+      if (conversationIds.length === 0) {
+        return [];
+      }
+      
+      return await db.select()
+        .from(chatConversations)
+        .where(sql`${chatConversations.id} IN (${conversationIds.join(',')})`);
+    } catch (error) {
+      console.error("Error fetching chat conversations by user:", error);
+      return [];
+    }
+  }
+
+  async getChatConversationsByTeam(teamId: number): Promise<ChatConversation[]> {
+    try {
+      return await db.select()
+        .from(chatConversations)
+        .where(
+          and(
+            eq(chatConversations.teamId, teamId),
+            eq(chatConversations.isTeamChannel, true)
+          )
+        );
+    } catch (error) {
+      console.error("Error fetching chat conversations by team:", error);
+      return [];
+    }
+  }
+
+  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
+    try {
+      const result = await db.insert(chatConversations).values(conversation).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating chat conversation:", error);
+      throw new Error('Failed to create chat conversation');
+    }
+  }
+
+  async updateChatConversation(id: number, updates: Partial<ChatConversation>): Promise<ChatConversation | undefined> {
+    try {
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(chatConversations)
+        .set(updatesWithTimestamp)
+        .where(eq(chatConversations.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating chat conversation:", error);
+      return undefined;
+    }
+  }
+
+  async deleteChatConversation(id: number): Promise<boolean> {
+    try {
+      // Delete all messages in this conversation
+      await db.delete(chatMessages)
+        .where(eq(chatMessages.conversationId, id));
+        
+      // Delete all participants
+      await db.delete(chatParticipants)
+        .where(eq(chatParticipants.conversationId, id));
+        
+      // Delete the conversation
+      const result = await db.delete(chatConversations)
+        .where(eq(chatConversations.id, id))
+        .returning({ id: chatConversations.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting chat conversation:", error);
+      return false;
+    }
+  }
+
+  // Chat Participants operations
+  async getChatParticipants(conversationId: number): Promise<ChatParticipant[]> {
+    try {
+      return await db.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.conversationId, conversationId));
+    } catch (error) {
+      console.error("Error fetching chat participants:", error);
+      return [];
+    }
+  }
+
+  async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
+    try {
+      // Check if the participant already exists
+      const existing = await db.select()
+        .from(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.conversationId, participant.conversationId),
+            eq(chatParticipants.userId, participant.userId)
+          )
+        );
+        
+      if (existing.length > 0) {
+        return existing[0];
+      }
+      
+      const result = await db.insert(chatParticipants).values(participant).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error adding chat participant:", error);
+      throw new Error('Failed to add chat participant');
+    }
+  }
+
+  async removeChatParticipant(conversationId: number, userId: number): Promise<boolean> {
+    try {
+      const result = await db.delete(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.conversationId, conversationId),
+            eq(chatParticipants.userId, userId)
+          )
+        )
+        .returning({ id: chatParticipants.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error removing chat participant:", error);
+      return false;
+    }
+  }
+
+  async updateChatParticipant(conversationId: number, userId: number, updates: Partial<ChatParticipant>): Promise<ChatParticipant | undefined> {
+    try {
+      const result = await db.update(chatParticipants)
+        .set(updates)
+        .where(
+          and(
+            eq(chatParticipants.conversationId, conversationId),
+            eq(chatParticipants.userId, userId)
+          )
+        )
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating chat participant:", error);
+      return undefined;
+    }
+  }
+
+  // Chat Messages operations
+  async getChatMessages(conversationId: number, limit: number = 50, before?: Date): Promise<ChatMessage[]> {
+    try {
+      let query = db.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, conversationId));
+        
+      if (before) {
+        query = query.where(lt(chatMessages.createdAt, before));
+      }
+      
+      return await query
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      return [];
+    }
+  }
+
+  async getUnreadChatMessageCount(userId: number): Promise<number> {
+    try {
+      // Get all conversation IDs where the user is a participant
+      const participations = await db.select({
+        conversationId: chatParticipants.conversationId,
+        lastReadTimestamp: chatParticipants.lastReadTimestamp
+      })
+      .from(chatParticipants)
+      .where(eq(chatParticipants.userId, userId));
+      
+      let unreadCount = 0;
+      
+      // Count unread messages for each conversation
+      for (const participation of participations) {
+        const { conversationId, lastReadTimestamp } = participation;
+        
+        if (!lastReadTimestamp) {
+          // If there's no last read timestamp, count all messages
+          const result = await db.select({ count: sql<number>`count(*)` })
+            .from(chatMessages)
+            .where(
+              and(
+                eq(chatMessages.conversationId, conversationId),
+                sql`${chatMessages.senderId} != ${userId}`
+              )
+            );
+          unreadCount += Number(result[0].count);
+        } else {
+          // Count messages after the last read timestamp
+          const result = await db.select({ count: sql<number>`count(*)` })
+            .from(chatMessages)
+            .where(
+              and(
+                eq(chatMessages.conversationId, conversationId),
+                sql`${chatMessages.senderId} != ${userId}`,
+                sql`${chatMessages.createdAt} > ${lastReadTimestamp}`
+              )
+            );
+          unreadCount += Number(result[0].count);
+        }
+      }
+      
+      return unreadCount;
+    } catch (error) {
+      console.error("Error counting unread chat messages:", error);
+      return 0;
+    }
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    try {
+      const result = await db.insert(chatMessages).values(message).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating chat message:", error);
+      throw new Error('Failed to create chat message');
+    }
+  }
+
+  async markChatMessagesAsRead(conversationId: number, userId: number): Promise<boolean> {
+    try {
+      // Update the last read timestamp for the user in this conversation
+      await db.update(chatParticipants)
+        .set({ lastReadTimestamp: new Date() })
+        .where(
+          and(
+            eq(chatParticipants.conversationId, conversationId),
+            eq(chatParticipants.userId, userId)
+          )
+        );
+      
+      return true;
+    } catch (error) {
+      console.error("Error marking chat messages as read:", error);
+      return false;
+    }
+  }
+
+  async deleteChatMessage(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(chatMessages)
+        .where(eq(chatMessages.id, id))
+        .returning({ id: chatMessages.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting chat message:", error);
       return false;
     }
   }

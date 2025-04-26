@@ -283,3 +283,60 @@ export type Customization = typeof customizations.$inferSelect;
 
 export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type MessageTemplate = typeof messageTemplates.$inferSelect;
+
+// Chat models for team communication
+export const chatConversations = pgTable("chat_conversations", {
+  id: serial("id").primaryKey(),
+  name: text("name"),
+  teamId: integer("team_id").references(() => teams.id),
+  isTeamChannel: boolean("is_team_channel").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const chatParticipants = pgTable("chat_participants", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => chatConversations.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  isAdmin: boolean("is_admin").default(false),
+  lastReadTimestamp: timestamp("last_read_timestamp"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => chatConversations.id),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  attachmentUrl: text("attachment_url"),
+  isRead: boolean("is_read").default(false),
+  isUrgent: boolean("is_urgent").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Chat schema validation
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChatParticipantSchema = createInsertSchema(chatParticipants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Chat types
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+
+export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
+export type ChatParticipant = typeof chatParticipants.$inferSelect;
+
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;

@@ -10,6 +10,9 @@ import {
   insertTeamSchema,
   insertCustomizationSchema,
   insertMessageTemplateSchema,
+  insertChatConversationSchema,
+  insertChatParticipantSchema,
+  insertChatMessageSchema,
   PIN_COLORS,
   CONTACT_STATUSES,
   QUICK_ACTIONS
