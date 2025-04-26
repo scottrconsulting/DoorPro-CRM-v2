@@ -143,6 +143,16 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span className={`material-icons mr-3 ${isActive("/chat") ? "text-primary" : "text-neutral-500"}`}>chat</span>
               <span>Team Chat</span>
             </Link>
+            <Link 
+              href="/routes" 
+              onClick={onClose}
+              className={`flex items-center px-4 py-2 ${isActive("/routes") 
+                ? "text-neutral-800 bg-neutral-100 border-l-4 border-primary" 
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800"}`}
+            >
+              <span className={`material-icons mr-3 ${isActive("/routes") ? "text-primary" : "text-neutral-500"}`}>directions</span>
+              <span>Route Planner</span>
+            </Link>
           </div>
           
           {/* Settings links */}

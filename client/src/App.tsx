@@ -18,6 +18,7 @@ import Settings from "@/pages/settings";
 import Customize from "@/pages/customize";
 import CustomizeMessageTemplates from "@/pages/customize-message-templates";
 import Chat from "@/pages/chat";
+import Routes from "@/pages/routes";
 import AppShell from "@/components/layout/app-shell";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
@@ -109,6 +110,9 @@ function App() {
                         </Route>
                         <Route path="/chat">
                           <Chat />
+                        </Route>
+                        <Route path="/routes">
+                          <Routes />
                         </Route>
                         <Route>
                           <NotFound />
