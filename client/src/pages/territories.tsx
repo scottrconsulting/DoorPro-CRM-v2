@@ -14,6 +14,13 @@ import { useGoogleMaps } from "@/hooks/use-maps";
 import { UserRole, hasPlanAccess, FREE_PLAN_LIMITS } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 
+// Add Google Maps types
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "your-api-key";
 
 export default function Territories() {
@@ -121,7 +128,7 @@ export default function Territories() {
 
   // Setup drawing manager when map is loaded
   useEffect(() => {
-    if (!isLoaded || !map) return;
+    if (!isLoaded || !map || !window.google) return;
 
     if (window.google.maps.drawing) {
       const manager = new window.google.maps.drawing.DrawingManager({
@@ -141,7 +148,7 @@ export default function Territories() {
       setDrawingManager(manager);
 
       // Listen for polygon complete
-      google.maps.event.addListener(manager, 'polygoncomplete', function(polygon) {
+      window.google.maps.event.addListener(manager, 'polygoncomplete', function(polygon: google.maps.Polygon) {
         const points = polygon.getPath().getArray().map(point => ({
           lat: point.lat(),
           lng: point.lng(),
@@ -163,12 +170,12 @@ export default function Territories() {
 
   // Toggle drawing mode
   const toggleDrawingMode = () => {
-    if (!drawingManager) return;
+    if (!drawingManager || !window.google) return;
     
     if (drawingMode) {
       drawingManager.setDrawingMode(null);
     } else {
-      drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+      drawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
     }
     
     setDrawingMode(!drawingMode);
@@ -183,19 +190,19 @@ export default function Territories() {
 
   // Show territory on map
   const showTerritoryOnMap = (territory: Territory) => {
+    if (!map || !territory.coordinates || !territory.coordinates.length || !window.google) return;
+    
     setSelectedTerritory(territory);
-    
-    if (!map || !territory.coordinates || !territory.coordinates.length) return;
-    
     clearDrawings();
     
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new window.google.maps.LatLngBounds();
     const polygonPath = territory.coordinates.map(coord => {
-      bounds.extend(new google.maps.LatLng(coord.lat, coord.lng));
-      return new google.maps.LatLng(coord.lat, coord.lng);
+      const latLng = new window.google.maps.LatLng(coord.lat, coord.lng);
+      bounds.extend(latLng);
+      return latLng;
     });
     
-    const polygon = new google.maps.Polygon({
+    const polygon = new window.google.maps.Polygon({
       paths: polygonPath,
       fillColor: "#3B82F6",
       fillOpacity: 0.3,
