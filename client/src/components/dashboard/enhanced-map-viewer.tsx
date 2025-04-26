@@ -749,9 +749,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
       {/* New Contact Dialog */}
       <Dialog open={showNewContactDialog} onOpenChange={setShowNewContactDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Contact</DialogTitle>
+            <p className="text-sm text-muted-foreground">Fill in contact information and notes</p>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 items-center gap-2">

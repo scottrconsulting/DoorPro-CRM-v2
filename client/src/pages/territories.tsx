@@ -431,9 +431,10 @@ export default function Territories() {
 
       {/* Create Territory Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Territory</DialogTitle>
+            <p className="text-sm text-muted-foreground">Define a sales territory by drawing on the map</p>
           </DialogHeader>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
