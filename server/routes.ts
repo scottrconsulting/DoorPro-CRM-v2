@@ -23,6 +23,15 @@ import session from "express-session";
 // import MemoryStore from "memorystore";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { 
+  stripe, 
+  getOrCreateCustomer, 
+  createSubscription, 
+  updateSubscriptionQuantity, 
+  cancelSubscription, 
+  createTeamMemberCheckoutSession, 
+  createSetupIntent 
+} from "./stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session setup using PostgreSQL for persistent sessions

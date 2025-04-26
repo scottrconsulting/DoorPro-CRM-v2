@@ -12,7 +12,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Price ID for the $25/month per team member subscription
 // In a real app, you'd create a product and price in the Stripe dashboard
-const TEAM_MEMBER_PRICE_ID = 'price_team_member_monthly';
+export const TEAM_MEMBER_PRICE_ID = 'price_team_member_monthly';
 
 export interface CustomerData {
   email: string;
