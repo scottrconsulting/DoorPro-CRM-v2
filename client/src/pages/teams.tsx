@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -47,6 +47,7 @@ type User = {
 
 function TeamCard({ team, onMembersClick }: { team: Team, onMembersClick: (teamId: number) => void }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const deleteTeamMutation = useMutation({
     mutationFn: async (teamId: number) => {
@@ -108,6 +109,7 @@ function TeamCard({ team, onMembersClick }: { team: Team, onMembersClick: (teamI
 function CreateTeamDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const form = useForm<z.infer<typeof teamSchema>>({
     resolver: zodResolver(teamSchema),
@@ -215,6 +217,14 @@ function CreateTeamDialog() {
 
 function TeamMembersDialog({ teamId, open, setOpen }: { teamId: number | null, open: boolean, setOpen: (open: boolean) => void }) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Schema for adding team members
+  const memberSchema = z.object({
+    username: z.string().min(1, "Username is required"),
+  });
+  
   const form = useForm<z.infer<typeof memberSchema>>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
@@ -277,6 +287,7 @@ function TeamMembersDialog({ teamId, open, setOpen }: { teamId: number | null, o
       return await res.json();
     },
     onSuccess: () => {
+      // Use the imported queryClient
       queryClient.invalidateQueries({ queryKey: ['/api/teams', teamId, 'members'] });
       form.reset();
       toast({
