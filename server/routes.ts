@@ -10,21 +10,19 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";
-import MemoryStore from "memorystore";
+// No longer needed with PostgreSQL sessions
+// import MemoryStore from "memorystore";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session setup
-  const MemorySessionStore = MemoryStore(session);
+  // Session setup using PostgreSQL for persistent sessions
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "doorprocrm-secret",
       resave: false,
       saveUninitialized: false,
-      store: new MemorySessionStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
+      store: storage.sessionStore,
       cookie: { 
         secure: process.env.NODE_ENV === "production",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week

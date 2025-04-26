@@ -15,6 +15,11 @@ import {
   type Territory,
   type InsertTerritory
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, sql, desc, asc, gte, lte } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 export interface IStorage {
   // User operations
@@ -51,206 +56,317 @@ export interface IStorage {
   createTerritory(territory: InsertTerritory): Promise<Territory>;
   updateTerritory(id: number, updates: Partial<Territory>): Promise<Territory | undefined>;
   deleteTerritory(id: number): Promise<boolean>;
+  
+  // Session store for authentication
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private contacts: Map<number, Contact>;
-  private visits: Map<number, Visit>;
-  private schedules: Map<number, Schedule>;
-  private territories: Map<number, Territory>;
-  private userId: number;
-  private contactId: number;
-  private visitId: number;
-  private scheduleId: number;
-  private territoryId: number;
+const PostgresSessionStore = connectPg(session);
 
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+  
   constructor() {
-    this.users = new Map();
-    this.contacts = new Map();
-    this.visits = new Map();
-    this.schedules = new Map();
-    this.territories = new Map();
-    this.userId = 1;
-    this.contactId = 1;
-    this.visitId = 1;
-    this.scheduleId = 1;
-    this.territoryId = 1;
-    
-    // Add admin user
-    this.createUser({
-      username: "admin",
-      password: "admin123", // In a real app, this would be hashed
-      email: "admin@doorprocrm.com",
-      fullName: "System Admin",
-      role: "admin"
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    try {
+      const result = await db.select().from(users).where(eq(users.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    try {
+      const result = await db.select().from(users).where(eq(users.username, username));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user by username:", error);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
+    try {
+      const result = await db.select().from(users).where(eq(users.email, email));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user by email:", error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const createdAt = new Date();
-    const user: User = { ...insertUser, id, createdAt };
-    this.users.set(id, user);
-    return user;
+    try {
+      const result = await db.insert(users).values(insertUser).returning();
+      return result[0];
+    } catch (error) {
+      // Check for unique constraint violation errors
+      const errorMessage = String(error);
+      if (errorMessage.includes('unique constraint') || errorMessage.includes('duplicate key')) {
+        if (errorMessage.includes('username')) {
+          throw new Error('Username already exists');
+        } else if (errorMessage.includes('email')) {
+          throw new Error('Email already exists');
+        }
+      }
+      console.error("Error creating user:", error);
+      throw new Error('Failed to create user');
+    }
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
-    const user = await this.getUser(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...updates };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+    try {
+      const result = await db.update(users)
+        .set(updates)
+        .where(eq(users.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return undefined;
+    }
   }
 
   // Contact operations
   async getContact(id: number): Promise<Contact | undefined> {
-    return this.contacts.get(id);
+    try {
+      const result = await db.select().from(contacts).where(eq(contacts.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching contact:", error);
+      return undefined;
+    }
   }
 
   async getContactsByUser(userId: number): Promise<Contact[]> {
-    return Array.from(this.contacts.values()).filter(
-      (contact) => contact.userId === userId
-    );
+    try {
+      return await db.select().from(contacts).where(eq(contacts.userId, userId));
+    } catch (error) {
+      console.error("Error fetching contacts by user:", error);
+      return [];
+    }
   }
 
   async createContact(insertContact: InsertContact): Promise<Contact> {
-    const id = this.contactId++;
-    const createdAt = new Date();
-    const updatedAt = new Date();
-    const contact: Contact = { ...insertContact, id, createdAt, updatedAt };
-    this.contacts.set(id, contact);
-    return contact;
+    try {
+      const result = await db.insert(contacts).values(insertContact).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating contact:", error);
+      throw new Error('Failed to create contact');
+    }
   }
 
   async updateContact(id: number, updates: Partial<Contact>): Promise<Contact | undefined> {
-    const contact = await this.getContact(id);
-    if (!contact) return undefined;
-    
-    const updatedContact = { ...contact, ...updates, updatedAt: new Date() };
-    this.contacts.set(id, updatedContact);
-    return updatedContact;
+    try {
+      // Always update the updatedAt field
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(contacts)
+        .set(updatesWithTimestamp)
+        .where(eq(contacts.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      return undefined;
+    }
   }
 
   async deleteContact(id: number): Promise<boolean> {
-    return this.contacts.delete(id);
+    try {
+      const result = await db.delete(contacts).where(eq(contacts.id, id)).returning({ id: contacts.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      return false;
+    }
   }
 
   // Visit operations
   async getVisit(id: number): Promise<Visit | undefined> {
-    return this.visits.get(id);
+    try {
+      const result = await db.select().from(visits).where(eq(visits.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching visit:", error);
+      return undefined;
+    }
   }
 
   async getVisitsByContact(contactId: number): Promise<Visit[]> {
-    return Array.from(this.visits.values()).filter(
-      (visit) => visit.contactId === contactId
-    );
+    try {
+      return await db.select()
+        .from(visits)
+        .where(eq(visits.contactId, contactId))
+        .orderBy(desc(visits.visitDate));
+    } catch (error) {
+      console.error("Error fetching visits by contact:", error);
+      return [];
+    }
   }
 
   async getVisitsByUser(userId: number): Promise<Visit[]> {
-    return Array.from(this.visits.values()).filter(
-      (visit) => visit.userId === userId
-    );
+    try {
+      return await db.select()
+        .from(visits)
+        .where(eq(visits.userId, userId))
+        .orderBy(desc(visits.visitDate));
+    } catch (error) {
+      console.error("Error fetching visits by user:", error);
+      return [];
+    }
   }
 
   async createVisit(insertVisit: InsertVisit): Promise<Visit> {
-    const id = this.visitId++;
-    const visit: Visit = { ...insertVisit, id };
-    this.visits.set(id, visit);
-    return visit;
+    try {
+      const result = await db.insert(visits).values(insertVisit).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating visit:", error);
+      throw new Error('Failed to create visit');
+    }
   }
 
   // Schedule operations
   async getSchedule(id: number): Promise<Schedule | undefined> {
-    return this.schedules.get(id);
+    try {
+      const result = await db.select().from(schedules).where(eq(schedules.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      return undefined;
+    }
   }
 
   async getSchedulesByUser(userId: number): Promise<Schedule[]> {
-    return Array.from(this.schedules.values()).filter(
-      (schedule) => schedule.userId === userId
-    );
+    try {
+      return await db.select()
+        .from(schedules)
+        .where(eq(schedules.userId, userId))
+        .orderBy(asc(schedules.startTime));
+    } catch (error) {
+      console.error("Error fetching schedules by user:", error);
+      return [];
+    }
   }
 
   async getSchedulesByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Schedule[]> {
-    return Array.from(this.schedules.values()).filter(
-      (schedule) => 
-        schedule.userId === userId && 
-        schedule.startTime >= startDate && 
-        schedule.startTime <= endDate
-    );
+    try {
+      return await db.select()
+        .from(schedules)
+        .where(
+          and(
+            eq(schedules.userId, userId),
+            gte(schedules.startTime, startDate),
+            lte(schedules.startTime, endDate)
+          )
+        )
+        .orderBy(asc(schedules.startTime));
+    } catch (error) {
+      console.error("Error fetching schedules by date range:", error);
+      return [];
+    }
   }
 
   async createSchedule(insertSchedule: InsertSchedule): Promise<Schedule> {
-    const id = this.scheduleId++;
-    const createdAt = new Date();
-    const schedule: Schedule = { ...insertSchedule, id, createdAt };
-    this.schedules.set(id, schedule);
-    return schedule;
+    try {
+      const result = await db.insert(schedules).values(insertSchedule).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+      throw new Error('Failed to create schedule');
+    }
   }
 
   async updateSchedule(id: number, updates: Partial<Schedule>): Promise<Schedule | undefined> {
-    const schedule = await this.getSchedule(id);
-    if (!schedule) return undefined;
-    
-    const updatedSchedule = { ...schedule, ...updates };
-    this.schedules.set(id, updatedSchedule);
-    return updatedSchedule;
+    try {
+      const result = await db.update(schedules)
+        .set(updates)
+        .where(eq(schedules.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      return undefined;
+    }
   }
 
   async deleteSchedule(id: number): Promise<boolean> {
-    return this.schedules.delete(id);
+    try {
+      const result = await db.delete(schedules).where(eq(schedules.id, id)).returning({ id: schedules.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      return false;
+    }
   }
 
   // Territory operations
   async getTerritory(id: number): Promise<Territory | undefined> {
-    return this.territories.get(id);
+    try {
+      const result = await db.select().from(territories).where(eq(territories.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching territory:", error);
+      return undefined;
+    }
   }
 
   async getTerritoriesByUser(userId: number): Promise<Territory[]> {
-    return Array.from(this.territories.values()).filter(
-      (territory) => territory.userId === userId
-    );
+    try {
+      return await db.select().from(territories).where(eq(territories.userId, userId));
+    } catch (error) {
+      console.error("Error fetching territories by user:", error);
+      return [];
+    }
   }
 
   async createTerritory(insertTerritory: InsertTerritory): Promise<Territory> {
-    const id = this.territoryId++;
-    const createdAt = new Date();
-    const territory: Territory = { ...insertTerritory, id, createdAt };
-    this.territories.set(id, territory);
-    return territory;
+    try {
+      const result = await db.insert(territories).values(insertTerritory).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating territory:", error);
+      throw new Error('Failed to create territory');
+    }
   }
 
   async updateTerritory(id: number, updates: Partial<Territory>): Promise<Territory | undefined> {
-    const territory = await this.getTerritory(id);
-    if (!territory) return undefined;
-    
-    const updatedTerritory = { ...territory, ...updates };
-    this.territories.set(id, updatedTerritory);
-    return updatedTerritory;
+    try {
+      const result = await db.update(territories)
+        .set(updates)
+        .where(eq(territories.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating territory:", error);
+      return undefined;
+    }
   }
 
   async deleteTerritory(id: number): Promise<boolean> {
-    return this.territories.delete(id);
+    try {
+      const result = await db.delete(territories).where(eq(territories.id, id)).returning({ id: territories.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting territory:", error);
+      return false;
+    }
   }
 }
 
-// Create and export an instance of the storage
-export const storage = new MemStorage();
+// Create and export an instance of the database storage
+export const storage = new DatabaseStorage();
