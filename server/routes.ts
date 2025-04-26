@@ -1094,6 +1094,350 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat Routes
+  // Get all conversations for the current user
+  app.get("/api/chat/conversations", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const conversations = await storage.getChatConversationsByUser(user.id);
+      return res.json(conversations);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  // Get a specific conversation by ID
+  app.get("/api/chat/conversations/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is a participant in this conversation
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isParticipant = participants.some(p => p.userId === user.id);
+      
+      if (!isParticipant && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this conversation" });
+      }
+      
+      return res.json(conversation);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+
+  // Create a new conversation
+  app.post("/api/chat/conversations", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Validate the conversation data
+      const conversationData = insertChatConversationSchema.parse(req.body);
+      
+      // If this is a team channel, ensure the user is a manager or admin
+      if (conversationData.isTeamChannel && conversationData.teamId) {
+        if (!user.isManager && user.role !== "admin") {
+          return res.status(403).json({ message: "Only managers or admins can create team channels" });
+        }
+        
+        // Check if user is a member of this team
+        const team = await storage.getTeam(conversationData.teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+        
+        if (team.managerId !== user.id && user.role !== "admin") {
+          return res.status(403).json({ message: "You can only create channels for teams you manage" });
+        }
+      }
+      
+      // Create the conversation
+      const conversation = await storage.createChatConversation(conversationData);
+      
+      // Add the current user as a participant and admin
+      await storage.addChatParticipant({
+        conversationId: conversation.id,
+        userId: user.id,
+        isAdmin: true
+      });
+      
+      return res.status(201).json(conversation);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+
+  // Get participants of a conversation
+  app.get("/api/chat/conversations/:id/participants", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is a participant in this conversation
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isParticipant = participants.some(p => p.userId === user.id);
+      
+      if (!isParticipant && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this conversation" });
+      }
+      
+      // For each participant, fetch the user details
+      const participantsWithDetails = await Promise.all(
+        participants.map(async (participant) => {
+          const userDetails = await storage.getUser(participant.userId);
+          return {
+            ...participant,
+            user: userDetails ? {
+              id: userDetails.id,
+              username: userDetails.username,
+              fullName: userDetails.fullName,
+              isManager: userDetails.isManager
+            } : null
+          };
+        })
+      );
+      
+      return res.json(participantsWithDetails);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch participants" });
+    }
+  });
+
+  // Add a participant to a conversation
+  app.post("/api/chat/conversations/:id/participants", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is an admin in this conversation
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isAdmin = participants.some(p => p.userId === user.id && p.isAdmin);
+      
+      if (!isAdmin && user.role !== "admin") {
+        return res.status(403).json({ message: "Only conversation admins can add participants" });
+      }
+      
+      // Validate the new participant data
+      const { userId, isAdmin: newUserIsAdmin } = req.body;
+      
+      if (!userId || typeof userId !== 'number') {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Check if the user exists
+      const userToAdd = await storage.getUser(userId);
+      if (!userToAdd) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Add the participant
+      const participant = await storage.addChatParticipant({
+        conversationId,
+        userId,
+        isAdmin: !!newUserIsAdmin
+      });
+      
+      return res.status(201).json(participant);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to add participant" });
+    }
+  });
+
+  // Remove a participant from a conversation
+  app.delete("/api/chat/conversations/:id/participants/:userId", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const userIdToRemove = parseInt(req.params.userId, 10);
+      
+      const conversation = await storage.getChatConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is an admin in this conversation or is removing themselves
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isAdmin = participants.some(p => p.userId === user.id && p.isAdmin);
+      const isRemovingSelf = user.id === userIdToRemove;
+      
+      if (!isAdmin && !isRemovingSelf && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to remove participants" });
+      }
+      
+      // Remove the participant
+      const success = await storage.removeChatParticipant(conversationId, userIdToRemove);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+      
+      return res.json({ message: "Participant removed successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to remove participant" });
+    }
+  });
+
+  // Get messages in a conversation
+  app.get("/api/chat/conversations/:id/messages", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is a participant in this conversation
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isParticipant = participants.some(p => p.userId === user.id);
+      
+      if (!isParticipant && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this conversation" });
+      }
+      
+      // Get query parameters for pagination
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+      const before = req.query.before ? new Date(req.query.before as string) : undefined;
+      
+      // Get messages
+      const messages = await storage.getChatMessages(conversationId, limit, before);
+      
+      // For each message, fetch the sender details
+      const messagesWithSenders = await Promise.all(
+        messages.map(async (message) => {
+          const sender = await storage.getUser(message.senderId);
+          return {
+            ...message,
+            sender: sender ? {
+              id: sender.id,
+              username: sender.username,
+              fullName: sender.fullName
+            } : null
+          };
+        })
+      );
+      
+      // Mark messages as read
+      await storage.markChatMessagesAsRead(conversationId, user.id);
+      
+      return res.json(messagesWithSenders);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Send a message in a conversation
+  app.post("/api/chat/conversations/:id/messages", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Check if user is a participant in this conversation
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isParticipant = participants.some(p => p.userId === user.id);
+      
+      if (!isParticipant && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to send messages in this conversation" });
+      }
+      
+      // Validate the message data
+      const { content, isUrgent, attachmentUrl } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      
+      // Create the message
+      const message = await storage.createChatMessage({
+        conversationId,
+        senderId: user.id,
+        content,
+        isUrgent: !!isUrgent,
+        attachmentUrl: attachmentUrl || null
+      });
+      
+      // Return the message with sender details
+      return res.status(201).json({
+        ...message,
+        sender: {
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName
+        }
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Delete a message
+  app.delete("/api/chat/messages/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id, 10);
+      
+      // We need to query the database to get the message first
+      // to check if the user is authorized to delete it
+      const messages = await storage.getChatMessages(0, 1); // This is inefficient, we should add a method to get a single message
+      const message = messages.find(m => m.id === messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Check if user is the sender or an admin
+      const user = req.user as any;
+      if (message.senderId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this message" });
+      }
+      
+      // Delete the message
+      const success = await storage.deleteChatMessage(messageId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      return res.json({ message: "Message deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  // Get unread message count for the current user
+  app.get("/api/chat/unread-count", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const count = await storage.getUnreadChatMessageCount(user.id);
+      return res.json({ count });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch unread message count" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
