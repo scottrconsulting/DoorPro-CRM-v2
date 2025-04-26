@@ -4,6 +4,9 @@ import {
   visits,
   schedules,
   territories,
+  sales,
+  tasks,
+  documents,
   type User,
   type InsertUser,
   type Contact,
@@ -13,7 +16,13 @@ import {
   type Schedule,
   type InsertSchedule,
   type Territory,
-  type InsertTerritory
+  type InsertTerritory,
+  type Sale,
+  type InsertSale,
+  type Task,
+  type InsertTask,
+  type Document,
+  type InsertDocument
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, asc, gte, lte } from "drizzle-orm";
@@ -32,6 +41,8 @@ export interface IStorage {
   // Contact operations
   getContact(id: number): Promise<Contact | undefined>;
   getContactsByUser(userId: number): Promise<Contact[]>;
+  getContactsByStatus(userId: number, status: string): Promise<Contact[]>;
+  getContactsByTag(userId: number, tag: string): Promise<Contact[]>;
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: number, updates: Partial<Contact>): Promise<Contact | undefined>;
   deleteContact(id: number): Promise<boolean>;
@@ -40,12 +51,15 @@ export interface IStorage {
   getVisit(id: number): Promise<Visit | undefined>;
   getVisitsByContact(contactId: number): Promise<Visit[]>;
   getVisitsByUser(userId: number): Promise<Visit[]>;
+  getVisitsByDate(userId: number, date: Date): Promise<Visit[]>;
   createVisit(visit: InsertVisit): Promise<Visit>;
+  updateVisit(id: number, updates: Partial<Visit>): Promise<Visit | undefined>;
   
   // Schedule operations
   getSchedule(id: number): Promise<Schedule | undefined>;
   getSchedulesByUser(userId: number): Promise<Schedule[]>;
   getSchedulesByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Schedule[]>;
+  getSchedulesByContact(contactId: number): Promise<Schedule[]>;
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   updateSchedule(id: number, updates: Partial<Schedule>): Promise<Schedule | undefined>;
   deleteSchedule(id: number): Promise<boolean>;
@@ -56,6 +70,36 @@ export interface IStorage {
   createTerritory(territory: InsertTerritory): Promise<Territory>;
   updateTerritory(id: number, updates: Partial<Territory>): Promise<Territory | undefined>;
   deleteTerritory(id: number): Promise<boolean>;
+  
+  // Sale operations
+  getSale(id: number): Promise<Sale | undefined>;
+  getSalesByUser(userId: number): Promise<Sale[]>;
+  getSalesByContact(contactId: number): Promise<Sale[]>;
+  getSalesByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Sale[]>;
+  createSale(sale: InsertSale): Promise<Sale>;
+  updateSale(id: number, updates: Partial<Sale>): Promise<Sale | undefined>;
+  deleteSale(id: number): Promise<boolean>;
+  
+  // Task operations
+  getTask(id: number): Promise<Task | undefined>;
+  getTasksByUser(userId: number): Promise<Task[]>;
+  getTasksByContact(contactId: number): Promise<Task[]>;
+  getTasksByStatus(userId: number, status: string): Promise<Task[]>;
+  getTasksByDueDate(userId: number, dueDate: Date): Promise<Task[]>;
+  getOverdueTasks(userId: number): Promise<Task[]>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined>;
+  completeTask(id: number): Promise<Task | undefined>;
+  deleteTask(id: number): Promise<boolean>;
+  
+  // Document operations
+  getDocument(id: number): Promise<Document | undefined>;
+  getDocumentsByUser(userId: number): Promise<Document[]>;
+  getDocumentsByContact(contactId: number): Promise<Document[]>;
+  getDocumentsByCategory(userId: number, category: string): Promise<Document[]>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, updates: Partial<Document>): Promise<Document | undefined>;
+  deleteDocument(id: number): Promise<boolean>;
   
   // Session store for authentication
   sessionStore: session.Store;
@@ -155,6 +199,39 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+  
+  async getContactsByStatus(userId: number, status: string): Promise<Contact[]> {
+    try {
+      return await db.select()
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.userId, userId),
+            eq(contacts.status, status)
+          )
+        );
+    } catch (error) {
+      console.error("Error fetching contacts by status:", error);
+      return [];
+    }
+  }
+
+  async getContactsByTag(userId: number, tag: string): Promise<Contact[]> {
+    try {
+      const result = await db.select()
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.userId, userId),
+            sql`${contacts.tags} ? ${tag}`
+          )
+        );
+      return result;
+    } catch (error) {
+      console.error("Error fetching contacts by tag:", error);
+      return [];
+    }
+  }
 
   async createContact(insertContact: InsertContact): Promise<Contact> {
     try {
@@ -229,6 +306,31 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+  
+  async getVisitsByDate(userId: number, date: Date): Promise<Visit[]> {
+    try {
+      // Create start and end of the target date
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
+      return await db.select()
+        .from(visits)
+        .where(
+          and(
+            eq(visits.userId, userId),
+            gte(visits.visitDate, startDate),
+            lte(visits.visitDate, endDate)
+          )
+        )
+        .orderBy(desc(visits.visitDate));
+    } catch (error) {
+      console.error("Error fetching visits by date:", error);
+      return [];
+    }
+  }
 
   async createVisit(insertVisit: InsertVisit): Promise<Visit> {
     try {
@@ -237,6 +339,19 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error creating visit:", error);
       throw new Error('Failed to create visit');
+    }
+  }
+  
+  async updateVisit(id: number, updates: Partial<Visit>): Promise<Visit | undefined> {
+    try {
+      const result = await db.update(visits)
+        .set(updates)
+        .where(eq(visits.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating visit:", error);
+      return undefined;
     }
   }
 
