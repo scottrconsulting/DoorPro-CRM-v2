@@ -120,6 +120,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // In a production app, we would hash the password here
+      // Check if we need to make this user an admin (using the admin flag in request)
+      if (req.body.isAdmin === true) {
+        userData.role = "admin";
+      }
+      
       const user = await storage.createUser(userData);
       
       // Automatically log in the user

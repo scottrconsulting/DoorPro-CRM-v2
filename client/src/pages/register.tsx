@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -26,6 +27,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function Register() {
   const { register: registerUser, isRegisterPending, registerError } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -41,7 +43,7 @@ export default function Register() {
   const onSubmit = (data: RegisterFormValues) => {
     setErrorMessage(null);
     const { confirmPassword, ...userData } = data;
-    registerUser(userData);
+    registerUser({ ...userData, isAdmin });
   };
 
   // Extract error message from registerError
@@ -149,6 +151,15 @@ export default function Register() {
                 )}
               </div>
               
+              <div className="flex items-center space-x-2 pt-2">
+                <Switch 
+                  id="admin-mode" 
+                  checked={isAdmin}
+                  onCheckedChange={setIsAdmin}
+                />
+                <Label htmlFor="admin-mode">Create as Admin Account</Label>
+              </div>
+              
               <Button 
                 type="submit" 
                 className="w-full"
@@ -161,10 +172,8 @@ export default function Register() {
           <CardFooter>
             <p className="text-center w-full text-sm">
               Already have an account?{" "}
-              <Link href="/login">
-                <a className="text-primary hover:underline">
-                  Log in
-                </a>
+              <Link href="/login" className="text-primary hover:underline">
+                Log in
               </Link>
             </p>
           </CardFooter>

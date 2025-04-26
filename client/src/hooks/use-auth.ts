@@ -27,13 +27,14 @@ interface RegisterData {
   password: string;
   email: string;
   fullName: string;
+  isAdmin?: boolean;
 }
 
 export function useAuth() {
   const [_, setLocation] = useLocation();
 
   // Fetch the current authenticated user
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<{authenticated: boolean; user?: User}>({
     queryKey: ["/api/auth/user"],
     retry: false,
     refetchOnWindowFocus: true,

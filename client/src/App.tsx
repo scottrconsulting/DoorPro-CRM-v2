@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Router } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,29 +19,19 @@ import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
-function AuthenticatedApp() {
-  return (
-    <AppShell>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/territories" component={Territories} />
-        <Route path="/contacts" component={Contacts} />
-        <Route path="/contacts/:id" component={ContactDetail} />
-        <Route path="/schedule" component={Schedule} />
-        <Route path="/reports" component={Reports} />
-        <Route path="/upgrade" component={Upgrade} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppShell>
-  );
-}
+// This component is now integrated into the ProtectedRoute usage
 
-function AuthRouter() {
+// Protected route wrapper component
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const [_, setLocation] = useLocation();
-
-  // If still loading auth status, show nothing yet to prevent flashing
+  const [_, navigate] = useLocation();
+  
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -49,21 +39,32 @@ function AuthRouter() {
       </div>
     );
   }
+  
+  return isAuthenticated ? <Component /> : null;
+}
 
+function AuthRouter() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      {isAuthenticated ? (
-        <Route component={AuthenticatedApp} />
-      ) : (
-        <Route>
-          {() => {
-            setLocation("/login");
-            return null;
-          }}
-        </Route>
-      )}
+      <Route path="/">
+        <ProtectedRoute component={() => (
+          <AppShell>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/territories" component={Territories} />
+              <Route path="/contacts" component={Contacts} />
+              <Route path="/contacts/:id" component={ContactDetail} />
+              <Route path="/schedule" component={Schedule} />
+              <Route path="/reports" component={Reports} />
+              <Route path="/upgrade" component={Upgrade} />
+              <Route path="/settings" component={Settings} />
+              <Route component={NotFound} />
+            </Switch>
+          </AppShell>
+        )} />
+      </Route>
     </Switch>
   );
 }
