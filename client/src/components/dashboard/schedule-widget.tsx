@@ -88,8 +88,8 @@ export default function ScheduleWidget() {
         ) : todaySchedules.length === 0 ? (
           <div className="py-6 text-center">
             <p className="text-neutral-500">No schedules for this day</p>
-            <Link href="/schedule">
-              <a className="mt-2 text-sm text-primary hover:underline">Add a schedule</a>
+            <Link href="/schedule" className="mt-2 text-sm text-primary hover:underline">
+              Add a schedule
             </Link>
           </div>
         ) : (
@@ -142,10 +142,8 @@ export default function ScheduleWidget() {
       </div>
 
       <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50">
-        <Link href="/schedule">
-          <a className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm text-neutral-700 hover:bg-neutral-50 flex items-center justify-center">
-            <span className="material-icons text-sm mr-1">add</span> Add Appointment
-          </a>
+        <Link href="/schedule" className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm text-neutral-700 hover:bg-neutral-50 flex items-center justify-center">
+          <span className="material-icons text-sm mr-1">add</span> Add Appointment
         </Link>
       </div>
     </div>
