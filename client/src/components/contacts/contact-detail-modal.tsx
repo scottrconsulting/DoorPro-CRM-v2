@@ -16,13 +16,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, parseISO, addDays } from "date-fns";
-import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { 
   FileText, 
   Calendar, 
@@ -36,14 +41,9 @@ import {
   ArrowRight,
   ClipboardList
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { format, parseISO, addDays } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContactDetailModalProps {
   contactId: number;
