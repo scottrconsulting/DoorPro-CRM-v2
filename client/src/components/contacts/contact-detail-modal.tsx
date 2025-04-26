@@ -20,7 +20,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  CheckSquare, 
+  File,
+  Phone,
+  Mail,
+  Video,
+  Upload,
+  ArrowRight,
+  ClipboardList
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,21 +44,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { 
-  Calendar, 
-  ArrowRight, 
-  DollarSign, 
-  CheckSquare, 
-  ClipboardList, 
-  FileText, 
-  File, 
-  Upload,
-  Phone,
-  Mail,
-  Video
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface ContactDetailModalProps {
   contactId: number;
@@ -473,9 +473,9 @@ export default function ContactDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-4 py-3 border-b">
-          <DialogTitle>Customer Details</DialogTitle>
+          <DialogTitle>Contact Details</DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 p-4">
@@ -522,137 +522,541 @@ export default function ContactDetailModal({
             </div>
 
             <div className="md:w-2/3 md:pl-4">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-neutral-800">Visit History</h3>
-                </div>
-                {isLoadingVisits ? (
-                  <div className="flex justify-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="mb-4 grid grid-cols-5 w-full">
+                  <TabsTrigger value="notes" className="flex items-center">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="schedule" className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule
+                  </TabsTrigger>
+                  <TabsTrigger value="sales" className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Sales
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="flex items-center">
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="flex items-center">
+                    <File className="h-4 w-4 mr-2" />
+                    Documents
+                  </TabsTrigger>
+                </TabsList>
+                
+                {/* Notes Tab */}
+                <TabsContent value="notes" className="space-y-4">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-neutral-800">Add Note</h3>
+                    </div>
+                    <div className="border border-neutral-200 rounded-lg p-3">
+                      <Textarea
+                        className="w-full"
+                        rows={4}
+                        placeholder="Add notes about this contact..."
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          onClick={handleSaveNote}
+                          disabled={addVisitMutation.isPending}
+                          size="sm"
+                        >
+                          {addVisitMutation.isPending ? "Saving..." : "Save Note"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                ) : visits.length === 0 ? (
-                  <div className="border border-neutral-200 rounded-lg p-4 text-center">
-                    <p className="text-neutral-500">No visit history yet</p>
-                  </div>
-                ) : (
-                  <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200">
-                    {visits
-                      .sort((a, b) => 
-                        new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
-                      )
-                      .map((visit) => (
-                        <div key={visit.id} className="p-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="text-sm font-medium">
-                                {visit.visitType === "initial" ? "First Contact" : 
-                                 visit.visitType === "follow_up" ? "Follow-up Visit" : 
-                                 "Note"}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-neutral-800">Visit History</h3>
+                    </div>
+                    {isLoadingVisits ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    ) : visits.length === 0 ? (
+                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
+                        <p className="text-neutral-500">No visit history yet</p>
+                      </div>
+                    ) : (
+                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200">
+                        {visits
+                          .sort((a, b) => 
+                            new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
+                          )
+                          .map((visit) => (
+                            <div key={visit.id} className="p-3">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="text-sm font-medium">
+                                    {visit.visitType === "initial" ? "First Contact" : 
+                                     visit.visitType === "follow_up" ? "Follow-up Visit" : 
+                                     "Note"}
+                                  </div>
+                                  <div className="text-xs text-neutral-500">
+                                    {formatDate(visit.visitDate)}
+                                  </div>
+                                </div>
+                                {getVisitTypeBadge(visit.visitType)}
                               </div>
-                              <div className="text-xs text-neutral-500">
-                                {formatDate(visit.visitDate)}
+                              <p className="text-sm text-neutral-600 mt-1">{visit.notes}</p>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {/* Schedule Tab */}
+                <TabsContent value="schedule" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Schedule Follow-up</CardTitle>
+                      <CardDescription>Arrange a meeting or call with this contact</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="scheduleDate">Date</Label>
+                          <Input
+                            id="scheduleDate"
+                            type="date"
+                            value={followUpDate}
+                            onChange={(e) => setFollowUpDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="scheduleTime">Time</Label>
+                          <Input
+                            id="scheduleTime"
+                            type="time"
+                            value={followUpTime}
+                            onChange={(e) => setFollowUpTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="scheduleType">Type</Label>
+                        <Select value={followUpReason} onValueChange={setFollowUpReason}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select meeting type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="product_presentation">Product Presentation</SelectItem>
+                            <SelectItem value="follow_up">Follow-up Call</SelectItem>
+                            <SelectItem value="video_call">Video Call</SelectItem>
+                            <SelectItem value="contract_signing">Contract Signing</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end">
+                      <Button 
+                        onClick={handleScheduleFollowUp}
+                        disabled={scheduleFollowUpMutation.isPending}
+                      >
+                        {scheduleFollowUpMutation.isPending ? "Scheduling..." : "Schedule Follow-up"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Sales Tab */}
+                <TabsContent value="sales" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Record a Sale</CardTitle>
+                      <CardDescription>Track purchases and sales information</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="saleProduct">Product/Service</Label>
+                          <Input
+                            id="saleProduct"
+                            placeholder="Product or service name"
+                            value={saleProduct}
+                            onChange={(e) => setSaleProduct(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="saleAmount">Amount</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-2.5">$</span>
+                            <Input
+                              id="saleAmount"
+                              type="number"
+                              placeholder="0.00"
+                              step="0.01"
+                              min="0"
+                              className="pl-8"
+                              value={saleAmount}
+                              onChange={(e) => setSaleAmount(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="saleDate">Sale Date</Label>
+                          <Input
+                            id="saleDate"
+                            type="date"
+                            value={saleDate}
+                            onChange={(e) => setSaleDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="saleStatus">Status</Label>
+                          <Select value={saleStatus} onValueChange={setSaleStatus}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="refunded">Refunded</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="salePaymentMethod">Payment Method</Label>
+                        <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="credit_card">Credit Card</SelectItem>
+                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                            <SelectItem value="check">Check</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="saleNotes">Notes</Label>
+                        <Textarea
+                          id="saleNotes"
+                          placeholder="Additional notes about this sale"
+                          value={saleNotes}
+                          onChange={(e) => setSaleNotes(e.target.value)}
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end">
+                      <Button 
+                        onClick={handleSaveSale}
+                        disabled={addSaleMutation.isPending}
+                      >
+                        {addSaleMutation.isPending ? "Recording..." : "Record Sale"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-neutral-800">Sales History</h3>
+                    {isLoadingSales ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    ) : sales.length === 0 ? (
+                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
+                        <p className="text-neutral-500">No sales recorded yet</p>
+                      </div>
+                    ) : (
+                      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-neutral-200">
+                          <thead className="bg-neutral-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Date</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Product</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-neutral-200">
+                            {sales.map((sale) => (
+                              <tr key={sale.id}>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm text-neutral-700">
+                                  {format(new Date(sale.saleDate), "MMM d, yyyy")}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-neutral-700">{sale.product}</td>
+                                <td className="px-4 py-2 text-sm text-neutral-700 font-medium">{formatCurrency(sale.amount)}</td>
+                                <td className="px-4 py-2 whitespace-nowrap">
+                                  <Badge
+                                    variant={
+                                      sale.status === "completed" ? "default" :
+                                      sale.status === "pending" ? "outline" :
+                                      "destructive"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {sale.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {/* Tasks Tab */}
+                <TabsContent value="tasks" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Add Task</CardTitle>
+                      <CardDescription>Schedule follow-up tasks related to this contact</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="taskTitle">Task Title</Label>
+                        <Input
+                          id="taskTitle"
+                          placeholder="What needs to be done?"
+                          value={taskTitle}
+                          onChange={(e) => setTaskTitle(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="taskDescription">Description</Label>
+                        <Textarea
+                          id="taskDescription"
+                          placeholder="Add task details"
+                          value={taskDescription}
+                          onChange={(e) => setTaskDescription(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="taskDueDate">Due Date</Label>
+                          <Input
+                            id="taskDueDate"
+                            type="date"
+                            value={taskDueDate}
+                            onChange={(e) => setTaskDueDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="taskPriority">Priority</Label>
+                          <Select value={taskPriority} onValueChange={setTaskPriority}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end">
+                      <Button 
+                        onClick={handleSaveTask}
+                        disabled={addTaskMutation.isPending}
+                      >
+                        {addTaskMutation.isPending ? "Creating..." : "Create Task"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-neutral-800">Open Tasks</h3>
+                    {isLoadingTasks ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    ) : tasks.filter(task => !task.completed).length === 0 ? (
+                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
+                        <p className="text-neutral-500">No open tasks</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {tasks
+                          .filter(task => !task.completed)
+                          .sort((a, b) => 
+                            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+                          )
+                          .map((task) => (
+                            <div key={task.id} className="border border-neutral-200 rounded-lg p-3">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="text-base font-medium flex items-center">
+                                    <span 
+                                      className={`h-2 w-2 rounded-full mr-2 ${
+                                        task.priority === 'high' ? 'bg-red-500' :
+                                        task.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                                      }`}
+                                    ></span>
+                                    {task.title}
+                                  </div>
+                                  <div className="text-xs text-neutral-500 mt-1">
+                                    Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
+                                  </div>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => completeTaskMutation.mutate(task.id)}
+                                  disabled={completeTaskMutation.isPending}
+                                >
+                                  Complete
+                                </Button>
+                              </div>
+                              {task.description && (
+                                <p className="text-sm text-neutral-600 mt-2">{task.description}</p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {/* Documents Tab */}
+                <TabsContent value="documents" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Upload Document</CardTitle>
+                      <CardDescription>Store important files related to this contact</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="documentName">Document Name</Label>
+                          <Input
+                            id="documentName"
+                            placeholder="Contract.pdf"
+                            value={documentName}
+                            onChange={(e) => setDocumentName(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="documentCategory">Category</Label>
+                          <Select value={documentCategory} onValueChange={setDocumentCategory}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="contract">Contract</SelectItem>
+                              <SelectItem value="invoice">Invoice</SelectItem>
+                              <SelectItem value="proposal">Proposal</SelectItem>
+                              <SelectItem value="id">ID Document</SelectItem>
+                              <SelectItem value="general">General</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="documentDescription">Description</Label>
+                        <Textarea
+                          id="documentDescription"
+                          placeholder="Brief description of this document"
+                          value={documentDescription}
+                          onChange={(e) => setDocumentDescription(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <Label htmlFor="documentFile">File</Label>
+                        <div className="border-2 border-dashed border-neutral-200 rounded-lg p-6 text-center hover:bg-neutral-50 transition-colors">
+                          <Upload className="mx-auto h-8 w-8 text-neutral-400" />
+                          <p className="mt-2 text-sm text-neutral-600">
+                            Drag and drop a file, or click to browse
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            PDF, DOCX, XLSX, JPG, PNG up to 10MB
+                          </p>
+                          <Input
+                            id="documentFile"
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setDocumentFile(e.target.files[0]);
+                                setDocumentName(e.target.files[0].name);
+                              }
+                            }}
+                          />
+                          <Button 
+                            variant="outline" 
+                            className="mt-2" 
+                            onClick={() => document.getElementById('documentFile')?.click()}
+                          >
+                            Select File
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end">
+                      <Button disabled>
+                        Upload Document
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-neutral-800">Documents</h3>
+                    {isLoadingDocuments ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      </div>
+                    ) : documents.length === 0 ? (
+                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
+                        <p className="text-neutral-500">No documents uploaded yet</p>
+                      </div>
+                    ) : (
+                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200">
+                        {documents.map((doc) => (
+                          <div key={doc.id} className="p-3 flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="mr-3 text-neutral-500">
+                                {doc.fileType?.includes('pdf') ? (
+                                  <FileText className="h-8 w-8" />
+                                ) : doc.fileType?.includes('image') ? (
+                                  <FileText className="h-8 w-8" />
+                                ) : (
+                                  <File className="h-8 w-8" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{doc.fileName}</p>
+                                <p className="text-xs text-neutral-500">
+                                  {format(new Date(doc.uploadDate), "MMM d, yyyy")} • {doc.category}
+                                </p>
                               </div>
                             </div>
-                            {getVisitTypeBadge(visit.visitType)}
+                            <Button variant="ghost" size="sm">
+                              <span className="material-icons text-neutral-500 text-sm">download</span>
+                            </Button>
                           </div>
-                          <p className="text-sm text-neutral-600 mt-1">{visit.notes}</p>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Notes Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-neutral-800">Notes</h3>
-                </div>
-                <div className="border border-neutral-200 rounded-lg p-3">
-                  <Textarea
-                    className="w-full"
-                    rows={4}
-                    placeholder="Add notes about this customer..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex space-x-2">
-                      <button className="p-1 hover:bg-neutral-100 rounded" title="Template">
-                        <span className="material-icons text-neutral-500 text-sm">
-                          format_list_bulleted
-                        </span>
-                      </button>
-                    </div>
-                    <Button
-                      onClick={handleSaveNote}
-                      disabled={addVisitMutation.isPending}
-                      className="px-3 py-1"
-                      size="sm"
-                    >
-                      {addVisitMutation.isPending ? "Saving..." : "Save Note"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Schedule Follow-up */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-neutral-800">Schedule Follow-up</h3>
-                </div>
-                <div className="border border-neutral-200 rounded-lg p-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-700 mb-1">
-                        Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={followUpDate}
-                        onChange={(e) => setFollowUpDate(e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-700 mb-1">
-                        Time
-                      </label>
-                      <Input
-                        type="time"
-                        value={followUpTime}
-                        onChange={(e) => setFollowUpTime(e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-neutral-700 mb-1">
-                      Reason
-                    </label>
-                    <Select value={followUpReason} onValueChange={setFollowUpReason}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="product_presentation">Product presentation</SelectItem>
-                        <SelectItem value="follow_up">Follow-up call</SelectItem>
-                        <SelectItem value="contract_signing">Contract signing</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="mt-3 text-right">
-                    <Button
-                      onClick={handleScheduleFollowUp}
-                      disabled={scheduleFollowUpMutation.isPending}
-                      className="px-3 py-1"
-                      size="sm"
-                    >
-                      {scheduleFollowUpMutation.isPending ? "Scheduling..." : "Schedule"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
