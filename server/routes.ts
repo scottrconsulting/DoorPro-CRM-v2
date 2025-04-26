@@ -1,0 +1,519 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { 
+  insertUserSchema, 
+  insertContactSchema, 
+  insertVisitSchema, 
+  insertScheduleSchema, 
+  insertTerritorySchema 
+} from "@shared/schema";
+import { ZodError } from "zod";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Session setup
+  const MemorySessionStore = MemoryStore(session);
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "doorprocrm-secret",
+      resave: false,
+      saveUninitialized: false,
+      store: new MemorySessionStore({
+        checkPeriod: 86400000, // prune expired entries every 24h
+      }),
+      cookie: { 
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+      },
+    })
+  );
+
+  // Passport setup
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
+          return done(null, false, { message: "Incorrect username." });
+        }
+        
+        // In a production app, we would use proper password hashing here
+        if (user.password !== password) {
+          return done(null, false, { message: "Incorrect password." });
+        }
+        
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  // Middleware to ensure the user is authenticated
+  const ensureAuthenticated = (req: Request, res: Response, next: any) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+  };
+
+  // Middleware to check if user has pro access
+  const ensureProAccess = (req: Request, res: Response, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const user = req.user as any;
+    if (user.role === "admin" || user.role === "pro") {
+      return next();
+    }
+    
+    res.status(403).json({ message: "This feature requires a Pro subscription" });
+  };
+
+  // Authentication routes
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info.message });
+      
+      req.login(user, (err) => {
+        if (err) return next(err);
+        return res.json({ user: { id: user.id, username: user.username, email: user.email, fullName: user.fullName, role: user.role } });
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if username or email already exists
+      const existingUserByUsername = await storage.getUserByUsername(userData.username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const existingUserByEmail = await storage.getUserByEmail(userData.email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      
+      // In a production app, we would hash the password here
+      const user = await storage.createUser(userData);
+      
+      // Automatically log in the user
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Error during login after registration" });
+        }
+        return res.status(201).json({ user: { id: user.id, username: user.username, email: user.email, fullName: user.fullName, role: user.role } });
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ authenticated: false });
+    }
+    
+    const user = req.user as any;
+    return res.json({ 
+      authenticated: true, 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        email: user.email, 
+        fullName: user.fullName, 
+        role: user.role 
+      } 
+    });
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error during logout" });
+      }
+      return res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Upgrade user to pro (in real app, this would involve payment processing)
+  app.post("/api/users/upgrade", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const updatedUser = await storage.updateUser(user.id, { role: "pro" });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.json({ 
+        user: { 
+          id: updatedUser.id, 
+          username: updatedUser.username, 
+          email: updatedUser.email, 
+          fullName: updatedUser.fullName, 
+          role: updatedUser.role 
+        } 
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to upgrade user" });
+    }
+  });
+
+  // Contact routes
+  app.get("/api/contacts", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const contacts = await storage.getContactsByUser(user.id);
+      return res.json(contacts);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch contacts" });
+    }
+  });
+
+  app.get("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id, 10);
+      const contact = await storage.getContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      if (contact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this contact" });
+      }
+      
+      return res.json(contact);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch contact" });
+    }
+  });
+
+  app.post("/api/contacts", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Check contact limit for free users
+      if (user.role === "free") {
+        const existingContacts = await storage.getContactsByUser(user.id);
+        if (existingContacts.length >= 50) {
+          return res.status(403).json({ message: "Free plan limited to 50 contacts. Please upgrade to Pro." });
+        }
+      }
+      
+      const contactData = insertContactSchema.parse({ ...req.body, userId: user.id });
+      const contact = await storage.createContact(contactData);
+      return res.status(201).json(contact);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create contact" });
+    }
+  });
+
+  app.put("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id, 10);
+      const existingContact = await storage.getContact(contactId);
+      
+      if (!existingContact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingContact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this contact" });
+      }
+      
+      const updatedContact = await storage.updateContact(contactId, req.body);
+      return res.json(updatedContact);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update contact" });
+    }
+  });
+
+  app.delete("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id, 10);
+      const existingContact = await storage.getContact(contactId);
+      
+      if (!existingContact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingContact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this contact" });
+      }
+      
+      await storage.deleteContact(contactId);
+      return res.json({ message: "Contact deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete contact" });
+    }
+  });
+
+  // Visit routes
+  app.get("/api/contacts/:contactId/visits", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId, 10);
+      const contact = await storage.getContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      if (contact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this contact's visits" });
+      }
+      
+      const visits = await storage.getVisitsByContact(contactId);
+      return res.json(visits);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch visits" });
+    }
+  });
+
+  app.post("/api/contacts/:contactId/visits", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId, 10);
+      const contact = await storage.getContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      if (contact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to add visits to this contact" });
+      }
+      
+      const visitData = insertVisitSchema.parse({ ...req.body, contactId, userId: user.id });
+      const visit = await storage.createVisit(visitData);
+      return res.status(201).json(visit);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create visit" });
+    }
+  });
+
+  // Schedule routes
+  app.get("/api/schedules", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      let schedules;
+      if (req.query.start && req.query.end) {
+        const startDate = new Date(req.query.start as string);
+        const endDate = new Date(req.query.end as string);
+        schedules = await storage.getSchedulesByDateRange(user.id, startDate, endDate);
+      } else {
+        schedules = await storage.getSchedulesByUser(user.id);
+      }
+      
+      return res.json(schedules);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch schedules" });
+    }
+  });
+
+  app.post("/api/schedules", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const scheduleData = insertScheduleSchema.parse({ ...req.body, userId: user.id });
+      const schedule = await storage.createSchedule(scheduleData);
+      return res.status(201).json(schedule);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create schedule" });
+    }
+  });
+
+  app.put("/api/schedules/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id, 10);
+      const existingSchedule = await storage.getSchedule(scheduleId);
+      
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingSchedule.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this schedule" });
+      }
+      
+      const updatedSchedule = await storage.updateSchedule(scheduleId, req.body);
+      return res.json(updatedSchedule);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update schedule" });
+    }
+  });
+
+  app.delete("/api/schedules/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id, 10);
+      const existingSchedule = await storage.getSchedule(scheduleId);
+      
+      if (!existingSchedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingSchedule.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this schedule" });
+      }
+      
+      await storage.deleteSchedule(scheduleId);
+      return res.json({ message: "Schedule deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  // Territory routes
+  app.get("/api/territories", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const territories = await storage.getTerritoriesByUser(user.id);
+      return res.json(territories);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch territories" });
+    }
+  });
+
+  app.post("/api/territories", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const territoryData = insertTerritorySchema.parse({ ...req.body, userId: user.id });
+      const territory = await storage.createTerritory(territoryData);
+      return res.status(201).json(territory);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create territory" });
+    }
+  });
+
+  app.put("/api/territories/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const territoryId = parseInt(req.params.id, 10);
+      const existingTerritory = await storage.getTerritory(territoryId);
+      
+      if (!existingTerritory) {
+        return res.status(404).json({ message: "Territory not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTerritory.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this territory" });
+      }
+      
+      const updatedTerritory = await storage.updateTerritory(territoryId, req.body);
+      return res.json(updatedTerritory);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update territory" });
+    }
+  });
+
+  app.delete("/api/territories/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const territoryId = parseInt(req.params.id, 10);
+      const existingTerritory = await storage.getTerritory(territoryId);
+      
+      if (!existingTerritory) {
+        return res.status(404).json({ message: "Territory not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTerritory.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this territory" });
+      }
+      
+      await storage.deleteTerritory(territoryId);
+      return res.json({ message: "Territory deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete territory" });
+    }
+  });
+
+  // Reports routes (Pro feature)
+  app.get("/api/reports", ensureProAccess, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // Get all user contacts
+      const contacts = await storage.getContactsByUser(user.id);
+      
+      // Get all user visits
+      const visits = await storage.getVisitsByUser(user.id);
+      
+      // Calculate statistics
+      const totalContacts = contacts.length;
+      
+      // Count contacts by status
+      const contactsByStatus = contacts.reduce((acc: Record<string, number>, contact) => {
+        acc[contact.status] = (acc[contact.status] || 0) + 1;
+        return acc;
+      }, {});
+      
+      // Calculate conversion rate
+      const convertedContacts = contacts.filter(contact => contact.status === "converted").length;
+      const conversionRate = totalContacts > 0 ? (convertedContacts / totalContacts) * 100 : 0;
+      
+      // Recent activity
+      const recentVisits = visits
+        .sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime())
+        .slice(0, 10);
+      
+      return res.json({
+        totalContacts,
+        contactsByStatus,
+        conversionRate,
+        recentVisits,
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to generate reports" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
