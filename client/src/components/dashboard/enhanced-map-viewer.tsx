@@ -843,6 +843,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               <span className="text-neutral-600">Call back</span>
               {activeStatus === "call_back" && <span className="material-icons text-orange-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
+            
+            {/* Tip for right-click deletion */}
+            <div className="mt-2 text-xs italic text-muted-foreground border-t border-neutral-200 pt-1">
+              Tip: Right-click on any pin to delete it
+            </div>
           </div>
           
           {/* Add house instructions */}
@@ -1106,6 +1111,29 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Delete Contact Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedContact?.fullName || "this contact"}?
+              <br />
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => selectedContact && deleteContactMutation.mutate(selectedContact.id)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
