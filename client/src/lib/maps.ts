@@ -115,6 +115,20 @@ export async function getOptimalRoute(
 }
 
 // Get marker icon based on contact status
+export function getUserAvatarIcon(type: 'male' | 'female'): { url: string; scaledSize: { width: number; height: number } } {
+  if (type === 'male') {
+    return {
+      url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+      scaledSize: { width: 40, height: 40 }
+    };
+  } else {
+    return {
+      url: "https://maps.google.com/mapfiles/ms/icons/pink-dot.png",
+      scaledSize: { width: 40, height: 40 }
+    };
+  }
+}
+
 export function getMarkerIcon(status: string): { url: string; scaledSize: { width: number; height: number } } {
   let color: string;
   

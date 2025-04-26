@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useGoogleMaps } from "@/hooks/use-maps";
-import { geocodeAddress, getMarkerIcon, getCurrentLocation } from "@/lib/maps";
+import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Contact, InsertContact } from "@shared/schema";
@@ -35,6 +35,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
+  const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
+  const [userAvatar, setUserAvatar] = useState<'male' | 'female'>('male');
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
@@ -46,8 +48,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Work timer state - using refs to avoid render loops 
   const workTimerRef = useRef(0);
-  const timerActiveRef = useRef(true);
+  const timerActiveRef = useRef(false); // Start inactive until first house
   const lastActivityRef = useRef(Date.now());
+  const firstHouseRecordedRef = useRef(false);
+  const sessionsRef = useRef<{startTime: string, duration: number}[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // Fetch contacts
@@ -98,16 +102,34 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     },
   });
 
-  // Auto-detect user location on map load
+  // Auto-detect user location on map load and show user avatar
   useEffect(() => {
     const getUserLocation = async () => {
-      if (isLoaded && map) {
+      if (isLoaded && map && window.google) {
         try {
           const position = await getCurrentLocation();
           if (position) {
             panTo(position);
             map.setZoom(16); // Zoom in close enough to see houses
             console.log("Auto-detected user location and centered map");
+            
+            // Remove old user marker if it exists
+            if (userMarker) {
+              userMarker.setMap(null);
+            }
+            
+            // Add user avatar marker
+            const newUserMarker = new window.google.maps.Marker({
+              position,
+              map,
+              title: "Your Location",
+              icon: getUserAvatarIcon(userAvatar),
+              zIndex: 1000, // Make sure user avatar is on top
+              optimized: false, // For better animations
+              animation: window.google.maps.Animation.DROP
+            });
+            
+            setUserMarker(newUserMarker);
           }
         } catch (error) {
           console.error("Error getting current location:", error);
@@ -121,7 +143,45 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
     
     getUserLocation();
-  }, [isLoaded, map, panTo, toast]);
+    
+    // Watch for position changes (real-time location updates)
+    let watchId: number | null = null;
+    
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          
+          // Update user marker position
+          if (userMarker && map) {
+            userMarker.setPosition(newPosition);
+          }
+        },
+        (error) => {
+          console.error("Error watching position:", error);
+        },
+        { 
+          enableHighAccuracy: true, 
+          maximumAge: 10000 // 10 seconds
+        }
+      );
+    }
+    
+    return () => {
+      // Clean up position watcher
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      
+      // Remove user marker
+      if (userMarker) {
+        userMarker.setMap(null);
+      }
+    };
+  }, [isLoaded, map, panTo, toast, userMarker, userAvatar]);
 
   // Update markers when contacts change
   useEffect(() => {
@@ -356,6 +416,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
       return;
     }
+    
+    // Start timer after first house is recorded if not already running
+    if (!firstHouseRecordedRef.current) {
+      firstHouseRecordedRef.current = true;
+      timerActiveRef.current = true;
+      // Add first session
+      sessionsRef.current.push({
+        startTime: new Date().toISOString(),
+        duration: 0
+      });
+      toast({
+        title: "Work timer started",
+        description: "Timer will track your work sessions automatically"
+      });
+    }
 
     createContactMutation.mutate({
       userId: user?.id || 0,
@@ -454,12 +529,44 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             
             <Button 
               onClick={() => {
-                timerActiveRef.current = !timerActiveRef.current;
-                // Force re-render
-                setTimerDisplay(workTimerRef.current);
+                // Only allow pause/resume if we have recorded at least one house
+                if (firstHouseRecordedRef.current) {
+                  // If resuming, add a new session
+                  if (!timerActiveRef.current) {
+                    sessionsRef.current.push({
+                      startTime: new Date().toISOString(),
+                      duration: 0
+                    });
+                    toast({
+                      title: "Session started",
+                      description: "A new work session has been started"
+                    });
+                  } else {
+                    // If pausing, update current session's duration
+                    const currentSession = sessionsRef.current[sessionsRef.current.length - 1];
+                    if (currentSession) {
+                      currentSession.duration = workTimerRef.current;
+                    }
+                    toast({
+                      title: "Session paused",
+                      description: "Your work session has been saved"
+                    });
+                  }
+                  
+                  timerActiveRef.current = !timerActiveRef.current;
+                  // Force re-render
+                  setTimerDisplay(workTimerRef.current);
+                } else {
+                  toast({
+                    title: "Can't start timer yet",
+                    description: "Record your first contact to start the timer",
+                    variant: "destructive"
+                  });
+                }
               }} 
               variant={timerActiveRef.current ? "outline" : "default"}
               size="sm"
+              disabled={!firstHouseRecordedRef.current}
             >
               {timerActiveRef.current ? "Pause" : "Resume"}
             </Button>
@@ -534,6 +641,27 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center"
             >
               <span className="material-icons text-neutral-600">my_location</span>
+            </button>
+            <button
+              onClick={() => {
+                const newAvatar = userAvatar === 'male' ? 'female' : 'male';
+                setUserAvatar(newAvatar);
+                
+                // Update the user marker icon if it exists
+                if (userMarker && window.google) {
+                  userMarker.setIcon(getUserAvatarIcon(newAvatar));
+                  toast({
+                    title: "Avatar updated",
+                    description: `Your map avatar is now ${newAvatar}`
+                  });
+                }
+              }}
+              title="Change Avatar Gender"
+              className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center"
+            >
+              <span className="material-icons text-neutral-600">
+                {userAvatar === 'male' ? 'man' : 'woman'}
+              </span>
             </button>
           </div>
           
