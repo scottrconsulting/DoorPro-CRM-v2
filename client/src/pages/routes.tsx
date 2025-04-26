@@ -192,12 +192,22 @@ export default function Routes() {
       const geocoder = new google.maps.Geocoder();
       for (const location of locations) {
         try {
-          const result = await geocoder.geocode({ address: location.contact.address });
-          if (result.results[0]?.geometry?.location) {
+          // Use Promise-based geocoding
+          const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+            geocoder.geocode({ address: location.contact.address }, (results, status) => {
+              if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                resolve(results);
+              } else {
+                reject(new Error(`Geocoding failed: ${status}`));
+              }
+            });
+          });
+          
+          if (result[0]?.geometry?.location) {
             location.geocoded = true;
             location.latLng = {
-              lat: result.results[0].geometry.location.lat(),
-              lng: result.results[0].geometry.location.lng(),
+              lat: result[0].geometry.location.lat(),
+              lng: result[0].geometry.location.lng(),
             };
           }
         } catch (error) {
