@@ -19,6 +19,16 @@ async function main() {
   try {
     // Push the schema to the database
     await db.execute(`
+      -- Create teams table first
+      CREATE TABLE IF NOT EXISTS "teams" (
+        "id" SERIAL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "description" TEXT,
+        "manager_id" INTEGER NOT NULL,
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    
       -- Create tables if they don't exist
       CREATE TABLE IF NOT EXISTS "users" (
         "id" SERIAL PRIMARY KEY,
@@ -27,8 +37,28 @@ async function main() {
         "email" TEXT NOT NULL UNIQUE,
         "full_name" TEXT NOT NULL,
         "role" TEXT NOT NULL DEFAULT 'free',
+        "team_id" INTEGER,
+        "is_manager" BOOLEAN DEFAULT FALSE,
         "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
       );
+      
+      -- Add team_id and is_manager columns to users if they don't exist
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "team_id" INTEGER;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_manager" BOOLEAN DEFAULT FALSE;
+      
+      -- Add foreign key constraint if it doesn't exist
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'users_team_id_fkey'
+        ) THEN
+          ALTER TABLE "users" ADD CONSTRAINT "users_team_id_fkey" 
+          FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE SET NULL;
+        END IF;
+      EXCEPTION
+        WHEN others THEN
+        -- Do nothing if constraint already exists or fails
+      END $$;
 
       -- Make sure contacts has all new columns
       CREATE TABLE IF NOT EXISTS "contacts" (

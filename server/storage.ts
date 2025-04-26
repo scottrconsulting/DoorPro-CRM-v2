@@ -7,6 +7,7 @@ import {
   sales,
   tasks,
   documents,
+  teams,
   type User,
   type InsertUser,
   type Contact,
@@ -22,7 +23,9 @@ import {
   type Task,
   type InsertTask,
   type Document,
-  type InsertDocument
+  type InsertDocument,
+  type Team,
+  type InsertTeam
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
@@ -124,6 +127,90 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+
+  // Team operations
+  async getTeam(id: number): Promise<Team | undefined> {
+    try {
+      const result = await db.select().from(teams).where(eq(teams.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching team:", error);
+      return undefined;
+    }
+  }
+
+  async getTeamsByManager(managerId: number): Promise<Team[]> {
+    try {
+      return await db.select().from(teams).where(eq(teams.managerId, managerId));
+    } catch (error) {
+      console.error("Error fetching teams by manager:", error);
+      return [];
+    }
+  }
+
+  async createTeam(insertTeam: InsertTeam): Promise<Team> {
+    try {
+      const result = await db.insert(teams).values(insertTeam).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating team:", error);
+      throw new Error('Failed to create team');
+    }
+  }
+
+  async updateTeam(id: number, updates: Partial<Team>): Promise<Team | undefined> {
+    try {
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(teams)
+        .set(updatesWithTimestamp)
+        .where(eq(teams.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating team:", error);
+      return undefined;
+    }
+  }
+
+  async deleteTeam(id: number): Promise<boolean> {
+    try {
+      // First update all users that belong to this team to not belong to any team
+      await db.update(users)
+        .set({ teamId: null })
+        .where(eq(users.teamId, id));
+        
+      // Then delete the team
+      const result = await db.delete(teams)
+        .where(eq(teams.id, id))
+        .returning({ id: teams.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      return false;
+    }
+  }
+
+  async getTeamMembers(teamId: number): Promise<User[]> {
+    try {
+      return await db.select().from(users).where(eq(users.teamId, teamId));
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      return [];
+    }
+  }
+  
+  async getUsersByTeam(teamId: number): Promise<User[]> {
+    try {
+      return await db.select().from(users).where(eq(users.teamId, teamId));
+    } catch (error) {
+      console.error("Error fetching users by team:", error);
+      return [];
+    }
   }
 
   // User operations
