@@ -1783,8 +1783,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let event;
     
     try {
+      // Need to use raw body for Stripe signature verification
       event = constructEventFromPayload(signature, req.body);
-    } catch (err) {
+    } catch (error) {
+      console.error("Webhook signature verification failed:", error);
       return res.status(400).json({ message: "Invalid signature" });
     }
     
@@ -1813,10 +1815,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const user = await storage.getUserByStripeCustomerId(stripeCustomerId);
             
             if (user) {
-              await storage.updateUser(user.id, {
-                stripeSubscriptionId: subscription.id,
-                subscriptionStatus: subscription.status
-              });
+              await storage.updateUserStripeInfo(
+                user.id,
+                stripeCustomerId,
+                subscription.id,
+                subscription.status
+              );
             } else {
               console.error("No team or user found for customer ID:", stripeCustomerId);
             }
@@ -1827,19 +1831,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
         break;
         
       case "invoice.payment_succeeded":
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         if (invoice.subscription) {
           // Update payment status for the subscription
           console.log("Payment succeeded for subscription:", invoice.subscription);
+          
+          // You could update the subscription status to 'active' here if needed
+          const stripeCustomerId = invoice.customer as string;
+          try {
+            // Try to find the team with this customer ID first
+            const team = await storage.getTeamByStripeCustomerId(stripeCustomerId);
+            
+            if (team && team.subscriptionStatus !== 'active') {
+              await storage.updateTeamStripeInfo(
+                team.id,
+                stripeCustomerId,
+                invoice.subscription as string,
+                'active'
+              );
+            } else {
+              // If no team found, maybe it's a user subscription
+              const user = await storage.getUserByStripeCustomerId(stripeCustomerId);
+              
+              if (user && user.subscriptionStatus !== 'active') {
+                await storage.updateUserStripeInfo(
+                  user.id,
+                  stripeCustomerId,
+                  invoice.subscription as string,
+                  'active'
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Error updating subscription status after payment:", error);
+          }
         }
         break;
         
       case "invoice.payment_failed":
-        const failedInvoice = event.data.object as Stripe.Invoice;
+        const failedInvoice = event.data.object as any;
         if (failedInvoice.subscription) {
           // Handle failed payment
           console.error("Payment failed for subscription:", failedInvoice.subscription);
-          // Could send an email notification here
+          
+          // Update the subscription status to 'past_due'
+          const stripeCustomerId = failedInvoice.customer as string;
+          try {
+            // Try to find the team with this customer ID first
+            const team = await storage.getTeamByStripeCustomerId(stripeCustomerId);
+            
+            if (team) {
+              await storage.updateTeamStripeInfo(
+                team.id,
+                stripeCustomerId,
+                failedInvoice.subscription as string,
+                'past_due'
+              );
+            } else {
+              // If no team found, maybe it's a user subscription
+              const user = await storage.getUserByStripeCustomerId(stripeCustomerId);
+              
+              if (user) {
+                await storage.updateUserStripeInfo(
+                  user.id,
+                  stripeCustomerId,
+                  failedInvoice.subscription as string,
+                  'past_due'
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Error updating subscription status after failed payment:", error);
+          }
+          
+          // TODO: Send an email notification here
         }
         break;
         
