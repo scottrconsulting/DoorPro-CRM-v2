@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation, Router } from "wouter";
+import { Route, Switch, Router, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,23 +20,19 @@ import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
-// This component is now integrated into the ProtectedRoute usage
-
-// Protected route wrapper component
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+// Simple protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const [_, navigate] = useLocation();
   
   useEffect(() => {
+    // Log authentication state for debugging
+    console.log("Protected route - Auth state:", { isAuthenticated, isLoading });
+    
     if (!isLoading && !isAuthenticated) {
       navigate("/login");
     }
   }, [isLoading, isAuthenticated, navigate]);
-  
-  useEffect(() => {
-    // Log authentication state for debugging
-    console.log("Auth state:", { isAuthenticated, isLoading });
-  }, [isAuthenticated, isLoading]);
   
   if (isLoading) {
     return (
@@ -46,40 +42,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     );
   }
   
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Include the component directly in render, not as function call
-  return <Component />;
-}
-
-function AuthRouter() {
-  return (
-    <>
-      <Route path="/login"><Login /></Route>
-      <Route path="/register"><Register /></Route>
-      
-      {/* Protected routes */}
-      <Route path="/">
-        <ProtectedRoute component={() => (
-          <AppShell>
-            <Route path="/"><Dashboard /></Route>
-            <Route path="/territories"><Territories /></Route>
-            <Route path="/contacts"><Contacts /></Route>
-            <Route path="/contacts/:id"><ContactDetail /></Route>
-            <Route path="/schedule"><Schedule /></Route>
-            <Route path="/teams"><Teams /></Route>
-            <Route path="/reports"><Reports /></Route>
-            <Route path="/upgrade"><Upgrade /></Route>
-            <Route path="/settings"><Settings /></Route>
-            <Route path="/:rest*"><NotFound /></Route>
-          </AppShell>
-        )} />
-      </Route>
-    </>
-  );
-}
+  return isAuthenticated ? <>{children}</> : null;
+};
 
 function App() {
   const [mounted, setMounted] = useState(false);
@@ -95,7 +59,54 @@ function App() {
         <TooltipProvider>
           <Router>
             <Toaster />
-            {mounted && <AuthRouter />}
+            {mounted && (
+              <Switch>
+                <Route path="/login">
+                  <Login />
+                </Route>
+                <Route path="/register">
+                  <Register />
+                </Route>
+                <Route path="/*">
+                  <ProtectedRoute>
+                    <AppShell>
+                      <Switch>
+                        <Route path="/" exact>
+                          <Dashboard />
+                        </Route>
+                        <Route path="/territories">
+                          <Territories />
+                        </Route>
+                        <Route path="/contacts/:id">
+                          <ContactDetail />
+                        </Route>
+                        <Route path="/contacts">
+                          <Contacts />
+                        </Route>
+                        <Route path="/schedule">
+                          <Schedule />
+                        </Route>
+                        <Route path="/teams">
+                          <Teams />
+                        </Route>
+                        <Route path="/reports">
+                          <Reports />
+                        </Route>
+                        <Route path="/upgrade">
+                          <Upgrade />
+                        </Route>
+                        <Route path="/settings">
+                          <Settings />
+                        </Route>
+                        <Route>
+                          <NotFound />
+                        </Route>
+                      </Switch>
+                    </AppShell>
+                  </ProtectedRoute>
+                </Route>
+              </Switch>
+            )}
           </Router>
         </TooltipProvider>
       </ThemeProvider>
