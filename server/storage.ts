@@ -9,6 +9,7 @@ import {
   documents,
   teams,
   customizations,
+  messageTemplates,
   PIN_COLORS,
   CONTACT_STATUSES,
   QUICK_ACTIONS,
@@ -31,7 +32,9 @@ import {
   type Team,
   type InsertTeam,
   type Customization,
-  type InsertCustomization
+  type InsertCustomization,
+  type MessageTemplate,
+  type InsertMessageTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";

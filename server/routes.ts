@@ -9,6 +9,7 @@ import {
   insertTerritorySchema,
   insertTeamSchema,
   insertCustomizationSchema,
+  insertMessageTemplateSchema,
   PIN_COLORS,
   CONTACT_STATUSES,
   QUICK_ACTIONS

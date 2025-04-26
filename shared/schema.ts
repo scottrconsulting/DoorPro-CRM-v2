@@ -175,6 +175,20 @@ export const customizations = pgTable("customizations", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Message templates for SMS and Email communications
+export const messageTemplates = pgTable("message_templates", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // "email" or "text"
+  name: text("name").notNull(),
+  subject: text("subject"),  // For email templates
+  body: text("body").notNull(),
+  isDefault: boolean("is_default").default(false),
+  isHtml: boolean("is_html").default(false),  // For email templates
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Schema Validation
 export const insertTeamSchema = createInsertSchema(teams).omit({
   id: true,
@@ -230,6 +244,12 @@ export const insertCustomizationSchema = createInsertSchema(customizations).omit
   updatedAt: true,
 });
 
+export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof teams.$inferSelect;
@@ -260,3 +280,6 @@ export type Document = typeof documents.$inferSelect;
 
 export type InsertCustomization = z.infer<typeof insertCustomizationSchema>;
 export type Customization = typeof customizations.$inferSelect;
+
+export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
