@@ -9,7 +9,7 @@ import Territories from "@/pages/territories";
 import Contacts from "@/pages/contacts";
 import ContactDetail from "@/pages/contact-detail";
 import Schedule from "@/pages/schedule";
-import Teams from "@/pages/teams";
+import Teams from "@/pages/enhanced-teams";
 import Reports from "@/pages/reports";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
