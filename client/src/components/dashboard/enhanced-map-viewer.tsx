@@ -294,8 +294,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const timerInterval = setInterval(() => {
       const now = Date.now();
       
-      // If inactive for more than 30 minutes (1800000 ms), pause the timer
+      // If inactive for more than 30 minutes (1800000 ms), pause the timer automatically
       if (now - lastActivityRef.current > 1800000 && timerActiveRef.current) {
+        // Update current session's duration before pausing
+        const currentSession = sessionsRef.current[sessionsRef.current.length - 1];
+        if (currentSession) {
+          currentSession.duration = workTimerRef.current;
+        }
+        
         timerActiveRef.current = false;
         
         // Save work time to localStorage or could send to server in real app
@@ -304,18 +310,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           date: new Date().toISOString().split('T')[0],
           duration: workTimerRef.current,
           endTime: new Date().toISOString(),
+          sessions: sessionsRef.current,
         };
         localStorage.setItem(`workTime_${user?.id}_${new Date().toISOString().split('T')[0]}`, 
                             JSON.stringify(workTimeData));
         
         toast({
-          title: "Timer paused",
+          title: "Timer paused automatically",
           description: "No activity detected for 30 minutes",
         });
+        
+        // Force UI update
+        setTimerDisplay(workTimerRef.current);
       }
       
       // Only increment if active
-      if (timerActiveRef.current) {
+      if (timerActiveRef.current && firstHouseRecordedRef.current) {
         workTimerRef.current += 1;
       }
     }, 1000);
@@ -324,14 +334,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const handleActivity = () => {
       lastActivityRef.current = Date.now();
       
-      // If timer was inactive, restart it
-      if (!timerActiveRef.current) {
-        timerActiveRef.current = true;
-        toast({
-          title: "Timer resumed",
-          description: "Activity detected",
-        });
-      }
+      // Do not automatically restart the timer when activity is detected
+      // as this would interfere with manual pausing - only update the last activity timestamp
+      // The user will need to click the Resume button to restart the timer
     };
     
     // Add event listeners for activity tracking
@@ -535,30 +540,37 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => {
                 // Only allow pause/resume if we have recorded at least one house
                 if (firstHouseRecordedRef.current) {
-                  // If resuming, add a new session
-                  if (!timerActiveRef.current) {
+                  // Setup state to toggle between active and inactive
+                  const newTimerState = !timerActiveRef.current;
+                  
+                  // If resuming (going from inactive to active)
+                  if (newTimerState) {
+                    // Start a new session
                     sessionsRef.current.push({
                       startTime: new Date().toISOString(),
                       duration: 0
                     });
                     toast({
-                      title: "Session started",
+                      title: "Timer resumed",
                       description: "A new work session has been started"
                     });
                   } else {
-                    // If pausing, update current session's duration
+                    // If pausing (going from active to inactive)
+                    // Update current session's duration
                     const currentSession = sessionsRef.current[sessionsRef.current.length - 1];
                     if (currentSession) {
                       currentSession.duration = workTimerRef.current;
                     }
                     toast({
-                      title: "Session paused",
+                      title: "Timer paused",
                       description: "Your work session has been saved"
                     });
                   }
                   
-                  timerActiveRef.current = !timerActiveRef.current;
-                  // Force re-render
+                  // Update timer state
+                  timerActiveRef.current = newTimerState;
+                  
+                  // Force immediate re-render for UI update
                   setTimerDisplay(workTimerRef.current);
                 } else {
                   toast({
@@ -568,10 +580,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   });
                 }
               }} 
-              variant={timerActiveRef.current ? "outline" : "default"}
+              variant={timerActiveRef.current ? "default" : "outline"}
               size="sm"
               disabled={!firstHouseRecordedRef.current}
+              className="flex items-center"
             >
+              <span className="material-icons text-sm mr-1">
+                {timerActiveRef.current ? "pause_circle" : "play_circle"}
+              </span>
               {timerActiveRef.current ? "Pause" : "Resume"}
             </Button>
           </div>
