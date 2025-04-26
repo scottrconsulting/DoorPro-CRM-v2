@@ -27,6 +27,27 @@ export async function apiRequest(
     });
 
     await throwIfResNotOk(res);
+    
+    // For non-GET requests, try to parse JSON but handle empty responses
+    if (method !== 'GET') {
+      try {
+        const text = await res.text();
+        if (!text || text.trim() === '') {
+          return res;
+        }
+        // Create a clone of the response with the parsed JSON
+        const clonedRes = new Response(text, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: res.headers
+        });
+        return clonedRes;
+      } catch (parseError) {
+        console.error(`Error parsing JSON in apiRequest (${method} ${url}):`, parseError);
+        return res;
+      }
+    }
+    
     return res;
   } catch (error) {
     console.error(`API Request error (${method} ${url}):`, error);
@@ -55,7 +76,19 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
       }
 
       await throwIfResNotOk(res);
-      return await res.json();
+      try {
+        // First try to parse as JSON
+        const text = await res.text();
+        if (!text || text.trim() === '') {
+          // Handle empty responses
+          return [];
+        }
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error(`Error parsing JSON response from ${url}:`, parseError);
+        // Return an empty array for collection endpoints or null for single entity endpoints
+        return url.includes('/api/contacts') || url.includes('/api/visits') || url.includes('/api/schedules') ? [] : null;
+      }
     } catch (error) {
       console.error(`Query error for ${url}:`, error);
       throw error;

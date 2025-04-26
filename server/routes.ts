@@ -814,6 +814,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports routes (Pro feature)
+  // Get all visits for a user
+  app.get("/api/visits", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const visits = await storage.getVisitsByUser(user.id);
+      return res.json(visits);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch visits" });
+    }
+  });
+
   app.get("/api/reports", ensureProAccess, async (req, res) => {
     try {
       const user = req.user as any;
