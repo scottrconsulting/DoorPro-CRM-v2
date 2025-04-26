@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 // Add Google Maps types
 declare global {
   interface Window {
-    google: typeof google;
+    google: any;
   }
 }
 
@@ -44,12 +44,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     notes: ""
   });
   
+  // Work timer state - using refs to avoid render loops 
+  const workTimerRef = useRef(0);
+  const timerActiveRef = useRef(true);
+  const lastActivityRef = useRef(Date.now());
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
   // Fetch contacts
   const { data: contacts = [], isLoading: isLoadingContacts } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  // Initialize map with default location (US center)
+  // Initialize map with default location (US center), but will immediately try to locate user
   const {
     mapRef,
     map,
@@ -92,6 +98,31 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     },
   });
 
+  // Auto-detect user location on map load
+  useEffect(() => {
+    const getUserLocation = async () => {
+      if (isLoaded && map) {
+        try {
+          const position = await getCurrentLocation();
+          if (position) {
+            panTo(position);
+            map.setZoom(16); // Zoom in close enough to see houses
+            console.log("Auto-detected user location and centered map");
+          }
+        } catch (error) {
+          console.error("Error getting current location:", error);
+          toast({
+            title: "Location access denied",
+            description: "Please enable location services to see houses around you",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+    
+    getUserLocation();
+  }, [isLoaded, map, panTo, toast]);
+
   // Update markers when contacts change
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
@@ -121,12 +152,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     });
   }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact]);
 
-  // Set up click listener for adding houses
+  // Set up click listener for adding houses - can click anywhere on the map
   useEffect(() => {
     if (!isLoaded || !map || !window.google) return;
     
-    const mapClickListener = map.addListener("click", async (e: google.maps.MapMouseEvent) => {
-      if (!isAddingHouse || !e.latLng) return;
+    const mapClickListener = map.addListener("click", async (e: any) => {
+      if (!e.latLng) return;
+      
+      // Check if the click is on an existing contact marker
+      // If it is, the existing marker's click handler will handle it
+      const clickedFeature = map.data?.getFeatureAt?.(e.latLng);
+      if (clickedFeature) return;
+      
+      // If we're not in adding house mode, don't add a new marker, but still show the form
+      // This way users can click anywhere on map without toggling "Add House" mode
       
       // Remove the previous marker if it exists
       if (newHouseMarker) {
@@ -141,18 +180,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
       
       setNewHouseMarker(marker);
+      setIsAddingHouse(true); // Auto-enable adding mode
       
       // Get the address from the coordinates
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ location: e.latLng.toJSON() }, (
-        results: google.maps.GeocoderResult[], 
-        status: google.maps.GeocoderStatus
+        results: any, 
+        status: any
       ) => {
         if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
           const address = results[0].formatted_address;
           setNewContactAddress(address);
-          setNewContactCoords(e.latLng!.toJSON());
-          setNewContactForm((prev) => ({ ...prev, address }));
+          setNewContactCoords(e.latLng.toJSON());
+          setNewContactForm((prev) => ({ 
+            ...prev, 
+            address,
+            // Add current timestamp for visited
+            notes: `Initial contact: ${new Date().toLocaleString()}`
+          }));
           setShowNewContactDialog(true);
         } else {
           toast({
@@ -165,10 +210,96 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     });
     
     return () => {
-      // Clean up the listener when the component unmounts or when isAddingHouse changes
+      // Clean up the listener when the component unmounts
       window.google.maps.event.removeListener(mapClickListener);
     };
-  }, [isLoaded, map, isAddingHouse, addMarker, newHouseMarker, toast]);
+  }, [isLoaded, map, addMarker, newHouseMarker, toast]);
+
+  // Work timer implementation
+  useEffect(() => {
+    // Start timer when component loads
+    if (!timerActive) {
+      setTimerActive(true);
+    }
+    const initialActivity = Date.now();
+    if (lastActivity === 0) {
+      setLastActivity(initialActivity);
+    }
+    
+    // Update current time every second
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    // Update the timer only if active
+    const timerInterval = setInterval(() => {
+      const now = Date.now();
+      
+      // If inactive for more than 30 minutes (1800000 ms), pause the timer
+      if (now - lastActivity > 1800000 && timerActive) {
+        setTimerActive(false);
+        
+        // Save work time to localStorage or could send to server in real app
+        const workTimeData = {
+          userId: user?.id,
+          date: new Date().toISOString().split('T')[0],
+          duration: workTimer,
+          endTime: new Date().toISOString(),
+        };
+        localStorage.setItem(`workTime_${user?.id}_${new Date().toISOString().split('T')[0]}`, 
+                            JSON.stringify(workTimeData));
+        
+        toast({
+          title: "Timer paused",
+          description: "No activity detected for 30 minutes",
+        });
+      }
+      
+      // Only increment if active
+      if (timerActive) {
+        setWorkTimer(prev => prev + 1);
+      }
+    }, 1000);
+    
+    // Track mouse movement and map interaction as activity
+    const handleActivity = () => {
+      setLastActivity(Date.now());
+      
+      // If timer was inactive, restart it
+      if (!timerActive) {
+        setTimerActive(true);
+        toast({
+          title: "Timer resumed",
+          description: "Activity detected",
+        });
+      }
+    };
+    
+    // Add event listeners for activity tracking
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    
+    return () => {
+      clearInterval(timerInterval);
+      clearInterval(timeInterval);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      
+      // Save work time when component unmounts
+      const workTimeData = {
+        userId: user?.id,
+        date: new Date().toISOString().split('T')[0],
+        duration: workTimer,
+        endTime: new Date().toISOString(),
+      };
+      localStorage.setItem(`workTime_${user?.id}_${new Date().toISOString().split('T')[0]}`, 
+                          JSON.stringify(workTimeData));
+    };
+  }, []);
 
   // Change map type
   useEffect(() => {
@@ -280,8 +411,51 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setSelectedContacts(newSelectedContacts);
   };
 
+  // Format timer for display
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <>
+      {/* Work Timer Panel */}
+      <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden mb-4">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="material-icons text-primary mr-2">schedule</span>
+            <div>
+              <h3 className="font-medium text-neutral-800">Work Timer</h3>
+              <p className="text-xs text-neutral-500">Tracks your active time</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="text-center">
+              <p className="text-xs text-neutral-500">Current Time</p>
+              <p className="font-medium">{currentTime.toLocaleTimeString()}</p>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-xs text-neutral-500">Work Duration</p>
+              <p className={`font-bold ${timerActive ? 'text-green-600' : 'text-red-500'}`}>
+                {formatTime(workTimer)}
+              </p>
+            </div>
+            
+            <Button 
+              onClick={() => setTimerActive(!timerActive)} 
+              variant={timerActive ? "outline" : "default"}
+              size="sm"
+            >
+              {timerActive ? "Pause" : "Resume"}
+            </Button>
+          </div>
+        </div>
+      </div>
+      
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
         <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
           <h2 className="font-medium text-neutral-800">Territory Map</h2>
