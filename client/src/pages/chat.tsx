@@ -128,9 +128,9 @@ export default function ChatPage() {
   });
 
   // Form for adding a participant to a conversation
-  const addParticipantForm = useForm({
+  const addParticipantForm = useForm<{ userId: string | number; isAdmin: boolean }>({
     defaultValues: {
-      userId: 0,
+      userId: "",
       isAdmin: false,
     },
   });
@@ -323,12 +323,26 @@ export default function ChatPage() {
   };
 
   // Handle adding a participant
-  const onSubmitAddParticipant = (data: { userId: number; isAdmin: boolean }) => {
+  const onSubmitAddParticipant = (data: { userId: string | number; isAdmin: boolean }) => {
     if (!selectedConversation) return;
+    
+    const userId = typeof data.userId === 'string' && data.userId !== '' 
+      ? parseInt(data.userId, 10) 
+      : data.userId;
+    
+    // Only proceed if we have a valid userId (not NaN, not empty string)
+    if (!userId) {
+      toast({
+        title: "Error adding participant",
+        description: "Please select a user to add",
+        variant: "destructive",
+      });
+      return;
+    }
 
     addParticipantMutation.mutate({
       conversationId: selectedConversation,
-      userId: data.userId,
+      userId: userId,
       isAdmin: data.isAdmin,
     });
   };
@@ -546,7 +560,6 @@ export default function ChatPage() {
                             className="w-full border rounded-md p-2"
                             {...addParticipantForm.register("userId", {
                               required: true,
-                              valueAsNumber: true,
                             })}
                           >
                             <option value="">Select a user</option>
