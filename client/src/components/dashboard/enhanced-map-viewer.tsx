@@ -109,9 +109,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         try {
           const position = await getCurrentLocation();
           if (position) {
-            panTo(position);
-            map.setZoom(16); // Zoom in close enough to see houses
-            console.log("Auto-detected user location and centered map");
+            // Only pan to user's location on initial load, not continuously
+            if (!userMarker) {
+              panTo(position);
+              map.setZoom(16); // Zoom in close enough to see houses
+              console.log("Auto-detected user location and centered map");
+            }
             
             // Remove old user marker if it exists
             if (userMarker) {
@@ -155,7 +158,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             lng: position.coords.longitude
           };
           
-          // Update user marker position
+          // Update user marker position without moving the map
           if (userMarker && map) {
             userMarker.setPosition(newPosition);
           }
@@ -165,7 +168,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         },
         { 
           enableHighAccuracy: true, 
-          maximumAge: 10000 // 10 seconds
+          maximumAge: 10000, // 10 seconds
+          timeout: 15000 // 15 seconds timeout
         }
       );
     }
