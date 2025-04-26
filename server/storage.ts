@@ -8,6 +8,7 @@ import {
   tasks,
   documents,
   teams,
+  customizations,
   type User,
   type InsertUser,
   type Contact,
@@ -25,7 +26,9 @@ import {
   type Document,
   type InsertDocument,
   type Team,
-  type InsertTeam
+  type InsertTeam,
+  type Customization,
+  type InsertCustomization
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
