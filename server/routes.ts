@@ -6,7 +6,8 @@ import {
   insertContactSchema, 
   insertVisitSchema, 
   insertScheduleSchema, 
-  insertTerritorySchema 
+  insertTerritorySchema,
+  insertTeamSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";
@@ -410,6 +411,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team management routes
+  // Get all teams managed by the user
+  app.get("/api/teams", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const teams = await storage.getTeamsByManager(user.id);
+      return res.json(teams);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch teams" });
+    }
+  });
+
+  // Get a specific team
+  app.get("/api/teams/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      // Only the team manager or admin can access the team
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this team" });
+      }
+      
+      return res.json(team);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch team" });
+    }
+  });
+
+  // Create a new team
+  app.post("/api/teams", ensureProAccess, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      const teamData = insertTeamSchema.parse({ ...req.body, managerId: user.id });
+      const team = await storage.createTeam(teamData);
+      
+      // Set the user as manager if they aren't already
+      if (!user.isManager) {
+        await storage.updateUser(user.id, { isManager: true });
+      }
+      
+      return res.status(201).json(team);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      return res.status(500).json({ message: "Failed to create team" });
+    }
+  });
+
+  // Update a team
+  app.put("/api/teams/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const existingTeam = await storage.getTeam(teamId);
+      
+      if (!existingTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTeam.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this team" });
+      }
+      
+      const updatedTeam = await storage.updateTeam(teamId, req.body);
+      return res.json(updatedTeam);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update team" });
+    }
+  });
+
+  // Delete a team
+  app.delete("/api/teams/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const existingTeam = await storage.getTeam(teamId);
+      
+      if (!existingTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      if (existingTeam.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to delete this team" });
+      }
+      
+      const success = await storage.deleteTeam(teamId);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete team" });
+      }
+      
+      return res.json({ message: "Team deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete team" });
+    }
+  });
+
+  // Get team members
+  app.get("/api/teams/:id/members", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to access this team's members" });
+      }
+      
+      const members = await storage.getTeamMembers(teamId);
+      return res.json(members);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // Add user to team
+  app.post("/api/teams/:id/members", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to add members to this team" });
+      }
+      
+      const memberId = req.body.userId;
+      if (!memberId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const memberToAdd = await storage.getUser(memberId);
+      if (!memberToAdd) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update the user's team ID
+      const updatedUser = await storage.updateUser(memberId, { teamId });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to add user to team" });
+      }
+      
+      return res.json(updatedUser);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to add user to team" });
+    }
+  });
+
+  // Remove user from team
+  app.delete("/api/teams/:teamId/members/:userId", ensureAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId, 10);
+      const team = await storage.getTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      const user = req.user as any;
+      if (team.managerId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to remove members from this team" });
+      }
+      
+      const memberId = parseInt(req.params.userId, 10);
+      const memberToRemove = await storage.getUser(memberId);
+      
+      if (!memberToRemove) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (memberToRemove.teamId !== teamId) {
+        return res.status(400).json({ message: "User is not a member of this team" });
+      }
+      
+      // Remove the user from the team
+      const updatedUser = await storage.updateUser(memberId, { teamId: null });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to remove user from team" });
+      }
+      
+      return res.json({ message: "User removed from team successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to remove user from team" });
+    }
+  });
+  
   // Territory routes
   app.get("/api/territories", ensureAuthenticated, async (req, res) => {
     try {
