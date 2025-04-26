@@ -366,9 +366,9 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Conversations List */}
-        <div className="w-80 border-r flex flex-col">
+        <div className="w-full md:w-80 border-r flex flex-col md:h-full h-auto">
           <div className="p-4 border-b">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Messages</h2>
@@ -487,7 +487,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-[50vh] md:min-h-0">
           {!selectedConversation ? (
             <div className="flex-1 flex flex-col items-center justify-center p-4">
               <div className="text-center space-y-4 max-w-md">
