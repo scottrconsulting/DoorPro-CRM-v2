@@ -360,72 +360,157 @@ export default function Territories() {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      ) : territories.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <span className="material-icons text-6xl text-neutral-300 mb-4">map</span>
-            <h3 className="text-xl font-medium text-neutral-700 mb-2">No Territories</h3>
-            <p className="text-neutral-500 mb-6 text-center max-w-md">
-              Create a territory to start organizing your door-to-door sales areas and track your coverage.
-            </p>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              disabled={isAtTerritoryLimit}
-            >
-              <span className="material-icons mr-2">add_location</span>
-              Create Your First Territory
-            </Button>
-          </CardContent>
-        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {territories.map((territory) => (
-            <Card key={territory.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{territory.name}</CardTitle>
-                  <button 
-                    onClick={() => showTerritoryOnMap(territory)}
-                    className="p-1 rounded hover:bg-neutral-100"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Territory List */}
+          <div className="order-2 lg:order-1">
+            {territories.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <span className="material-icons text-6xl text-neutral-300 mb-4">map</span>
+                  <h3 className="text-xl font-medium text-neutral-700 mb-2">No Territories</h3>
+                  <p className="text-neutral-500 mb-6 text-center max-w-md">
+                    Create a territory to start organizing your door-to-door sales areas and track your coverage.
+                  </p>
+                  <Button 
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    disabled={isAtTerritoryLimit}
                   >
-                    <span className="material-icons text-neutral-600">visibility</span>
-                  </button>
+                    <span className="material-icons mr-2">add_location</span>
+                    Create Your First Territory
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {territories.map((territory) => (
+                  <Card key={territory.id} className="overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg">{territory.name}</CardTitle>
+                        <button 
+                          onClick={() => showTerritoryOnMap(territory)}
+                          className="p-1 rounded hover:bg-neutral-100"
+                        >
+                          <span className="material-icons text-neutral-600">visibility</span>
+                        </button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {territory.description && (
+                        <p className="text-neutral-600 text-sm mb-3">{territory.description}</p>
+                      )}
+                      <div className="mb-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-neutral-500">Coverage</span>
+                          <span className="font-medium">{territory.coverage || 0}%</span>
+                        </div>
+                        <Progress value={territory.coverage || 0} className="h-2 mt-1" />
+                      </div>
+                      <div className="flex justify-end mt-4 space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => startEditingTerritory(territory)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to delete this territory?")) {
+                              deleteTerritoryMutation.mutate(territory.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Map */}
+          <div className="order-1 lg:order-2 lg:col-span-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg">Territory Map</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    {territories.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearDrawings}
+                        className="text-xs flex items-center"
+                      >
+                        <span className="material-icons mr-1 text-sm">layers_clear</span>
+                        Clear Map
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => setIsCreateDialogOpen(true)}
+                      disabled={isAtTerritoryLimit}
+                      size="sm"
+                      className="text-xs flex items-center"
+                    >
+                      <span className="material-icons mr-1 text-sm">add</span>
+                      New Territory
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                {territory.description && (
-                  <p className="text-neutral-600 text-sm mb-3">{territory.description}</p>
-                )}
-                <div className="mb-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500">Coverage</span>
-                    <span className="font-medium">{territory.coverage || 0}%</span>
+              <CardContent className="p-0">
+                <div className="h-[500px] relative overflow-hidden">
+                  <div ref={mapRef} className="w-full h-full" />
+                  {mapLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                  
+                  {/* Map Controls */}
+                  <div className="absolute bottom-4 right-4 flex flex-col space-y-2">
+                    <button
+                      onClick={() => map?.setZoom((map.getZoom() || 0) + 1)}
+                      className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center"
+                    >
+                      <span className="material-icons text-neutral-600">add</span>
+                    </button>
+                    <button
+                      onClick={() => map?.setZoom((map.getZoom() || 0) - 1)}
+                      className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center"
+                    >
+                      <span className="material-icons text-neutral-600">remove</span>
+                    </button>
                   </div>
-                  <Progress value={territory.coverage || 0} className="h-2 mt-1" />
-                </div>
-                <div className="flex justify-end mt-4 space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => startEditingTerritory(territory)}
-                  >
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm("Are you sure you want to delete this territory?")) {
-                        deleteTerritoryMutation.mutate(territory.id);
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
+                  
+                  {/* Instructions */}
+                  {territories.length === 0 && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg max-w-md text-center">
+                      <span className="material-icons text-4xl text-primary">travel_explore</span>
+                      <h3 className="text-lg font-medium mt-2">Define Your Sales Territories</h3>
+                      <p className="text-neutral-600 mt-1">
+                        Create territories to organize your sales areas and track coverage.
+                      </p>
+                      <Button 
+                        onClick={() => setIsCreateDialogOpen(true)}
+                        disabled={isAtTerritoryLimit}
+                        className="mt-3"
+                      >
+                        <span className="material-icons mr-2">add_location</span>
+                        Start Drawing
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          ))}
+          </div>
         </div>
       )}
 
@@ -517,9 +602,10 @@ export default function Territories() {
 
       {/* Edit Territory Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Territory</DialogTitle>
+            <p className="text-sm text-muted-foreground">Modify territory boundaries by dragging points on the map</p>
           </DialogHeader>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
