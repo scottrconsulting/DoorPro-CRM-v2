@@ -443,11 +443,11 @@ export default function ContactDetailModal({
   if (isLoadingContact) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Loading contact details...</DialogTitle>
           </DialogHeader>
-          <div className="flex justify-center py-8">
+          <div className="flex-1 flex justify-center items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </DialogContent>
@@ -458,11 +458,13 @@ export default function ContactDetailModal({
   if (!contact) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Contact not found</DialogTitle>
           </DialogHeader>
-          <p>The requested contact could not be found.</p>
+          <div className="py-4">
+            <p>The requested contact could not be found.</p>
+          </div>
           <DialogFooter>
             <Button onClick={onClose}>Close</Button>
           </DialogFooter>
@@ -473,12 +475,12 @@ export default function ContactDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-4 py-3 border-b">
+      <DialogContent className="max-w-4xl max-h-[90vh] h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-4 py-3 border-b shrink-0">
           <DialogTitle>Contact Details</DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 p-4">
+        <div className="overflow-y-auto flex-1 p-4 pb-20">
           <div className="flex flex-col md:flex-row">
             <div className="md:w-1/3 mb-4 md:mb-0">
               <div className="bg-neutral-100 p-4 rounded-lg">
