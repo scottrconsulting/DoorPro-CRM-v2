@@ -7,7 +7,11 @@ import {
   insertVisitSchema, 
   insertScheduleSchema, 
   insertTerritorySchema,
-  insertTeamSchema
+  insertTeamSchema,
+  insertCustomizationSchema,
+  PIN_COLORS,
+  CONTACT_STATUSES,
+  QUICK_ACTIONS
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";

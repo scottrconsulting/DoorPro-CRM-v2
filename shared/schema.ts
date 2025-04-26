@@ -2,6 +2,11 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, doublePrecisi
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Pre-defined customization options for various elements
+export const PIN_COLORS = ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'teal', 'pink', 'brown', 'gray'];
+export const CONTACT_STATUSES = ['not_visited', 'interested', 'not_interested', 'converted', 'considering', 'no_soliciting', 'call_back', 'appointment_scheduled', 'no_answer'];
+export const QUICK_ACTIONS = ['no_answer', 'not_interested', 'call_back', 'no_soliciting'];
+
 // Teams model for grouping users
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -137,6 +142,39 @@ export const documents = pgTable("documents", {
   uploadDate: timestamp("upload_date").notNull().defaultNow(),
 });
 
+// Customization settings model for user/team preferences
+export const customizations = pgTable("customizations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  teamId: integer("team_id").references(() => teams.id),
+  // App-wide customizations
+  theme: text("theme").default("light"), // light, dark, system
+  primaryColor: text("primary_color").default("blue"),
+  // Map customizations
+  pinColors: json("pin_colors").$type<Record<string, string>>(), // status -> color mapping
+  quickActions: json("quick_actions").$type<string[]>(), // actions available on quick-click
+  // Form customizations
+  customStatuses: json("custom_statuses").$type<string[]>(), // additional contact statuses
+  customFields: json("custom_fields").$type<Array<{
+    name: string;
+    label: string;
+    type: string;
+    options?: string[];
+    required?: boolean;
+  }>>(), // additional custom form fields
+  // Appointment scheduling customizations
+  appointmentTypes: json("appointment_types").$type<string[]>(), // types of appointments
+  confirmationOptions: json("confirmation_options").$type<{
+    sms: boolean;
+    email: boolean;
+    reminderTime: number; // minutes before appointment
+  }>(),
+  // Other settings
+  noteTemplates: json("note_templates").$type<Record<string, string>>(), // predefined note templates
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Schema Validation
 export const insertTeamSchema = createInsertSchema(teams).omit({
   id: true,
@@ -186,6 +224,12 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   uploadDate: true,
 });
 
+export const insertCustomizationSchema = createInsertSchema(customizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof teams.$inferSelect;
@@ -213,3 +257,6 @@ export type Task = typeof tasks.$inferSelect;
 
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
+
+export type InsertCustomization = z.infer<typeof insertCustomizationSchema>;
+export type Customization = typeof customizations.$inferSelect;

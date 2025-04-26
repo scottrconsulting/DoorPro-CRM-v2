@@ -125,6 +125,15 @@ export default function Sidebar() {
             <span>Preferences</span>
           </Link>
           <Link 
+            href="/customize"
+            className={`flex items-center px-4 py-2 ${isActive("/customize") 
+              ? "text-neutral-800 bg-neutral-100 border-l-4 border-primary" 
+              : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800"}`}
+          >
+            <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-neutral-500"}`}>palette</span>
+            <span>Customize</span>
+          </Link>
+          <Link 
             href="/settings"
             className="flex items-center px-4 py-2 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800"
           >

@@ -15,6 +15,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
+import Customize from "@/pages/customize";
 import AppShell from "@/components/layout/app-shell";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
@@ -97,6 +98,9 @@ function App() {
                         </Route>
                         <Route path="/settings">
                           <Settings />
+                        </Route>
+                        <Route path="/customize">
+                          <Customize />
                         </Route>
                         <Route>
                           <NotFound />
