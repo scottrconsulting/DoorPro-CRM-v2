@@ -25,7 +25,7 @@ import {
   type InsertDocument
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -478,6 +478,350 @@ export class DatabaseStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error("Error deleting territory:", error);
+      return false;
+    }
+  }
+
+  // Schedule with Contact
+  async getSchedulesByContact(contactId: number): Promise<Schedule[]> {
+    try {
+      return await db.select()
+        .from(schedules)
+        .where(sql`${schedules.contactIds} @> ARRAY[${contactId}]::jsonb`)
+        .orderBy(asc(schedules.startTime));
+    } catch (error) {
+      console.error("Error fetching schedules by contact:", error);
+      return [];
+    }
+  }
+
+  // Sale operations
+  async getSale(id: number): Promise<Sale | undefined> {
+    try {
+      const result = await db.select().from(sales).where(eq(sales.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching sale:", error);
+      return undefined;
+    }
+  }
+
+  async getSalesByUser(userId: number): Promise<Sale[]> {
+    try {
+      return await db.select()
+        .from(sales)
+        .where(eq(sales.userId, userId))
+        .orderBy(desc(sales.saleDate));
+    } catch (error) {
+      console.error("Error fetching sales by user:", error);
+      return [];
+    }
+  }
+
+  async getSalesByContact(contactId: number): Promise<Sale[]> {
+    try {
+      return await db.select()
+        .from(sales)
+        .where(eq(sales.contactId, contactId))
+        .orderBy(desc(sales.saleDate));
+    } catch (error) {
+      console.error("Error fetching sales by contact:", error);
+      return [];
+    }
+  }
+
+  async getSalesByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Sale[]> {
+    try {
+      return await db.select()
+        .from(sales)
+        .where(
+          and(
+            eq(sales.userId, userId),
+            gte(sales.saleDate, startDate),
+            lte(sales.saleDate, endDate)
+          )
+        )
+        .orderBy(desc(sales.saleDate));
+    } catch (error) {
+      console.error("Error fetching sales by date range:", error);
+      return [];
+    }
+  }
+
+  async createSale(insertSale: InsertSale): Promise<Sale> {
+    try {
+      const result = await db.insert(sales).values(insertSale).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      throw new Error('Failed to create sale');
+    }
+  }
+
+  async updateSale(id: number, updates: Partial<Sale>): Promise<Sale | undefined> {
+    try {
+      // Always update the updatedAt field
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(sales)
+        .set(updatesWithTimestamp)
+        .where(eq(sales.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating sale:", error);
+      return undefined;
+    }
+  }
+
+  async deleteSale(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(sales).where(eq(sales.id, id)).returning({ id: sales.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting sale:", error);
+      return false;
+    }
+  }
+
+  // Task operations
+  async getTask(id: number): Promise<Task | undefined> {
+    try {
+      const result = await db.select().from(tasks).where(eq(tasks.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      return undefined;
+    }
+  }
+
+  async getTasksByUser(userId: number): Promise<Task[]> {
+    try {
+      return await db.select()
+        .from(tasks)
+        .where(eq(tasks.userId, userId))
+        .orderBy(asc(tasks.dueDate));
+    } catch (error) {
+      console.error("Error fetching tasks by user:", error);
+      return [];
+    }
+  }
+
+  async getTasksByContact(contactId: number): Promise<Task[]> {
+    try {
+      return await db.select()
+        .from(tasks)
+        .where(eq(tasks.contactId, contactId))
+        .orderBy(asc(tasks.dueDate));
+    } catch (error) {
+      console.error("Error fetching tasks by contact:", error);
+      return [];
+    }
+  }
+
+  async getTasksByStatus(userId: number, status: string): Promise<Task[]> {
+    try {
+      return await db.select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.userId, userId),
+            eq(tasks.status, status)
+          )
+        )
+        .orderBy(asc(tasks.dueDate));
+    } catch (error) {
+      console.error("Error fetching tasks by status:", error);
+      return [];
+    }
+  }
+
+  async getTasksByDueDate(userId: number, dueDate: Date): Promise<Task[]> {
+    try {
+      // Create start and end of the target date
+      const startDate = new Date(dueDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(dueDate);
+      endDate.setHours(23, 59, 59, 999);
+      
+      return await db.select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.userId, userId),
+            gte(tasks.dueDate, startDate),
+            lte(tasks.dueDate, endDate)
+          )
+        )
+        .orderBy(asc(tasks.dueDate));
+    } catch (error) {
+      console.error("Error fetching tasks by due date:", error);
+      return [];
+    }
+  }
+
+  async getOverdueTasks(userId: number): Promise<Task[]> {
+    try {
+      const now = new Date();
+      
+      return await db.select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.userId, userId),
+            lt(tasks.dueDate, now),
+            eq(tasks.completed, false)
+          )
+        )
+        .orderBy(asc(tasks.dueDate));
+    } catch (error) {
+      console.error("Error fetching overdue tasks:", error);
+      return [];
+    }
+  }
+
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    try {
+      const result = await db.insert(tasks).values(insertTask).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw new Error('Failed to create task');
+    }
+  }
+
+  async updateTask(id: number, updates: Partial<Task>): Promise<Task | undefined> {
+    try {
+      // Always update the updatedAt field
+      const updatesWithTimestamp = {
+        ...updates,
+        updatedAt: new Date()
+      };
+      
+      const result = await db.update(tasks)
+        .set(updatesWithTimestamp)
+        .where(eq(tasks.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating task:", error);
+      return undefined;
+    }
+  }
+
+  async completeTask(id: number): Promise<Task | undefined> {
+    try {
+      const result = await db.update(tasks)
+        .set({
+          completed: true,
+          completedDate: new Date(),
+          status: 'completed',
+          updatedAt: new Date()
+        })
+        .where(eq(tasks.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error completing task:", error);
+      return undefined;
+    }
+  }
+
+  async deleteTask(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(tasks).where(eq(tasks.id, id)).returning({ id: tasks.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      return false;
+    }
+  }
+
+  // Document operations
+  async getDocument(id: number): Promise<Document | undefined> {
+    try {
+      const result = await db.select().from(documents).where(eq(documents.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      return undefined;
+    }
+  }
+
+  async getDocumentsByUser(userId: number): Promise<Document[]> {
+    try {
+      return await db.select()
+        .from(documents)
+        .where(eq(documents.userId, userId))
+        .orderBy(desc(documents.uploadDate));
+    } catch (error) {
+      console.error("Error fetching documents by user:", error);
+      return [];
+    }
+  }
+
+  async getDocumentsByContact(contactId: number): Promise<Document[]> {
+    try {
+      return await db.select()
+        .from(documents)
+        .where(eq(documents.contactId, contactId))
+        .orderBy(desc(documents.uploadDate));
+    } catch (error) {
+      console.error("Error fetching documents by contact:", error);
+      return [];
+    }
+  }
+
+  async getDocumentsByCategory(userId: number, category: string): Promise<Document[]> {
+    try {
+      return await db.select()
+        .from(documents)
+        .where(
+          and(
+            eq(documents.userId, userId),
+            eq(documents.category, category)
+          )
+        )
+        .orderBy(desc(documents.uploadDate));
+    } catch (error) {
+      console.error("Error fetching documents by category:", error);
+      return [];
+    }
+  }
+
+  async createDocument(insertDocument: InsertDocument): Promise<Document> {
+    try {
+      const result = await db.insert(documents).values(insertDocument).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating document:", error);
+      throw new Error('Failed to create document');
+    }
+  }
+
+  async updateDocument(id: number, updates: Partial<Document>): Promise<Document | undefined> {
+    try {
+      const result = await db.update(documents)
+        .set(updates)
+        .where(eq(documents.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating document:", error);
+      return undefined;
+    }
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(documents).where(eq(documents.id, id)).returning({ id: documents.id });
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting document:", error);
       return false;
     }
   }

@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Contact, Visit, InsertVisit } from "@shared/schema";
+import { 
+  Contact, 
+  Visit, 
+  InsertVisit, 
+  Sale, 
+  InsertSale,
+  Task,
+  InsertTask,
+  Document,
+  InsertDocument
+} from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +20,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { 
+  Calendar, 
+  ArrowRight, 
+  DollarSign, 
+  CheckSquare, 
+  ClipboardList, 
+  FileText, 
+  File, 
+  Upload,
+  Phone,
+  Mail,
+  Video
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ContactDetailModalProps {
   contactId: number;
