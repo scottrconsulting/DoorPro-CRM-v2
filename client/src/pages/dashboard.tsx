@@ -5,7 +5,7 @@ import { Contact, Visit } from "@shared/schema";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/dashboard/stat-card";
-import MapViewer from "@/components/dashboard/map-viewer";
+import EnhancedMapViewer from "@/components/dashboard/enhanced-map-viewer";
 import ContactList from "@/components/dashboard/contact-list";
 import ScheduleWidget from "@/components/dashboard/schedule-widget";
 import { PRO_FEATURES } from "@/lib/auth";
@@ -127,8 +127,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Map Section */}
-      <MapViewer onSelectContact={handleContactSelect} />
+      {/* Map Section - Enhanced with ability to click on houses */}
+      <EnhancedMapViewer onSelectContact={handleContactSelect} />
 
       {/* Recent Contacts & Schedule Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
