@@ -215,16 +215,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, addMarker, newHouseMarker, toast]);
 
-  // Work timer implementation
+  // Work timer implementation (using refs to avoid render issues)
   useEffect(() => {
     // Start timer when component loads
-    if (!timerActive) {
-      setTimerActive(true);
-    }
-    const initialActivity = Date.now();
-    if (lastActivity === 0) {
-      setLastActivity(initialActivity);
-    }
+    timerActiveRef.current = true;
+    lastActivityRef.current = Date.now();
     
     // Update current time every second
     const timeInterval = setInterval(() => {
@@ -236,14 +231,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const now = Date.now();
       
       // If inactive for more than 30 minutes (1800000 ms), pause the timer
-      if (now - lastActivity > 1800000 && timerActive) {
-        setTimerActive(false);
+      if (now - lastActivityRef.current > 1800000 && timerActiveRef.current) {
+        timerActiveRef.current = false;
         
         // Save work time to localStorage or could send to server in real app
         const workTimeData = {
           userId: user?.id,
           date: new Date().toISOString().split('T')[0],
-          duration: workTimer,
+          duration: workTimerRef.current,
           endTime: new Date().toISOString(),
         };
         localStorage.setItem(`workTime_${user?.id}_${new Date().toISOString().split('T')[0]}`, 
@@ -256,18 +251,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       }
       
       // Only increment if active
-      if (timerActive) {
-        setWorkTimer(prev => prev + 1);
+      if (timerActiveRef.current) {
+        workTimerRef.current += 1;
       }
     }, 1000);
     
     // Track mouse movement and map interaction as activity
     const handleActivity = () => {
-      setLastActivity(Date.now());
+      lastActivityRef.current = Date.now();
       
       // If timer was inactive, restart it
-      if (!timerActive) {
-        setTimerActive(true);
+      if (!timerActiveRef.current) {
+        timerActiveRef.current = true;
         toast({
           title: "Timer resumed",
           description: "Activity detected",
@@ -293,13 +288,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const workTimeData = {
         userId: user?.id,
         date: new Date().toISOString().split('T')[0],
-        duration: workTimer,
+        duration: workTimerRef.current,
         endTime: new Date().toISOString(),
       };
       localStorage.setItem(`workTime_${user?.id}_${new Date().toISOString().split('T')[0]}`, 
                           JSON.stringify(workTimeData));
     };
-  }, []);
+  }, [user?.id, toast]);
 
   // Change map type
   useEffect(() => {
@@ -418,6 +413,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+  
+  // Need to re-render the timer display when it changes
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  useEffect(() => {
+    const timerDisplayInterval = setInterval(() => {
+      setTimerDisplay(workTimerRef.current);
+    }, 1000);
+    
+    return () => {
+      clearInterval(timerDisplayInterval);
+    };
+  }, []);
 
   return (
     <>
@@ -440,17 +447,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             
             <div className="text-center">
               <p className="text-xs text-neutral-500">Work Duration</p>
-              <p className={`font-bold ${timerActive ? 'text-green-600' : 'text-red-500'}`}>
-                {formatTime(workTimer)}
+              <p className={`font-bold ${timerActiveRef.current ? 'text-green-600' : 'text-red-500'}`}>
+                {formatTime(timerDisplay)}
               </p>
             </div>
             
             <Button 
-              onClick={() => setTimerActive(!timerActive)} 
-              variant={timerActive ? "outline" : "default"}
+              onClick={() => {
+                timerActiveRef.current = !timerActiveRef.current;
+                // Force re-render
+                setTimerDisplay(workTimerRef.current);
+              }} 
+              variant={timerActiveRef.current ? "outline" : "default"}
               size="sm"
             >
-              {timerActive ? "Pause" : "Resume"}
+              {timerActiveRef.current ? "Pause" : "Resume"}
             </Button>
           </div>
         </div>
