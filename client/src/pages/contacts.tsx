@@ -50,6 +50,17 @@ export default function Contacts() {
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
+    queryFn: async () => {
+      const res = await fetch("/api/contacts", { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Unauthorized - Please log in");
+        }
+        throw new Error(`Failed to fetch contacts: ${res.statusText}`);
+      }
+      return res.json();
+    },
+    enabled: !!user, // Only fetch if user is authenticated
   });
 
   // Create contact form

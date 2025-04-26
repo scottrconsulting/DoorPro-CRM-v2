@@ -227,32 +227,45 @@ function TeamMembersDialog({ teamId, open, setOpen }: { teamId: number | null, o
     queryKey: ['/api/teams', teamId],
     queryFn: async () => {
       if (!teamId) return null;
-      const res = await fetch(`/api/teams/${teamId}`);
-      if (!res.ok) throw new Error('Failed to fetch team');
+      const res = await fetch(`/api/teams/${teamId}`, { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Unauthorized - Please log in");
+        }
+        throw new Error(`Failed to fetch team: ${res.statusText}`);
+      }
       return res.json();
     },
-    enabled: !!teamId,
+    enabled: !!teamId && !!user && (user.role === 'pro' || user.role === 'admin'),
   });
   
   // Fetch team members
-  const { data: members, isLoading: isLoadingMembers } = useQuery<User[]>({
+  const { data: members = [], isLoading: isLoadingMembers } = useQuery<User[]>({
     queryKey: ['/api/teams', teamId, 'members'],
     queryFn: async () => {
       if (!teamId) return [];
-      const res = await fetch(`/api/teams/${teamId}/members`);
-      if (!res.ok) throw new Error('Failed to fetch team members');
+      const res = await fetch(`/api/teams/${teamId}/members`, { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Unauthorized - Please log in");
+        }
+        throw new Error(`Failed to fetch team members: ${res.statusText}`);
+      }
       return res.json();
     },
-    enabled: !!teamId,
+    enabled: !!teamId && !!user && (user.role === 'pro' || user.role === 'admin'),
   });
   
   const addMemberMutation = useMutation({
     mutationFn: async (data: { username: string }) => {
       // First, fetch the user by username
-      const userRes = await fetch(`/api/users/search?username=${encodeURIComponent(data.username)}`);
+      const userRes = await fetch(`/api/users/search?username=${encodeURIComponent(data.username)}`, { credentials: "include" });
       if (!userRes.ok) {
         if (userRes.status === 404) {
           throw new Error('User not found');
+        }
+        if (userRes.status === 401) {
+          throw new Error('Unauthorized - Please log in');
         }
         throw new Error('Failed to find user');
       }
@@ -407,13 +420,19 @@ export default function Teams() {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [membersDialogOpen, setMembersDialogOpen] = useState(false);
   
-  const { data: teams, isLoading } = useQuery<Team[]>({
+  const { data: teams = [], isLoading } = useQuery<Team[]>({
     queryKey: ['/api/teams'],
     queryFn: async () => {
-      const res = await fetch('/api/teams');
-      if (!res.ok) throw new Error('Failed to fetch teams');
+      const res = await fetch('/api/teams', { credentials: "include" });
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Unauthorized - Please log in");
+        }
+        throw new Error(`Failed to fetch teams: ${res.statusText}`);
+      }
       return res.json();
     },
+    enabled: !!user && (user.role === 'pro' || user.role === 'admin'), // Only fetch if user is authenticated and has pro access
   });
   
   const openMembersDialog = (teamId: number) => {
