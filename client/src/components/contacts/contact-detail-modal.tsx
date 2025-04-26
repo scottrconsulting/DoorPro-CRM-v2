@@ -61,6 +61,29 @@ export default function ContactDetailModal({
   const [followUpDate, setFollowUpDate] = useState(format(addDays(new Date(), 2), "yyyy-MM-dd"));
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("follow_up");
+  
+  // Active tab state
+  const [activeTab, setActiveTab] = useState("notes");
+  
+  // Sale state
+  const [saleAmount, setSaleAmount] = useState("");
+  const [saleProduct, setSaleProduct] = useState("");
+  const [saleDate, setSaleDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [saleStatus, setSaleStatus] = useState("completed");
+  const [salePaymentMethod, setSalePaymentMethod] = useState("cash");
+  const [saleNotes, setSaleNotes] = useState("");
+  
+  // Task state
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [taskPriority, setTaskPriority] = useState("medium");
+  
+  // Document state
+  const [documentName, setDocumentName] = useState("");
+  const [documentCategory, setDocumentCategory] = useState("general");
+  const [documentDescription, setDocumentDescription] = useState("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   // Fetch contact details
   const { data: contact, isLoading: isLoadingContact } = useQuery<Contact>({
@@ -72,6 +95,24 @@ export default function ContactDetailModal({
   const { data: visits = [], isLoading: isLoadingVisits } = useQuery<Visit[]>({
     queryKey: [`/api/contacts/${contactId}/visits`],
     enabled: isOpen,
+  });
+  
+  // Fetch sales
+  const { data: sales = [], isLoading: isLoadingSales } = useQuery<Sale[]>({
+    queryKey: [`/api/contacts/${contactId}/sales`],
+    enabled: isOpen && activeTab === "sales",
+  });
+  
+  // Fetch tasks
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<Task[]>({
+    queryKey: [`/api/contacts/${contactId}/tasks`],
+    enabled: isOpen && activeTab === "tasks",
+  });
+  
+  // Fetch documents
+  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<Document[]>({
+    queryKey: [`/api/contacts/${contactId}/documents`],
+    enabled: isOpen && activeTab === "documents",
   });
 
   // Add visit mutation
@@ -114,6 +155,114 @@ export default function ContactDetailModal({
       toast({
         title: "Failed to schedule follow-up",
         description: "There was an error scheduling your follow-up",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Add sale mutation
+  const addSaleMutation = useMutation({
+    mutationFn: async (saleData: InsertSale) => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/sales`, saleData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/sales`] });
+      // Reset form
+      setSaleAmount("");
+      setSaleProduct("");
+      setSaleDate(format(new Date(), "yyyy-MM-dd"));
+      setSaleStatus("completed");
+      setSalePaymentMethod("cash");
+      setSaleNotes("");
+      
+      toast({
+        title: "Sale recorded",
+        description: "The sale was successfully recorded",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to record sale",
+        description: "There was an error recording the sale",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Add task mutation
+  const addTaskMutation = useMutation({
+    mutationFn: async (taskData: InsertTask) => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/tasks`, taskData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+      // Reset form
+      setTaskTitle("");
+      setTaskDescription("");
+      setTaskDueDate(format(new Date(), "yyyy-MM-dd"));
+      setTaskPriority("medium");
+      
+      toast({
+        title: "Task created",
+        description: "The task was successfully created",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create task",
+        description: "There was an error creating the task",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Complete task mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const res = await apiRequest("PATCH", `/api/tasks/${taskId}/complete`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+      toast({
+        title: "Task completed",
+        description: "The task was marked as completed",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to complete task",
+        description: "There was an error completing the task",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Upload document mutation (placeholder for now)
+  const uploadDocumentMutation = useMutation({
+    mutationFn: async (documentData: FormData) => {
+      const res = await apiRequest("POST", `/api/contacts/${contactId}/documents`, documentData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/documents`] });
+      // Reset form
+      setDocumentName("");
+      setDocumentCategory("general");
+      setDocumentDescription("");
+      setDocumentFile(null);
+      
+      toast({
+        title: "Document uploaded",
+        description: "The document was successfully uploaded",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to upload document",
+        description: "There was an error uploading the document",
         variant: "destructive",
       });
     },
@@ -164,6 +313,59 @@ export default function ContactDetailModal({
       type: "follow_up",
       contactIds: [contactId],
     });
+  };
+  
+  // Handle save sale
+  const handleSaveSale = () => {
+    if (!saleProduct.trim() || !saleAmount) {
+      toast({
+        title: "Required fields missing",
+        description: "Please enter a product name and amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    addSaleMutation.mutate({
+      contactId,
+      userId: contact?.userId || 0,
+      amount: parseFloat(saleAmount),
+      product: saleProduct,
+      saleDate: new Date(saleDate),
+      status: saleStatus,
+      paymentMethod: salePaymentMethod,
+      notes: saleNotes,
+    });
+  };
+  
+  // Handle save task
+  const handleSaveTask = () => {
+    if (!taskTitle.trim()) {
+      toast({
+        title: "Task title is required",
+        description: "Please enter a title for the task",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    addTaskMutation.mutate({
+      contactId,
+      userId: contact?.userId || 0,
+      title: taskTitle,
+      description: taskDescription,
+      dueDate: new Date(taskDueDate),
+      priority: taskPriority,
+      status: "pending",
+    });
+  };
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
   };
 
   // Generate status badge
