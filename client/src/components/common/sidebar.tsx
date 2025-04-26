@@ -98,6 +98,15 @@ export default function Sidebar() {
             )}
           </Link>
           <Link 
+            href="/chat"
+            className={`flex items-center px-4 py-2 ${isActive("/chat") 
+              ? "text-neutral-800 bg-neutral-100 border-l-4 border-primary" 
+              : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800"}`}
+          >
+            <span className={`material-icons mr-3 ${isActive("/chat") ? "text-primary" : "text-neutral-500"}`}>chat</span>
+            <span>Team Chat</span>
+          </Link>
+          <Link 
             href="/reports"
             className={`flex items-center px-4 py-2 ${isActive("/reports") 
               ? "text-neutral-800 bg-neutral-100 border-l-4 border-primary" 

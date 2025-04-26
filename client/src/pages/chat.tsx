@@ -84,7 +84,7 @@ interface Message {
   } | null;
 }
 
-interface User {
+interface ChatUser {
   id: number;
   username: string;
   fullName: string;
@@ -152,9 +152,10 @@ export default function ChatPage() {
     refetchInterval: 5000, // Poll for new messages every 5 seconds
   });
 
-  const { data: teamMembers } = useQuery<User[]>({
-    queryKey: ["/api/teams/members", user?.teamId],
-    enabled: !!user?.teamId,
+  // Get team members for adding to conversations
+  const { data: teamMembers } = useQuery<ChatUser[]>({
+    queryKey: ["/api/teams/members"],
+    enabled: !!user,
   });
 
   const { data: unreadCount } = useQuery<{ count: number }>({
@@ -619,10 +620,11 @@ export default function ChatPage() {
                                   })}
                                 </span>
                                 {message.isUrgent && (
-                                  <AlertCircle
-                                    className="h-4 w-4 text-red-500 ml-1"
-                                    title="Urgent message"
-                                  />
+                                  <span title="Urgent message">
+                                    <AlertCircle
+                                      className="h-4 w-4 text-red-500 ml-1"
+                                    />
+                                  </span>
                                 )}
                                 {isSelf && (
                                   <DropdownMenu>
