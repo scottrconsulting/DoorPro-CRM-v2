@@ -1,554 +1,417 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Schedule, InsertSchedule, Contact } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage 
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertScheduleSchema } from "@shared/schema";
-import { z } from "zod";
+import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import AppShell from "@/components/layout/app-shell";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { format, parseISO, isSameDay, addHours } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Schedule, InsertSchedule, Contact } from "@shared/schema";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO, set } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
-
-// Extended schema with validation
-const scheduleFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  description: z.string().optional(),
-  startTime: z.date(),
-  endTime: z.date(),
-  type: z.string(),
-  contactIds: z.array(z.number()).optional(),
-});
-
-type ScheduleFormValues = z.infer<typeof scheduleFormSchema>;
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 export default function SchedulePage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [scheduleType, setScheduleType] = useState("appointment");
+  const [location, setLocation] = useState("");
+  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [sendReminder, setSendReminder] = useState(false);
+  const [reminderTime, setReminderTime] = useState("1_hour");
+  const [confirmationMethod, setConfirmationMethod] = useState("email");
+  
+  // Clear form function
+  const clearForm = () => {
+    setTitle("");
+    setDescription("");
+    setStartTime("09:00");
+    setEndTime("10:00");
+    setScheduleType("appointment");
+    setLocation("");
+    setSelectedContacts([]);
+    setSendReminder(false);
+    setReminderTime("1_hour");
+    setConfirmationMethod("email");
+    setShowAddForm(false);
+  };
 
-  // Get schedules
+  // Fetch schedules
   const { data: schedules = [], isLoading } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
   });
-
-  // Get contacts for selection
+  
+  // Fetch contacts
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  // Create schedule form
-  const form = useForm<ScheduleFormValues>({
-    resolver: zodResolver(scheduleFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      startTime: addHours(new Date(), 1),
-      endTime: addHours(new Date(), 2),
-      type: "appointment",
-      contactIds: [],
-    },
+  // Group schedules by date
+  const schedulesByDate = schedules.reduce((acc, schedule) => {
+    const date = format(parseISO(schedule.startTime.toString()), "yyyy-MM-dd");
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(schedule);
+    return acc;
+  }, {} as Record<string, Schedule[]>);
+  
+  // Sort dates
+  const sortedDates = Object.keys(schedulesByDate).sort((a, b) => {
+    return new Date(a).getTime() - new Date(b).getTime();
   });
+
+  // Calculate reminder time
+  const calculateReminderTime = (startDateTime: Date): Date => {
+    const reminder = new Date(startDateTime);
+    
+    switch (reminderTime) {
+      case "15_min":
+        reminder.setMinutes(reminder.getMinutes() - 15);
+        break;
+      case "30_min":
+        reminder.setMinutes(reminder.getMinutes() - 30);
+        break;
+      case "1_hour":
+        reminder.setHours(reminder.getHours() - 1);
+        break;
+      case "2_hours":
+        reminder.setHours(reminder.getHours() - 2);
+        break;
+      case "1_day":
+        reminder.setDate(reminder.getDate() - 1);
+        break;
+      default:
+        reminder.setHours(reminder.getHours() - 1);
+    }
+    
+    return reminder;
+  };
 
   // Create schedule mutation
   const createScheduleMutation = useMutation({
-    mutationFn: async (schedule: InsertSchedule) => {
-      const res = await apiRequest("POST", "/api/schedules", schedule);
+    mutationFn: async (scheduleData: InsertSchedule) => {
+      const res = await apiRequest("POST", "/api/schedules", scheduleData);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      setIsCreateModalOpen(false);
-      form.reset();
       toast({
         title: "Schedule created",
-        description: "Your schedule was successfully created",
+        description: "Your schedule has been created successfully",
       });
+      clearForm();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
-        title: "Failed to create schedule",
-        description: error.message || "There was an error creating your schedule",
+        title: "Error creating schedule",
+        description: "There was an error creating your schedule. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  // Delete schedule mutation
-  const deleteScheduleMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/schedules/${id}`, {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedDate) {
       toast({
-        title: "Schedule deleted",
-        description: "Schedule was successfully deleted",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Failed to delete schedule",
-        description: "There was an error deleting the schedule",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Filter schedules for selected date
-  const schedulesForSelectedDate = schedules.filter((schedule) => {
-    const scheduleDate = parseISO(schedule.startTime.toString());
-    return isSameDay(scheduleDate, selectedDate);
-  }).sort((a, b) => {
-    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-  });
-
-  // Get schedule color based on type
-  const getScheduleTypeColor = (type: string) => {
-    switch (type) {
-      case "route":
-        return "bg-blue-50 border-l-4 border-primary";
-      case "follow_up":
-        return "bg-green-50 border-l-4 border-success";
-      case "appointment":
-        return "bg-yellow-50 border-l-4 border-warning";
-      default:
-        return "bg-neutral-50 border-l-4 border-neutral-400";
-    }
-  };
-
-  // Format time
-  const formatTime = (date: string | Date) => {
-    return format(new Date(date), "h:mm a");
-  };
-
-  // Handle form submit
-  const onSubmit = (data: ScheduleFormValues) => {
-    // Check if at free plan limit
-    if (user?.role === UserRole.FREE && schedules.length >= FREE_PLAN_LIMITS.schedules) {
-      toast({
-        title: "Schedule limit reached",
-        description: `Free plan is limited to ${FREE_PLAN_LIMITS.schedules} schedules. Please upgrade to Pro for unlimited schedules.`,
+        title: "Date required",
+        description: "Please select a date for your schedule",
         variant: "destructive",
       });
       return;
     }
-
-    // Validate that end time is after start time
-    if (data.endTime <= data.startTime) {
+    
+    // Combine date and time
+    const startDateTime = set(selectedDate, {
+      hours: parseInt(startTime.split(":")[0]),
+      minutes: parseInt(startTime.split(":")[1]),
+      seconds: 0,
+      milliseconds: 0,
+    });
+    
+    const endDateTime = set(selectedDate, {
+      hours: parseInt(endTime.split(":")[0]),
+      minutes: parseInt(endTime.split(":")[1]),
+      seconds: 0,
+      milliseconds: 0,
+    });
+    
+    // Validate time
+    if (endDateTime <= startDateTime) {
       toast({
-        title: "Invalid time range",
+        title: "Invalid time",
         description: "End time must be after start time",
         variant: "destructive",
       });
       return;
     }
-
-    createScheduleMutation.mutate({
-      ...data,
+    
+    const scheduleData: InsertSchedule = {
       userId: user?.id || 0,
+      title,
+      description,
+      startTime: startDateTime.toISOString(),
+      endTime: endDateTime.toISOString(),
+      type: scheduleType,
+      location,
+      contactIds: selectedContacts.length > 0 ? selectedContacts : undefined,
+      reminderSent: false,
+      reminderTime: sendReminder ? calculateReminderTime(startDateTime).toISOString() : undefined,
+      confirmationMethod: scheduleType === "appointment" ? confirmationMethod : undefined,
+      confirmationStatus: scheduleType === "appointment" ? "pending" : undefined,
+    };
+    
+    createScheduleMutation.mutate(scheduleData);
+  };
+
+  // Toggle contact selection
+  const toggleContactSelection = (contactId: number) => {
+    setSelectedContacts((prev) => {
+      if (prev.includes(contactId)) {
+        return prev.filter((id) => id !== contactId);
+      } else {
+        return [...prev, contactId];
+      }
     });
   };
 
-  // Open create modal with pre-filled date
-  const handleAddSchedule = (date?: Date) => {
-    const defaultStartTime = date ? addHours(date, 9) : addHours(new Date(), 1);
-    const defaultEndTime = date ? addHours(date, 10) : addHours(new Date(), 2);
+  // Get confirmation status badge color
+  const getConfirmationStatusColor = (status: string | null) => {
+    if (!status) return "bg-neutral-100 text-neutral-800";
     
-    form.reset({
-      title: "",
-      description: "",
-      startTime: defaultStartTime,
-      endTime: defaultEndTime,
-      type: "appointment",
-      contactIds: [],
-    });
-    
-    setIsCreateModalOpen(true);
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 text-green-800 border-green-300";
+      case "rescheduled":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-300";
+      case "pending":
+      default:
+        return "bg-blue-100 text-blue-800 border-blue-300";
+    }
   };
-
-  // Check if at schedule limit
-  const isAtScheduleLimit = user?.role === UserRole.FREE && schedules.length >= FREE_PLAN_LIMITS.schedules;
-
-  // Count dots to show on calendar
-  const scheduleCounts = schedules.reduce((acc: Record<string, number>, schedule) => {
-    const dateStr = format(new Date(schedule.startTime), "yyyy-MM-dd");
-    acc[dateStr] = (acc[dateStr] || 0) + 1;
-    return acc;
-  }, {});
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold font-sans text-neutral-800">Schedule</h1>
-          <p className="text-neutral-500">Manage your appointments and routes</p>
-        </div>
-        <div className="mt-4 md:mt-0">
+    <AppShell>
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
           <Button 
-            onClick={() => handleAddSchedule()}
-            disabled={isAtScheduleLimit}
+            onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center"
           >
-            <span className="material-icons text-sm mr-1">add</span>
-            Add Schedule
+            <span className="material-icons text-sm mr-1">{showAddForm ? "close" : "add"}</span>
+            {showAddForm ? "Cancel" : "Add Schedule"}
           </Button>
-          {isAtScheduleLimit && (
-            <p className="text-xs text-red-500 mt-1">
-              Free plan limited to {FREE_PLAN_LIMITS.schedules} schedules. Please upgrade to Pro.
-            </p>
-          )}
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border"
-              modifiers={{
-                dots: (date) => {
-                  const dateStr = format(date, "yyyy-MM-dd");
-                  return !!scheduleCounts[dateStr];
-                },
-              }}
-              modifiersStyles={{
-                dots: {
-                  position: "relative",
-                }
-              }}
-              modifiersClassNames={{
-                dots: "dot-calendar",
-              }}
-              styles={{
-                day_today: { fontWeight: "bold", border: "1px solid #000" },
-                day_selected: {
-                  backgroundColor: "hsl(var(--primary))",
-                  color: "white",
-                  fontWeight: "bold",
-                },
-              }}
-            />
-            <style jsx global>{`
-              .dot-calendar::after {
-                content: "";
-                position: absolute;
-                bottom: 2px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 4px;
-                height: 4px;
-                border-radius: 50%;
-                background-color: hsl(var(--primary));
-              }
-            `}</style>
-          </CardContent>
-        </Card>
-
-        {/* Schedule for Selected Day */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">
-              {format(selectedDate, "EEEE, MMMM d, yyyy")}
-            </CardTitle>
-            <Button 
-              onClick={() => handleAddSchedule(selectedDate)}
-              variant="outline"
-              size="sm"
-              className="h-8"
-              disabled={isAtScheduleLimit}
-            >
-              <span className="material-icons text-sm mr-1">add</span>
-              Add
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : schedulesForSelectedDate.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <span className="material-icons text-5xl text-neutral-300 mb-3">event_busy</span>
-                <h3 className="text-lg font-medium text-neutral-700 mb-1">No schedules for this day</h3>
-                <p className="text-neutral-500 mb-4">Add an appointment or route for {format(selectedDate, "MMMM d")}</p>
-                <Button 
-                  onClick={() => handleAddSchedule(selectedDate)}
-                  variant="outline"
-                  disabled={isAtScheduleLimit}
-                >
-                  <span className="material-icons text-sm mr-1">add</span>
-                  Add Schedule
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {schedulesForSelectedDate.map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    className={`flex items-center p-3 rounded ${getScheduleTypeColor(schedule.type)}`}
-                  >
-                    <div className="flex-shrink-0 mr-3 text-center">
-                      <div className="text-xs text-neutral-500">
-                        {formatTime(schedule.startTime)}
-                      </div>
-                      <div className="text-xs text-neutral-500">
-                        {formatTime(schedule.endTime)}
-                      </div>
-                    </div>
-                    <div className="flex-grow">
-                      <h4 className="text-sm font-medium text-neutral-800">{schedule.title}</h4>
-                      <div className="text-xs text-neutral-600">{schedule.description}</div>
-                      {schedule.type === "route" && schedule.contactIds && (
-                        <div className="text-xs text-neutral-600">
-                          {schedule.contactIds.length} houses planned
+        
+        {showAddForm && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-medium mb-4">New Schedule</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Schedule title"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Enter location (optional)"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="scheduleType">Type</Label>
+                  <Select value={scheduleType} onValueChange={setScheduleType}>
+                    <SelectTrigger id="scheduleType">
+                      <SelectValue placeholder="Schedule type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="route">Route Planning</SelectItem>
+                      <SelectItem value="follow_up">Follow Up</SelectItem>
+                      <SelectItem value="appointment">Appointment</SelectItem>
+                      <SelectItem value="presentation">Presentation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div>
+                  <Label htmlFor="startTime">Start Time</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="endTime">End Time</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add details about this schedule"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch id="send-reminder" checked={sendReminder} onCheckedChange={setSendReminder} />
+                  <Label htmlFor="send-reminder">Send reminder</Label>
+                </div>
+                
+                {sendReminder && (
+                  <div>
+                    <Label htmlFor="reminderTime">Reminder Time</Label>
+                    <Select value={reminderTime} onValueChange={setReminderTime}>
+                      <SelectTrigger id="reminderTime">
+                        <SelectValue placeholder="When to send reminder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15_min">15 minutes before</SelectItem>
+                        <SelectItem value="30_min">30 minutes before</SelectItem>
+                        <SelectItem value="1_hour">1 hour before</SelectItem>
+                        <SelectItem value="2_hours">2 hours before</SelectItem>
+                        <SelectItem value="1_day">1 day before</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                {scheduleType === "appointment" && (
+                  <div className="md:col-span-2">
+                    <Label htmlFor="confirmationMethod" className="mb-2 block">Confirmation Method</Label>
+                    <Select value={confirmationMethod} onValueChange={setConfirmationMethod}>
+                      <SelectTrigger id="confirmationMethod">
+                        <SelectValue placeholder="How to confirm appointment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="both">Email & SMS</SelectItem>
+                        <SelectItem value="none">No confirmation needed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      {confirmationMethod === "email" && "Appointment confirmation will be sent via email"}
+                      {confirmationMethod === "sms" && "Appointment confirmation will be sent via SMS text message"}
+                      {confirmationMethod === "both" && "Appointment confirmation will be sent via both email and SMS"}
+                      {confirmationMethod === "none" && "No automatic confirmation will be sent for this appointment"}
+                    </p>
+                  </div>
+                )}
+                
+                {(scheduleType === "route" || scheduleType === "follow_up") && (
+                  <div className="md:col-span-2">
+                    <Label className="mb-2 block">Select Contacts</Label>
+                    <div className="border rounded-md p-4 h-48 overflow-y-auto">
+                      {contacts.length === 0 ? (
+                        <div className="text-neutral-500 text-center py-4">
+                          No contacts available
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {contacts.map((contact) => (
+                            <div 
+                              key={contact.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox 
+                                id={`contact-${contact.id}`}
+                                checked={selectedContacts.includes(contact.id)}
+                                onCheckedChange={() => toggleContactSelection(contact.id)}
+                              />
+                              <Label 
+                                htmlFor={`contact-${contact.id}`}
+                                className="font-normal cursor-pointer"
+                              >
+                                {contact.fullName} ({contact.address})
+                              </Label>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                    <div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this schedule?")) {
-                            deleteScheduleMutation.mutate(schedule.id);
-                          }
-                        }}
-                      >
-                        <span className="material-icons text-neutral-500">delete</span>
-                      </Button>
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Create Schedule Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Schedule</DialogTitle>
-            <DialogDescription>
-              Create a new appointment, route, or follow-up.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Morning Route" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
                 )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Additional details"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="date"
-                          value={format(field.value, "yyyy-MM-dd")}
-                          onChange={(e) => {
-                            const date = e.target.value;
-                            const time = format(field.value, "HH:mm");
-                            field.onChange(new Date(`${date}T${time}`));
-                          }}
-                        />
-                        <Input
-                          type="time"
-                          value={format(field.value, "HH:mm")}
-                          onChange={(e) => {
-                            const date = format(field.value, "yyyy-MM-dd");
-                            const time = e.target.value;
-                            field.onChange(new Date(`${date}T${time}`));
-                          }}
-                        />
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="date"
-                          value={format(field.value, "yyyy-MM-dd")}
-                          onChange={(e) => {
-                            const date = e.target.value;
-                            const time = format(field.value, "HH:mm");
-                            field.onChange(new Date(`${date}T${time}`));
-                          }}
-                        />
-                        <Input
-                          type="time"
-                          value={format(field.value, "HH:mm")}
-                          onChange={(e) => {
-                            const date = format(field.value, "yyyy-MM-dd");
-                            const time = e.target.value;
-                            field.onChange(new Date(`${date}T${time}`));
-                          }}
-                        />
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
               
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="appointment">Appointment</SelectItem>
-                        <SelectItem value="route">Route</SelectItem>
-                        <SelectItem value="follow_up">Follow-up</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {form.watch("type") === "route" && (
-                <FormField
-                  control={form.control}
-                  name="contactIds"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Contacts</FormLabel>
-                      <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-                        {contacts.length === 0 ? (
-                          <p className="text-sm text-neutral-500">No contacts available</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {contacts.map((contact) => (
-                              <div key={contact.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`contact-${contact.id}`}
-                                  checked={field.value?.includes(contact.id)}
-                                  onCheckedChange={(checked) => {
-                                    const currentValues = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...currentValues, contact.id]);
-                                    } else {
-                                      field.onChange(
-                                        currentValues.filter((id) => id !== contact.id)
-                                      );
-                                    }
-                                  }}
-                                />
-                                <label
-                                  htmlFor={`contact-${contact.id}`}
-                                  className="text-sm cursor-pointer"
-                                >
-                                  {contact.fullName} - {contact.address.split(',')[0]}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateModalOpen(false)}
+              <div className="mt-6 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearForm}
+                  className="mr-2"
                 >
                   Cancel
                 </Button>
@@ -558,11 +421,97 @@ export default function SchedulePage() {
                 >
                   {createScheduleMutation.isPending ? "Creating..." : "Create Schedule"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isLoading ? (
+            <div className="col-span-full flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : sortedDates.length === 0 ? (
+            <div className="col-span-full text-center py-12 bg-white rounded-lg shadow-md">
+              <div className="material-icons text-neutral-400 text-5xl mb-2">event_busy</div>
+              <h3 className="text-lg font-medium text-neutral-800">No schedules yet</h3>
+              <p className="text-neutral-500 mb-4">Click the 'Add Schedule' button to create your first schedule</p>
+              <Button onClick={() => setShowAddForm(true)}>Add Schedule</Button>
+            </div>
+          ) : (
+            sortedDates.map((date) => (
+              <Card key={date} className="shadow-md">
+                <CardHeader className="bg-neutral-50 border-b pb-3">
+                  <CardTitle className="text-lg">{format(new Date(date), "EEEE, MMMM d")}</CardTitle>
+                  <CardDescription>
+                    {schedulesByDate[date].length} item{schedulesByDate[date].length !== 1 && 's'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
+                    {schedulesByDate[date]
+                      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+                      .map((schedule) => (
+                        <div 
+                          key={schedule.id}
+                          className={cn(
+                            "border-l-4 px-3 py-2 rounded-r-md",
+                            schedule.type === "route" && "border-blue-500 bg-blue-50",
+                            schedule.type === "follow_up" && "border-green-500 bg-green-50",
+                            schedule.type === "appointment" && "border-yellow-500 bg-yellow-50",
+                            schedule.type === "presentation" && "border-purple-500 bg-purple-50"
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <div className="flex-1">
+                              <div className="font-medium">{schedule.title}</div>
+                              <div className="text-xs text-neutral-600">
+                                {format(parseISO(schedule.startTime.toString()), "h:mm a")} - {format(parseISO(schedule.endTime.toString()), "h:mm a")}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="uppercase text-xs">
+                              {schedule.type.replace("_", " ")}
+                            </Badge>
+                          </div>
+                          {schedule.description && (
+                            <div className="text-sm text-neutral-600 mt-1">
+                              {schedule.description}
+                            </div>
+                          )}
+                          {schedule.location && (
+                            <div className="text-xs text-neutral-500 mt-1 flex items-center">
+                              <span className="material-icons text-xs mr-1">location_on</span>
+                              {schedule.location}
+                            </div>
+                          )}
+                          {schedule.contactIds && schedule.contactIds.length > 0 && (
+                            <div className="text-xs text-neutral-500 mt-1">
+                              <span>{schedule.contactIds.length} contact{schedule.contactIds.length !== 1 ? 's' : ''}</span>
+                            </div>
+                          )}
+                          {schedule.type === "appointment" && schedule.confirmationStatus && (
+                            <div className="mt-2">
+                              <span className={`text-xs px-2 py-1 rounded-full ${getConfirmationStatusColor(schedule.confirmationStatus)}`}>
+                                {schedule.confirmationStatus.charAt(0).toUpperCase() + schedule.confirmationStatus.slice(1)}
+                              </span>
+                              {schedule.confirmationMethod && schedule.confirmationMethod !== "none" && (
+                                <span className="text-xs text-neutral-500 ml-2">
+                                  via {schedule.confirmationMethod === "both" 
+                                    ? "Email & SMS" 
+                                    : schedule.confirmationMethod.charAt(0).toUpperCase() + schedule.confirmationMethod.slice(1)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    </AppShell>
   );
 }

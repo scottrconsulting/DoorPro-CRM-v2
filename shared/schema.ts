@@ -72,6 +72,8 @@ export const schedules = pgTable("schedules", {
   contactIds: json("contact_ids").$type<number[]>(), // Array of contact IDs for routes
   reminderSent: boolean("reminder_sent").default(false),
   reminderTime: timestamp("reminder_time"), // When to send reminder
+  confirmationMethod: text("confirmation_method"), // email, sms, both, none
+  confirmationStatus: text("confirmation_status"), // pending, confirmed, rescheduled, cancelled
   calendarEventId: text("calendar_event_id"), // ID for external calendar integration
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
