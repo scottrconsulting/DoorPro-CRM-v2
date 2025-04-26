@@ -119,7 +119,7 @@ export default function ContactDetailModal({
   const addVisitMutation = useMutation({
     mutationFn: async (visitData: InsertVisit) => {
       const res = await apiRequest("POST", `/api/contacts/${contactId}/visits`, visitData);
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/visits`] });
