@@ -5,13 +5,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Contact, InsertContact } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // Add Google Maps types
 declare global {
@@ -42,6 +43,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
   const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
@@ -108,6 +111,30 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       toast({
         title: "Failed to add contact",
         description: "There was an error adding the contact",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: number) => {
+      const res = await apiRequest("DELETE", `/api/contacts/${contactId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact deleted",
+        description: "Contact has been successfully removed",
+      });
+      setShowDeleteDialog(false);
+      setSelectedContact(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete contact",
+        description: "There was an error removing the contact",
         variant: "destructive",
       });
     },
@@ -217,10 +244,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         });
         
         if (marker) {
+          // Click handler to view the contact
           marker.addListener("click", () => {
+            setSelectedContact(contact);
+            
             if (onSelectContact) {
               onSelectContact(contact.id);
             }
+          });
+          
+          // Right-click handler to show delete option
+          marker.addListener("rightclick", () => {
+            setSelectedContact(contact);
+            setShowDeleteDialog(true);
           });
         }
       }
