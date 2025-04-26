@@ -37,6 +37,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
   const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
   const [userAvatar, setUserAvatar] = useState<'male' | 'female'>('male');
+  const [activeStatus, setActiveStatus] = useState<string>("not_visited");
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
@@ -259,6 +260,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           setNewContactForm((prev) => ({ 
             ...prev, 
             address,
+            status: activeStatus, // Use the selected active status
             // Add current timestamp for visited
             notes: `Initial contact: ${new Date().toLocaleString()}`
           }));
@@ -277,7 +279,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       // Clean up the listener when the component unmounts
       window.google.maps.event.removeListener(mapClickListener);
     };
-  }, [isLoaded, map, addMarker, newHouseMarker, toast]);
+  }, [isLoaded, map, addMarker, newHouseMarker, toast, activeStatus]);
 
   // Work timer implementation (using refs to avoid render issues)
   useEffect(() => {
@@ -413,6 +415,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Handle status change
   const handleStatusChange = (value: string) => {
     setNewContactForm((prev) => ({ ...prev, status: value }));
+  };
+  
+  // Set active status for next pin
+  const handleSetActiveStatus = (status: string) => {
+    setActiveStatus(status);
+    toast({
+      title: "Pin type selected",
+      description: `Next pin will be marked as "${status.replace(/_/g, ' ')}"`,
+    });
   };
 
   // Handle save new contact
@@ -685,28 +696,56 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             </button>
           </div>
           
-          {/* Legend */}
+          {/* Interactive Contact Status Legend */}
           <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-2">
-            <div className="text-xs font-medium mb-1">Contact Status</div>
-            <div className="flex items-center text-xs">
+            <div className="text-xs font-medium mb-1">Contact Status (Click to Select)</div>
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "converted" ? "bg-green-100" : ""}`}
+              onClick={() => handleSetActiveStatus("converted")}
+            >
               <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span>
               <span className="text-neutral-600">Converted</span>
+              {activeStatus === "converted" && <span className="material-icons text-green-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
-            <div className="flex items-center text-xs">
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "interested" ? "bg-yellow-100" : ""}`}
+              onClick={() => handleSetActiveStatus("interested")}
+            >
               <span className="inline-block w-3 h-3 rounded-full bg-yellow-500 mr-1"></span>
-              <span className="text-neutral-600">Follow up</span>
+              <span className="text-neutral-600">Interested</span>
+              {activeStatus === "interested" && <span className="material-icons text-yellow-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
-            <div className="flex items-center text-xs">
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "not_interested" ? "bg-red-100" : ""}`}
+              onClick={() => handleSetActiveStatus("not_interested")}
+            >
               <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span>
               <span className="text-neutral-600">Not interested</span>
+              {activeStatus === "not_interested" && <span className="material-icons text-red-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
-            <div className="flex items-center text-xs">
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "not_visited" ? "bg-blue-100" : ""}`}
+              onClick={() => handleSetActiveStatus("not_visited")}
+            >
               <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
               <span className="text-neutral-600">Not visited</span>
+              {activeStatus === "not_visited" && <span className="material-icons text-blue-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
-            <div className="flex items-center text-xs">
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "no_soliciting" ? "bg-purple-100" : ""}`}
+              onClick={() => handleSetActiveStatus("no_soliciting")}
+            >
               <span className="inline-block w-3 h-3 rounded-full bg-purple-500 mr-1"></span>
               <span className="text-neutral-600">No soliciting</span>
+              {activeStatus === "no_soliciting" && <span className="material-icons text-purple-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
+            </div>
+            <div 
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "call_back" ? "bg-orange-100" : ""}`}
+              onClick={() => handleSetActiveStatus("call_back")}
+            >
+              <span className="inline-block w-3 h-3 rounded-full bg-orange-500 mr-1"></span>
+              <span className="text-neutral-600">Call back</span>
+              {activeStatus === "call_back" && <span className="material-icons text-orange-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
           </div>
           
