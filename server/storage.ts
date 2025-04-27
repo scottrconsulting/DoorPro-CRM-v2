@@ -579,7 +579,24 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContact(id: number): Promise<boolean> {
     try {
+      // First, delete related visits
+      await db.delete(visits).where(eq(visits.contactId, id));
+      
+      // Delete related schedules
+      await db.delete(schedules).where(eq(schedules.contactId, id));
+      
+      // Delete related tasks
+      await db.delete(tasks).where(eq(tasks.contactId, id));
+      
+      // Delete related sales
+      await db.delete(sales).where(eq(sales.contactId, id));
+      
+      // Delete related documents
+      await db.delete(documents).where(eq(documents.contactId, id));
+      
+      // Finally, delete the contact
       const result = await db.delete(contacts).where(eq(contacts.id, id)).returning({ id: contacts.id });
+      
       return result.length > 0;
     } catch (error) {
       console.error("Error deleting contact:", error);
