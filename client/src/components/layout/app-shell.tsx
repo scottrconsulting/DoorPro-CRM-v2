@@ -60,19 +60,19 @@ export default function AppShell({ children }: AppShellProps) {
           {children}
 
           {/* Footer */}
-          <footer className="bg-white border-t border-neutral-200 py-4 px-6">
+          <footer className="bg-background border-t border-border py-4 px-6">
             <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="text-sm text-neutral-500">
+              <div className="text-sm text-muted-foreground">
                 &copy; {new Date().getFullYear()} DoorPro CRM. All rights reserved.
               </div>
               <div className="flex items-center space-x-4 mt-2 md:mt-0">
-                <a href="#" className="text-sm text-neutral-500 hover:text-neutral-700">
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
                   Terms
                 </a>
-                <a href="#" className="text-sm text-neutral-500 hover:text-neutral-700">
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
                   Privacy
                 </a>
-                <a href="#" className="text-sm text-neutral-500 hover:text-neutral-700">
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
                   Support
                 </a>
               </div>
