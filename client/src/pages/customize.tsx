@@ -414,7 +414,7 @@ useEffect(() => {
                         />
                       ) : (
                         <div className="flex items-center justify-between flex-1">
-                          <span className="font-medium">{status.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">{status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
                           <span>{statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
                         </div>
                       )}

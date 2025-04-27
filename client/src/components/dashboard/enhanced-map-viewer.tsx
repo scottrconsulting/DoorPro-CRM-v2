@@ -399,6 +399,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }
     return undefined;
   };
+  
+  // Function to properly capitalize a status for display
+  const getStatusLabel = (status: string): string => {
+    if (customization?.statusLabels && customization.statusLabels[status]) {
+      return customization.statusLabels[status];
+    }
+    // Capitalize each word
+    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
 
   // Update markers when contacts or customization changes
   useEffect(() => {
@@ -557,7 +566,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("not_visited")} mr-1`} 
                 style={getColorStyle("not_visited")}
               />
-              {customization?.statusLabels?.not_visited || "Not Visited"}
+              {getStatusLabel("not_visited")}
             </Button>
             
             <Button 
