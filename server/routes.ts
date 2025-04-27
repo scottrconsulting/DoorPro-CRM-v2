@@ -48,14 +48,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       resave: true,
       saveUninitialized: true,
       store: storage.sessionStore,
+      proxy: true, // Trust the reverse proxy when setting secure cookies
       cookie: { 
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: 'lax',
+        secure: false, // Set to false to allow non-HTTPS connections
+        httpOnly: true, // Helps prevent XSS attacks
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        sameSite: 'none', // Required for cross-origin/cross-site requests
         path: '/',
-        httpOnly: true
+        domain: undefined // Don't specify domain to allow cross-domain access
       },
-      rolling: true
+      rolling: true // Reset expiration with every request
     })
   );
 
