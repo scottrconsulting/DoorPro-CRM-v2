@@ -618,7 +618,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("converted")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className={`w-2 h-2 rounded-full ${getStatusColor("converted")} mr-1`} />
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("converted")} mr-1`}
+                style={getColorStyle("converted")}
+              />
               {customization?.statusLabels?.converted || "Converted"}
             </Button>
             
@@ -628,7 +631,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("no_soliciting")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className={`w-2 h-2 rounded-full ${getStatusColor("no_soliciting")} mr-1`} />
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("no_soliciting")} mr-1`}
+                style={getColorStyle("no_soliciting")}
+              />
               {customization?.statusLabels?.no_soliciting || "No Solicit"}
             </Button>
           </>
