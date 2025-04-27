@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Contact, Schedule } from "@shared/schema";
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Navigation, MapPin, CheckCircle2 } from "lucide-react";
 import { getCurrentLocation, getOptimalRoute } from "@/lib/maps";
+import { useGoogleMaps } from "@/hooks/use-maps";
 
 // Type for optimized route
 interface RouteStop {
@@ -38,20 +39,28 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 export default function Routes() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService | null>(null);
-  const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [optimizedRoute, setOptimizedRoute] = useState<RouteStop[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral | null>(null);
   const [routeType, setRouteType] = useState<string>("optimized");
-  const [travelMode, setTravelMode] = useState<google.maps.TravelMode>(google.maps.TravelMode.DRIVING);
+  const [travelMode, setTravelMode] = useState<string>("DRIVING");
   const [showScheduled, setShowScheduled] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
+  
+  // Initialize Google Maps using our custom hook
+  const {
+    mapRef,
+    map,
+    isLoaded,
+    loading
+  } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
+    center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
+    zoom: 5,
+  });
 
   // Fetch contacts
   const { data: contacts = [], isLoading: isLoadingContacts } = useQuery<Contact[]>({
