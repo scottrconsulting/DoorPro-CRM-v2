@@ -450,7 +450,7 @@ export default function ContactDetailModal({
       userId: contact?.userId || 0,
       visitType: "note",
       notes: note,
-      visitDate: new Date(),
+      visitDate: new Date().toISOString(),
     });
   };
 
