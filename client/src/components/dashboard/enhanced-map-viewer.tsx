@@ -368,10 +368,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
       const isLongClick = clickDuration > 1000; // Threshold of 1 second for a long click/hold
       
-      // Remove the previous marker if it exists
-      if (newHouseMarker) {
-        newHouseMarker.setMap(null);
-      }
+      // Only proceed if it's a long click
+      if (!isLongClick) return;
       
       // Create a new marker where the user clicked
       const marker = addMarker(e.latLng.toJSON(), {
