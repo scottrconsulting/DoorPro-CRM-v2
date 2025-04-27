@@ -30,6 +30,11 @@ async function main() {
         language TEXT DEFAULT 'en',
         date_format TEXT DEFAULT 'MM/DD/YYYY',
         time_format TEXT DEFAULT 'hh:mm A',
+        quick_actions TEXT[] DEFAULT '{}',
+        custom_statuses TEXT[] DEFAULT '{}',
+        status_labels JSONB DEFAULT '{}',
+        appointment_types TEXT[] DEFAULT '{}',
+        confirmation_options JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
