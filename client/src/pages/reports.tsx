@@ -36,10 +36,48 @@ export default function Reports() {
     enabled: hasProAccess,
   });
 
-  const { data: visits = [], isLoading: isLoadingVisits } = useQuery<Visit[]>({
+  // Add refetch capability to update data in real-time
+  const { data: visits = [], isLoading: isLoadingVisits, refetch: refetchVisits } = useQuery<Visit[]>({
     queryKey: ["/api/visits"],
     enabled: hasProAccess,
+    refetchInterval: 60000, // Auto-refresh every minute
   });
+  
+  // Function to export activity data to CSV
+  const exportToCSV = () => {
+    // Prepare the CSV data
+    const todayDate = format(new Date(), 'yyyy-MM-dd');
+    const filename = `activity_report_${todayDate}.csv`;
+    
+    // Create CSV header
+    let csvContent = "Date,Time,Address,Status,Notes\n";
+    
+    // Add rows
+    visits.forEach(visit => {
+      const visitDate = new Date(visit.visitDate);
+      const contact = contacts.find(c => c.id === visit.contactId);
+      
+      // Format each field and wrap in quotes to handle commas in the content
+      const formattedDate = format(visitDate, "MM/dd/yyyy");
+      const formattedTime = format(visitDate, "h:mm a");
+      const address = contact?.address?.replace(/"/g, '""') || "Unknown Address";
+      const status = (contact?.status?.replace(/_/g, ' ') || "Unknown")?.replace(/"/g, '""');
+      const notes = (visit.notes || "No notes")?.replace(/"/g, '""');
+      
+      csvContent += `"${formattedDate}","${formattedTime}","${address}","${status}","${notes}"\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Calculate general stats
   const totalContacts = contacts.length;
@@ -342,8 +380,19 @@ export default function Reports() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle>Today's Activity</CardTitle>
-                  <div className="text-sm bg-green-100 text-green-800 rounded-full px-3 py-1">
-                    {visits.filter(v => isToday(new Date(v.visitDate))).length} visits today
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 gap-1 text-xs" 
+                      onClick={() => refetchVisits()}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Refresh</span>
+                    </Button>
+                    <div className="text-sm bg-green-100 text-green-800 rounded-full px-3 py-1">
+                      {visits.filter(v => isToday(new Date(v.visitDate))).length} visits today
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -410,10 +459,23 @@ export default function Reports() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Daily Activity Detail</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Complete record of all doors knocked and leads entered with timestamps
-              </p>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <div>
+                  <CardTitle>Daily Activity Detail</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Complete record of all doors knocked and leads entered with timestamps
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={exportToCSV}
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export CSV</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
