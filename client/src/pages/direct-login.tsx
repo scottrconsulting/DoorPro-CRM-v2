@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
 import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,8 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Loader2, LogIn } from "lucide-react";
 import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,19 +15,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional(),
 });
 
-export default function Login() {
+export default function DirectLogin() {
   const [, navigate] = useLocation();
-  const { isAuthenticated: isAuthAuthenticated, isLoading: isAuthLoading, login: authLogin } = useAuth();
-  const { isAuthenticated: isDirectAuthenticated, isLoading: isDirectLoading, login: directLogin } = useDirectAuth();
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const { isAuthenticated, isLoading, login, error: authError } = useDirectAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDirectLoginEnabled, setIsDirectLoginEnabled] = useState(true);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // If already authenticated, redirect to dashboard
-  if ((isAuthAuthenticated && !isAuthLoading) || (isDirectAuthenticated && !isDirectLoading)) {
+  if (isAuthenticated && !isLoading) {
     navigate("/");
     return null;
   }
@@ -40,7 +34,6 @@ export default function Login() {
     defaultValues: {
       username: "",
       password: "",
-      rememberMe: false,
     },
   });
 
@@ -49,24 +42,7 @@ export default function Login() {
     setLoginError(null);
     
     try {
-      // Try the direct auth first for more reliable cross-browser login
-      if (isDirectLoginEnabled) {
-        try {
-          await directLogin({
-            username: values.username,
-            password: values.password,
-          });
-          navigate("/");
-          return;
-        } catch (error) {
-          console.error("Direct login failed, falling back to standard login:", error);
-          // Disable direct login for this session if it failed
-          setIsDirectLoginEnabled(false);
-        }
-      }
-      
-      // Fallback to standard login
-      await authLogin({
+      await login({
         username: values.username,
         password: values.password,
       });
@@ -85,17 +61,17 @@ export default function Login() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center text-primary">
-              DoorPro CRM
+              Token-Based Login
             </CardTitle>
             <CardDescription className="text-center">
-              Log in to your account to continue
+              This login uses a token-based system for more reliable access
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loginError && (
+            {(loginError || authError) && (
               <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Login Failed</AlertTitle>
-                <AlertDescription>{loginError}</AlertDescription>
+                <AlertDescription>{loginError || authError}</AlertDescription>
               </Alert>
             )}
             
@@ -129,32 +105,12 @@ export default function Login() {
                   )}
                 />
                 
-                <div className="flex items-center space-x-2">
-                  <FormField
-                    control={form.control}
-                    name="rememberMe"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <Label htmlFor="rememberMe" className="text-sm cursor-pointer">
-                          Remember me
-                        </Label>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isSubmitting || isAuthLoading || isDirectLoading}
+                  disabled={isSubmitting || isLoading}
                 >
-                  {isSubmitting || isAuthLoading || isDirectLoading ? (
+                  {isSubmitting || isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Logging in...
@@ -168,25 +124,20 @@ export default function Login() {
                 </Button>
               </form>
             </Form>
+
+            <div className="mt-4 bg-blue-50 p-3 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-700">About this login method</h4>
+              <p className="text-xs text-blue-600 mt-1">
+                This page uses a token-based authentication system that bypasses cookies entirely. 
+                Use this login method if you experience issues with the standard login page 
+                when accessing from external browsers.
+              </p>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-between flex-col space-y-2">
-            <div className="flex justify-between w-full">
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot password?
-              </Link>
-              <Link to="/direct-login" className="text-sm text-primary hover:underline">
-                Use token login
-              </Link>
-            </div>
-            <div className="text-sm text-gray-500 text-center mt-2">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline">
-                Sign up
-              </Link>
-            </div>
-            <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded mt-2 text-center">
-              Having login issues? Try our <Link to="/direct-login" className="font-semibold underline">token-based login</Link> for more reliable access
-            </div>
+            <Link to="/login" className="text-sm text-primary hover:underline">
+              Return to standard login
+            </Link>
             <div className="text-xs text-gray-400 text-center mt-4">
               Demo credentials: admin / password
             </div>

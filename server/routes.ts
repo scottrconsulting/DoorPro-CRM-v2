@@ -40,6 +40,9 @@ import type Stripe from 'stripe';
 import { verifyPassword, generateResetToken, hashPassword } from './utils/password';
 import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 
+// Import direct auth router
+import directAuthRouter from './direct-auth';
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add a CORS header to all responses
   app.use((req, res, next) => {
@@ -174,7 +177,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(403).json({ message: "This feature requires a Pro subscription" });
   };
 
-  // Authentication routes
+  // Register direct auth routes that don't use cookies - more reliable for cross-domain access
+  app.use('/api/direct-auth', directAuthRouter);
+
+  // Standard Authentication routes
   app.post("/api/auth/login", (req, res, next) => {
     console.log("Login attempt for username:", req.body.username);
 

@@ -12,6 +12,7 @@ import Schedule from "@/pages/schedule";
 import Teams from "@/pages/enhanced-teams";
 import Reports from "@/pages/reports";
 import Login from "@/pages/login";
+import DirectLogin from "@/pages/direct-login";
 import Register from "@/pages/register";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
@@ -25,21 +26,31 @@ import AutoLogin from "@/pages/auto-login";
 import AppShell from "@/components/layout/app-shell";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
+import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useEffect, useState } from "react";
 
-// Simple protected route component
+// Enhanced protected route component that works with both auth systems
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated: isAuthAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated: isDirectAuthenticated, isLoading: isDirectLoading } = useDirectAuth();
   const [_, navigate] = useLocation();
+  
+  // Combined auth state - user is authenticated if either system authenticates them
+  const isAuthenticated = isAuthAuthenticated || isDirectAuthenticated;
+  const isLoading = isAuthLoading && isDirectLoading; // Only loading if both are loading
   
   useEffect(() => {
     // Log authentication state for debugging
-    console.log("Protected route - Auth state:", { isAuthenticated, isLoading });
+    console.log("Protected route - Auth state:", { 
+      standard: { isAuthAuthenticated, isAuthLoading },
+      token: { isDirectAuthenticated, isDirectLoading },
+      combined: { isAuthenticated, isLoading }
+    });
     
     if (!isLoading && !isAuthenticated) {
       navigate("/login");
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, isAuthAuthenticated, isDirectAuthenticated, navigate]);
   
   if (isLoading) {
     return (
@@ -73,6 +84,9 @@ function App() {
                 </Route>
                 <Route path="/login">
                   <Login />
+                </Route>
+                <Route path="/direct-login">
+                  <DirectLogin />
                 </Route>
                 <Route path="/register">
                   <Register />
