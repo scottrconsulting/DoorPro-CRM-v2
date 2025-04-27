@@ -49,18 +49,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Serving static HTML login page');
     res.sendFile('login.html', { root: './client/public' });
   });
-  
-  // Modified login route to use our static HTML page
-  app.get('/login', (req, res) => {
-    console.log('Login route accessed - serving static login page');
-    res.sendFile('login.html', { root: './client/public' });
-  });
-  
-  // Direct login also uses the static HTML page
-  app.get('/direct-login', (req, res) => {
-    console.log('Direct login route accessed - serving static login page');
-    res.sendFile('login.html', { root: './client/public' });
-  });
 
   // Add a CORS header to all responses
   app.use((req, res, next) => {

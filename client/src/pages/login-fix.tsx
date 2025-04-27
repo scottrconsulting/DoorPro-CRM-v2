@@ -111,7 +111,7 @@ export default function LoginFix() {
             )}
             
             {loginSuccess && (
-              <Alert variant="success" className="mb-4 bg-green-50 border-green-200 text-green-800">
+              <Alert className="mb-4 bg-green-50 border border-green-200 text-green-800">
                 <AlertTitle>Login Successful</AlertTitle>
                 <AlertDescription>Redirecting to dashboard...</AlertDescription>
               </Alert>
