@@ -8,6 +8,7 @@ import { Contact, InsertContact, InsertVisit } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -643,6 +644,151 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </Button>
         </div>
       </div>
+      
+      {/* New Contact Dialog - appears on long press */}
+      <Dialog open={showNewContactDialog} onOpenChange={setShowNewContactDialog}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Contact</DialogTitle>
+            <DialogDescription>
+              Enter the details for this new contact.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name / Address</Label>
+                <Input 
+                  id="fullName" 
+                  value={newContactForm.fullName}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, fullName: e.target.value}))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select 
+                  value={newContactForm.status}
+                  onValueChange={(value) => setNewContactForm(prev => ({...prev, status: value}))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_visited">Not Visited</SelectItem>
+                    <SelectItem value="interested">Interested</SelectItem>
+                    <SelectItem value="not_interested">Not Interested</SelectItem>
+                    <SelectItem value="call_back">Call Back</SelectItem>
+                    <SelectItem value="appointment_scheduled">Appointment Scheduled</SelectItem>
+                    <SelectItem value="converted">Converted</SelectItem>
+                    <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input 
+                id="address" 
+                value={newContactForm.address}
+                onChange={(e) => setNewContactForm(prev => ({...prev, address: e.target.value}))}
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input 
+                  id="city" 
+                  value={newContactForm.city}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, city: e.target.value}))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Input 
+                  id="state" 
+                  value={newContactForm.state}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, state: e.target.value}))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="zipCode">Zip Code</Label>
+                <Input 
+                  id="zipCode" 
+                  value={newContactForm.zipCode}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, zipCode: e.target.value}))}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input 
+                  id="phone" 
+                  value={newContactForm.phone}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, phone: e.target.value}))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  value={newContactForm.email}
+                  onChange={(e) => setNewContactForm(prev => ({...prev, email: e.target.value}))}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea 
+                id="notes" 
+                rows={3} 
+                value={newContactForm.notes}
+                onChange={(e) => setNewContactForm(prev => ({...prev, notes: e.target.value}))}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewContactDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                // Create the contact with all form data
+                if (newContactCoords) {
+                  createContactMutation.mutate({
+                    userId: user?.id || 0,
+                    fullName: newContactForm.fullName,
+                    address: newContactForm.address,
+                    city: newContactForm.city,
+                    state: newContactForm.state,
+                    zipCode: newContactForm.zipCode,
+                    phone: newContactForm.phone,
+                    email: newContactForm.email,
+                    status: newContactForm.status,
+                    latitude: newContactCoords.lat.toString(),
+                    longitude: newContactCoords.lng.toString(),
+                    notes: newContactForm.notes
+                  });
+                  
+                  setShowNewContactDialog(false);
+                }
+              }}
+            >
+              Create Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
