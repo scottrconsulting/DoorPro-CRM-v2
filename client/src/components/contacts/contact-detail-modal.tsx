@@ -89,6 +89,9 @@ export default function ContactDetailModal({
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editZipCode, setEditZipCode] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -305,6 +308,9 @@ export default function ContactDetailModal({
     if (contact) {
       setEditName(contact.fullName);
       setEditAddress(contact.address);
+      setEditCity(contact.city || "");
+      setEditState(contact.state || "");
+      setEditZipCode(contact.zipCode || "");
       setEditPhone(contact.phone || "");
       setEditEmail(contact.email || "");
       setEditStatus(contact.status);
@@ -431,6 +437,9 @@ export default function ContactDetailModal({
     updateContactMutation.mutate({
       fullName: editName,
       address: editAddress,
+      city: editCity || null,
+      state: editState || null,
+      zipCode: editZipCode || null,
       phone: editPhone || null,
       email: editEmail || null,
       status: editStatus,
@@ -578,6 +587,13 @@ export default function ContactDetailModal({
                   <div className="text-sm mb-2">
                     <span className="material-icons text-xs align-text-bottom mr-1">home</span>
                     {contact.address}
+                    {contact.city || contact.state ? (
+                      <div className="ml-5 mt-1 text-xs text-neutral-600">
+                        {contact.city ? `${contact.city}, ` : ''}
+                        {contact.state || ''} 
+                        {contact.zipCode ? ` ${contact.zipCode}` : ''}
+                      </div>
+                    ) : null}
                   </div>
                   {contact.phone && (
                     <div className="text-sm mb-2">
