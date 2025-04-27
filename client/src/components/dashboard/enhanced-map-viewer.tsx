@@ -380,13 +380,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       // Only show form dialog for long clicks
       if (isLongClick) {
-        title: "New Contact",
-        draggable: true,
-        animation: window.google.maps.Animation.DROP,
-        icon: getMarkerIcon(activeStatus),
-      });
+        // Show the contact dialog for long clicks
+        setShowNewContactDialog(true);
+      }
       
-      setNewHouseMarker(marker);
       setIsAddingHouse(true); // Auto-enable adding mode
       
       // Get the address from the coordinates
