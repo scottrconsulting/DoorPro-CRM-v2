@@ -483,35 +483,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Drawing manager functionality removed as requested
 
-  // Function to count contacts inside polygon
-  const countContactsInPolygon = useCallback((polygon) => {
-    if (!polygon || !contacts.length) return;
-    
-    // Create a function to check if a point is inside the polygon
-    const isPointInPolygon = (point, poly) => {
-      return window.google.maps.geometry.poly.containsLocation(
-        new window.google.maps.LatLng(point.lat, point.lng),
-        poly
-      );
-    };
-    
-    // Count contacts inside polygon
-    const count = contacts.filter(contact => {
-      if (!contact.latitude || !contact.longitude) return false;
-      
-      return isPointInPolygon(
-        { lat: parseFloat(contact.latitude), lng: parseFloat(contact.longitude) },
-        polygon
-      );
-    }).length;
-    
-    setAddressesInPolygon(count);
-    
-    toast({
-      title: "Area Analysis",
-      description: `Found ${count} addresses in the selected area`,
-    });
-  }, [contacts, toast]);
+  // Function to count contacts inside polygon removed as requested
   
   // Drawing mode toggle removed as requested
 
