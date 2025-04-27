@@ -15,10 +15,40 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
+// Define the Customization type
+interface Customization {
+  id: number;
+  userId: number;
+  teamId: number | null;
+  pinColors: Record<string, string>;
+  enabledWidgets: string[];
+  widgetOrder: string[];
+  defaultMapType: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Add Google Maps types
 declare global {
   interface Window {
-    google: any;
+    google: {
+      maps: {
+        Map: any;
+        Marker: any;
+        Animation: any;
+        InfoWindow: any;
+        Geocoder: any;
+        GeocoderStatus: {
+          OK: string;
+        };
+        SymbolPath: {
+          CIRCLE: number;
+        };
+        event: {
+          removeListener: (listener: any) => void;
+        };
+      };
+    };
   }
 }
 
@@ -54,6 +84,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     address: "",
     phone: "",
     email: "",
+    city: "",
+    state: "",
+    zipCode: "",
     status: "not_visited",
     notes: "",
     // Scheduling fields
@@ -259,6 +292,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           lng: parseFloat(contact.longitude),
         };
         
+        // Ensure we're using the customized pin colors from settings
+        // This fixes pin color consistency across all contact types
         const marker = addMarker(position, {
           title: contact.fullName,
           icon: getMarkerIcon(contact.status, customization?.pinColors),
