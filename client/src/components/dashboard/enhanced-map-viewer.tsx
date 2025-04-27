@@ -205,6 +205,124 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setShowDeleteDialog(true);
   }, []);
   
+  // Handle my location button click
+  const handleMyLocationClick = async () => {
+    const position = await getCurrentLocation();
+    if (position && map) {
+      panTo(position);
+      map.setZoom(15);
+    }
+  };
+  
+  // Add click functionality to map for adding new contacts
+  useEffect(() => {
+    if (!isLoaded || !map || !window.google) return;
+    
+    // Track when the mouse is pressed down
+    const mouseDownListener = map.addListener("mousedown", (e: any) => {
+      if (!e.latLng) return;
+      setMouseDownTime(Date.now());
+    });
+    
+    // Handle click with hold detection
+    const clickListener = map.addListener("click", async (e: any) => {
+      if (!e.latLng) return;
+      setMouseUpTime(Date.now());
+      
+      // Calculate click duration
+      const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
+      const isLongClick = clickDuration > 500; // 500ms threshold for long press
+      
+      // Create a marker at the clicked location with the current active status
+      const marker = addMarker(e.latLng.toJSON(), {
+        title: "New Contact",
+        draggable: true,
+        animation: window.google.maps.Animation.DROP,
+        icon: getMarkerIcon(activeStatus, customization?.pinColors),
+      });
+      
+      setNewHouseMarker(marker);
+      setIsAddingHouse(true); // Auto-enable adding mode
+      
+      // Get the address from the coordinates
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: e.latLng.toJSON() }, (
+        results: any, 
+        status: any
+      ) => {
+        if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+          const address = results[0].formatted_address;
+          setNewContactAddress(address);
+          setNewContactCoords(e.latLng.toJSON());
+          
+          // Extract address components for all contact creation paths
+          const streetNumber = results[0].address_components.find((c: any) => 
+            c.types.includes('street_number'))?.short_name || '';
+          const street = results[0].address_components.find((c: any) => 
+            c.types.includes('route'))?.short_name || '';
+          const city = results[0].address_components.find((c: any) => 
+            c.types.includes('locality'))?.short_name || '';
+          const state = results[0].address_components.find((c: any) => 
+            c.types.includes('administrative_area_level_1'))?.short_name || '';
+          const zipCode = results[0].address_components.find((c: any) => 
+            c.types.includes('postal_code'))?.short_name || '';
+          
+          const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+          
+          // For quick clicks - just add the contact with the selected status for ALL statuses
+          // Start work timer when first contact is added (if not already started)
+          if (!firstHouseRecordedRef.current) {
+            firstHouseRecordedRef.current = true;
+            timerActiveRef.current = true;
+            
+            // Add first session to the sessions list
+            sessionsRef.current.push({
+              startTime: new Date().toISOString(),
+              duration: 0
+            });
+            
+            toast({
+              title: "Work timer started",
+              description: "Timer has started tracking your work session"
+            });
+          }
+          
+          // Create the contact with the current active status and all address components
+          createContactMutation.mutate({
+            userId: user?.id || 0,
+            fullName: autoName,
+            address: address,
+            city: city,
+            state: state,
+            zipCode: zipCode,
+            status: activeStatus,
+            latitude: e.latLng.lat().toString(),
+            longitude: e.latLng.lng().toString(),
+            notes: `Quick add: ${new Date().toLocaleString()}`
+          });
+          
+          toast({
+            title: "Contact added",
+            description: `Added pin with status: ${activeStatus.replace(/_/g, ' ')}`,
+          });
+        } else {
+          // Could not get the address
+          toast({
+            title: "Pin added",
+            description: "Address could not be determined",
+            variant: "destructive",
+          });
+        }
+      });
+    });
+    
+    return () => {
+      // Clean up the listeners when the component unmounts
+      window.google.maps.event.removeListener(mouseDownListener);
+      window.google.maps.event.removeListener(clickListener);
+    };
+  }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
+
   // Update markers when contacts change
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
@@ -261,21 +379,80 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             }
           }
         });
+        
+        // Right-click handler to show delete option
+        marker.addListener("rightclick", () => {
+          handleContactDelete(contact);
+        });
       }
     });
     
     console.log("Status counts for debugging:", statusCounts);
     
-  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization?.pinColors]);
+  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization?.pinColors, handleContactDelete]);
+  
+  // Change map type when mapType state changes
+  useEffect(() => {
+    if (isLoaded && map) {
+      setGoogleMapType(mapType);
+    }
+  }, [mapType, isLoaded, map, setGoogleMapType]);
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full w-full">
+      {/* Google Map Container */}
       <div
         ref={mapRef}
         className="w-full h-full rounded-lg overflow-hidden shadow-lg"
       />
       
-      {/* Status selection controls */}
+      {/* Map Controls Overlay - Top Right */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        {/* Map Type Controls */}
+        <div className="bg-white p-2 rounded-lg shadow-lg grid grid-cols-2 gap-1">
+          <Button
+            variant={mapType === "roadmap" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMapType("roadmap")}
+          >
+            Map
+          </Button>
+          <Button
+            variant={mapType === "satellite" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMapType("satellite")}
+          >
+            Satellite
+          </Button>
+          <Button
+            variant={mapType === "hybrid" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMapType("hybrid")}
+          >
+            Hybrid
+          </Button>
+          <Button
+            variant={mapType === "terrain" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMapType("terrain")}
+          >
+            Terrain
+          </Button>
+        </div>
+        
+        {/* Location and Search Controls */}
+        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMyLocationClick}
+          >
+            My Location
+          </Button>
+        </div>
+      </div>
+      
+      {/* Status Selection Controls - Bottom */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded-lg shadow-lg flex items-center gap-2 flex-wrap justify-center z-10">
         <Button 
           variant={activeStatus === "not_visited" ? "default" : "outline"}
@@ -346,6 +523,83 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <div className="w-3 h-3 rounded-full bg-purple-500 mr-2" />
           No Soliciting
         </Button>
+      </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this contact? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (selectedContact) {
+                deleteContactMutation.mutate(selectedContact.id);
+              }
+              setShowDeleteDialog(false);
+            }}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Work Timer Display - Top Left Corner */}
+      <div className="absolute top-4 left-4 bg-white p-2 rounded-lg shadow-lg z-10">
+        <div className="text-sm font-bold">{formattedTime}</div>
+        <div className="flex gap-2 mt-1">
+          <Button
+            variant={timerActiveRef.current ? "outline" : "default"}
+            size="sm"
+            onClick={() => {
+              // If first time starting, initialize the session
+              if (!firstHouseRecordedRef.current && !timerActiveRef.current) {
+                firstHouseRecordedRef.current = true;
+                sessionsRef.current.push({
+                  startTime: new Date().toISOString(),
+                  duration: 0
+                });
+              }
+              
+              // Toggle timer state
+              timerActiveRef.current = !timerActiveRef.current;
+              
+              // Save current session duration when pausing
+              if (!timerActiveRef.current) {
+                const currentSession = sessionsRef.current[sessionsRef.current.length - 1];
+                if (currentSession) {
+                  currentSession.duration = workTimerRef.current;
+                }
+              } else {
+                // Create a new session if resuming after pause
+                if (firstHouseRecordedRef.current) {
+                  sessionsRef.current.push({
+                    startTime: new Date().toISOString(),
+                    duration: 0
+                  });
+                }
+              }
+              
+              // Force UI update
+              setTimerDisplay(workTimerRef.current);
+              
+              // Show feedback toast
+              toast({
+                title: timerActiveRef.current ? "Timer Started" : "Timer Paused",
+                description: timerActiveRef.current ? 
+                  "Recording your work time" : 
+                  `Session duration: ${formattedTime}`,
+              });
+            }}
+            className="px-2 py-1 h-auto"
+          >
+            {timerActiveRef.current ? "Pause" : "Start/Resume"}
+          </Button>
+        </div>
       </div>
     </div>
   );
