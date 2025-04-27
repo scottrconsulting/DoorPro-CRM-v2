@@ -821,9 +821,9 @@ useEffect(() => {
         <TabsContent value="map-pins" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pin Color Settings</CardTitle>
+              <CardTitle>Map Pin Configuration</CardTitle>
               <CardDescription>
-                Customize the colors of pins on the map based on contact status.
+                Customize both pin labels and colors in one place for a unified map appearance.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -831,7 +831,8 @@ useEffect(() => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[150px]">Status ID</TableHead>
+                      <TableHead>Display Label</TableHead>
                       <TableHead>Color</TableHead>
                       <TableHead className="w-24">Preview</TableHead>
                       <TableHead className="w-32">Actions</TableHead>
@@ -840,8 +841,29 @@ useEffect(() => {
                   <TableBody>
                     {[...CONTACT_STATUSES, ...customStatuses].map(status => (
                       <TableRow key={status}>
-                        <TableCell className="font-medium">
-                          {statusLabels[status] || status.replace(/_/g, ' ')}
+                        <TableCell className="font-medium text-sm text-muted-foreground">
+                          {status}
+                        </TableCell>
+                        <TableCell>
+                          {editingStatus === status ? (
+                            <Input 
+                              value={statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              onChange={(e) => setStatusLabels({
+                                ...statusLabels,
+                                [status]: e.target.value
+                              })}
+                              autoFocus
+                              className="w-full"
+                            />
+                          ) : (
+                            <div 
+                              className="px-2 py-1 cursor-pointer hover:bg-slate-50 rounded-md w-fit font-medium"
+                              onClick={() => setEditingStatus(status)}
+                            >
+                              {statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              <span className="ml-2 text-xs text-muted-foreground">(click to edit)</span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -902,24 +924,46 @@ useEffect(() => {
                         <TableCell>
                           <div className="flex justify-center">
                             <div 
-                              className="w-8 h-8 rounded-full" 
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" 
                               style={{ backgroundColor: editedPinColors[status] || "blue" }}
-                            />
+                              title={statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            >
+                              {(statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')).charAt(0).toUpperCase()}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {isPro && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setCurrentColor(editedPinColors[status] || "#3b82f6"); // Default to blue
-                                setActiveColorPicker(status);
-                              }}
-                            >
-                              Custom Color
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {isPro && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setCurrentColor(editedPinColors[status] || "#3b82f6"); // Default to blue
+                                  setActiveColorPicker(status);
+                                }}
+                              >
+                                Custom Color
+                              </Button>
+                            )}
+                            {editingStatus === status ? (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => setEditingStatus(null)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => setEditingStatus(status)}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -992,6 +1036,24 @@ useEffect(() => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              
+              {/* Legend Preview */}
+              <div className="mt-8 bg-white p-4 border rounded-md">
+                <h3 className="text-base font-semibold mb-3">Map Legend Preview</h3>
+                <div className="flex flex-wrap gap-4">
+                  {[...CONTACT_STATUSES, ...customStatuses].map(status => (
+                    <div key={status} className="flex items-center gap-2">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: editedPinColors[status] || "blue" }}
+                      />
+                      <span className="text-sm">
+                        {statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground">
