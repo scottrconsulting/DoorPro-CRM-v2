@@ -26,6 +26,9 @@ interface Customization {
   enabledWidgets: string[];
   widgetOrder: string[];
   defaultMapType: string;
+  quickActions: string[];
+  customStatuses: string[];
+  appointmentTypes: string[];
   createdAt?: string;
   updatedAt?: string;
 }

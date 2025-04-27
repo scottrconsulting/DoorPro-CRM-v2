@@ -186,41 +186,39 @@ export function createSvgMarker(color: string, label?: string): string {
 
 // This function returns the icon for a given status using Google Maps markers
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>, statusLabels?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
-  // Default colors for statuses if no custom color is provided
-  const defaultColors: Record<string, string> = {
-    converted: "#00c853",           // Green
-    interested: "#ffd600",          // Yellow
-    appointment_scheduled: "#ff9800", // Orange
-    call_back: "#2196f3",           // Blue
-    considering: "#9c27b0",         // Purple
-    not_interested: "#f44336",      // Red
-    not_visited: "#2196f3",         // Blue
-    no_soliciting: "#000000",       // Black
-    unknown: "#ffffff"              // White
+  // Simple direct mapping to reliable Google marker colors
+  const statusToColorMap: Record<string, string> = {
+    converted: "green",
+    interested: "yellow",
+    appointment_scheduled: "orange",
+    call_back: "blue",
+    considering: "purple",
+    not_interested: "red",
+    not_visited: "blue",
+    no_soliciting: "purple",
+    presented: "pink"
   };
   
-  // Determine the color to use
-  let color: string;
+  // Get color from customization if available, otherwise use defaults
+  let markerColor: string = "blue"; // Default fallback
   
-  // First try custom colors from user settings
   if (pinColors && status in pinColors) {
-    color = pinColors[status];
-  } 
-  // Then fall back to default color map
-  else if (status in defaultColors) {
-    color = defaultColors[status];
-  }
-  // Last resort fallback
-  else {
-    color = "#2196f3"; // Default blue
+    const customColor = pinColors[status];
+    
+    // If it's one of the standard Google marker colors, use it directly
+    if (["red", "blue", "green", "yellow", "purple", "orange", "pink"].includes(customColor.toLowerCase())) {
+      markerColor = customColor.toLowerCase();
+    } else {
+      // Otherwise, map to closest standard color
+      markerColor = mapHexToGoogleColor(customColor);
+    }
+  } else if (status in statusToColorMap) {
+    markerColor = statusToColorMap[status];
   }
   
-  // For most reliable display, we'll map colors to standard Google marker colors
-  const googleColor = mapHexToGoogleColor(color);
-  
-  // Standard Google Maps markers with limited colors
+  // Use standard Google Maps markers for maximum compatibility
   return {
-    url: `https://maps.google.com/mapfiles/ms/icons/${googleColor}-dot.png`,
+    url: `https://maps.google.com/mapfiles/ms/icons/${markerColor}-dot.png`,
     scaledSize: { width: 32, height: 32 },
   };
 }
