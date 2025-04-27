@@ -158,10 +158,11 @@ export function getUserAvatarIcon(type: 'male' | 'female'): { url: string; scale
 }
 
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
-  // Default colors if customization is not available
+  // Default colors - these must match the legend colors in the UI
+  // Valid Google Maps colors are: "red", "blue", "green", "yellow", "purple", "orange", "pink"
   const defaultColors: Record<string, string> = {
     converted: "green",
-    interested: "yellow",
+    interested: "yellow", 
     appointment_scheduled: "orange",
     call_back: "blue",
     considering: "purple",
@@ -170,8 +171,43 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
     no_soliciting: "purple"
   };
 
+  // Map any custom colors from settings to the closest Google Maps colors
+  // This ensures colors in settings will work with Google Maps API
+  function mapToGoogleColor(color: string): string {
+    // Google Maps only supports these specific colors
+    const validGoogleColors = ["red", "blue", "green", "yellow", "purple", "orange", "pink"];
+    
+    // If the color is already a valid Google Maps color, use it
+    if (validGoogleColors.includes(color.toLowerCase())) {
+      return color.toLowerCase();
+    }
+    
+    // Otherwise map common color names to Google Maps colors
+    const colorMap: Record<string, string> = {
+      "teal": "green",
+      "lime": "green",
+      "aqua": "blue",
+      "cyan": "blue",
+      "magenta": "purple",
+      "violet": "purple",
+      "indigo": "purple",
+      "amber": "yellow",
+      "gold": "yellow",
+      "maroon": "red",
+      "crimson": "red",
+      "salmon": "red"
+    };
+    
+    return colorMap[color.toLowerCase()] || "blue"; // Default to blue if no match
+  }
+
   // Use customization colors if available, otherwise fall back to defaults
-  const color = (pinColors && pinColors[status]) || defaultColors[status] || "blue";
+  let color = defaultColors[status] || "blue";
+  
+  if (pinColors && pinColors[status]) {
+    // Map any custom color from settings to a valid Google Maps color
+    color = mapToGoogleColor(pinColors[status]);
+  }
   
   return {
     url: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
