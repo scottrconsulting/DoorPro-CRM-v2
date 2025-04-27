@@ -1259,24 +1259,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customization = await storage.getCustomizationByUser(user.id);
       
       if (!customization) {
-        // Return default customization settings
+        // Return default customization settings that match our updated schema
         return res.json({
           id: 0,
           userId: user.id,
           teamId: null,
           theme: "light",
           primaryColor: "blue",
+          colorScheme: null,
+          secondaryColor: null,
+          accentColor: null,
+          fontFamily: null,
+          logoUrl: null,
+          enableDarkMode: true,
           pinColors: Object.fromEntries(CONTACT_STATUSES.map((status, i) => [status, PIN_COLORS[i % PIN_COLORS.length]])),
+          mapDefaultView: "roadmap",
           quickActions: QUICK_ACTIONS,
           customStatuses: [],
-          customFields: [],
+          statusLabels: {},
           appointmentTypes: ["Sales Presentation", "Product Demo", "Follow-up Meeting", "Installation"],
           confirmationOptions: {
             sms: true,
             email: true,
             reminderTime: 30
           },
-          noteTemplates: {},
+          dashboardWidgets: DASHBOARD_WIDGETS,
+          dashboardWidgetLabels: DASHBOARD_WIDGET_LABELS,
+          timerSettings: {},
+          notificationSettings: {},
+          language: "en",
+          dateFormat: "MM/DD/YYYY",
+          timeFormat: "hh:mm A",
           createdAt: new Date(),
           updatedAt: new Date()
         });
