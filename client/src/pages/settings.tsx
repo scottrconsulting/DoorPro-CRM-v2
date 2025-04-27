@@ -354,8 +354,11 @@ export default function Settings() {
                         <FormItem>
                           <FormLabel>Theme</FormLabel>
                           <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setTheme(value);
+                            }} 
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -483,7 +486,7 @@ export default function Settings() {
                           <FormLabel>Default Calendar View</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
