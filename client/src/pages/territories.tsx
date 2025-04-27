@@ -32,6 +32,7 @@ export default function Territories() {
   const [newTerritoryDescription, setNewTerritoryDescription] = useState("");
   const [drawingMode, setDrawingMode] = useState(false);
   const [drawingPoints, setDrawingPoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [currentMapType, setCurrentMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap");
 
   // Get territories list
   const { data: territories = [], isLoading } = useQuery<Territory[]>({
@@ -45,6 +46,7 @@ export default function Territories() {
     isLoaded,
     loading: mapLoading,
     panTo,
+    setMapType,
   } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
@@ -56,6 +58,7 @@ export default function Territories() {
     map: createMap,
     isLoaded: createMapIsLoaded,
     loading: createMapLoading,
+    setMapType: setCreateMapType,
   } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 7,
@@ -136,6 +139,12 @@ export default function Territories() {
       });
     },
   });
+
+  // Apply map type when it changes
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+    setMapType(currentMapType);
+  }, [map, isLoaded, currentMapType, setMapType]);
 
   // Setup drawing manager for main map
   useEffect(() => {
@@ -536,6 +545,33 @@ export default function Territories() {
                 </div>
               </CardHeader>
               <CardContent className="p-0 relative h-[500px]">
+                {/* Map Type Controls */}
+                <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
+                  <button
+                    className={`py-1 px-2 text-xs ${currentMapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                    onClick={() => setCurrentMapType('roadmap')}
+                  >
+                    Road
+                  </button>
+                  <button
+                    className={`py-1 px-2 text-xs ${currentMapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                    onClick={() => setCurrentMapType('satellite')}
+                  >
+                    Satellite
+                  </button>
+                  <button
+                    className={`py-1 px-2 text-xs ${currentMapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                    onClick={() => setCurrentMapType('hybrid')}
+                  >
+                    Hybrid
+                  </button>
+                  <button
+                    className={`py-1 px-2 text-xs ${currentMapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                    onClick={() => setCurrentMapType('terrain')}
+                  >
+                    Terrain
+                  </button>
+                </div>
                 <div ref={mapRef} className="w-full h-full" />
                 {mapLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">

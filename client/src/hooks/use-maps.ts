@@ -15,7 +15,7 @@ interface UseMapResult {
   loading: boolean;
   error: Error | null;
   isLoaded: boolean;
-  setMapType: (type: "roadmap" | "satellite") => void;
+  setMapType: (type: "roadmap" | "satellite" | "hybrid" | "terrain") => void;
   panTo: (position: { lat: number; lng: number }) => void;
   addMarker: (position: { lat: number; lng: number }, options?: any) => google.maps.Marker | null;
   clearMarkers: () => void;
@@ -82,12 +82,24 @@ export function useGoogleMaps(apiKey: string, options: MapOptions): UseMapResult
   }, [isLoaded, mapRef, map, options]);
 
   // Set map type
-  const setMapType = useCallback((type: "roadmap" | "satellite") => {
+  const setMapType = useCallback((type: "roadmap" | "satellite" | "hybrid" | "terrain") => {
     if (!map) return;
     
-    map.setMapTypeId(
-      type === "satellite" ? google.maps.MapTypeId.SATELLITE : google.maps.MapTypeId.ROADMAP
-    );
+    switch (type) {
+      case "satellite":
+        map.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+        break;
+      case "hybrid":
+        map.setMapTypeId(google.maps.MapTypeId.HYBRID);
+        break;
+      case "terrain":
+        map.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+        break;
+      case "roadmap":
+      default:
+        map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        break;
+    }
   }, [map]);
 
   // Pan to a location

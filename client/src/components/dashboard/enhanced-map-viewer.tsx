@@ -855,12 +855,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               {activeStatus === "no_soliciting" && <span className="material-icons text-purple-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
             <div 
-              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "call_back" ? "bg-orange-100" : ""}`}
+              className={`flex items-center text-xs px-2 py-1 rounded cursor-pointer ${activeStatus === "call_back" ? "bg-cyan-100" : ""}`}
               onClick={() => handleSetActiveStatus("call_back")}
             >
-              <span className="inline-block w-3 h-3 rounded-full bg-orange-500 mr-1"></span>
+              <span className="inline-block w-3 h-3 rounded-full bg-cyan-500 mr-1"></span>
               <span className="text-neutral-600">Call back</span>
-              {activeStatus === "call_back" && <span className="material-icons text-orange-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
+              {activeStatus === "call_back" && <span className="material-icons text-cyan-500 ml-1" style={{ fontSize: '14px' }}>check</span>}
             </div>
             
             {/* Tip for right-click deletion */}
