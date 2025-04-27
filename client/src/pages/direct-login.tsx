@@ -1,58 +1,54 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useDirectAuth } from "@/hooks/use-direct-auth";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogIn } from "lucide-react";
-import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const formSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
 export default function DirectLogin() {
-  const [, navigate] = useLocation();
-  const { isAuthenticated, isLoading, login, error: authError } = useDirectAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("password");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Use useEffect for redirection to avoid React warnings
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      navigate("/");
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    setLoginError(null);
-    
     try {
-      await login({
-        username: values.username,
-        password: values.password,
+      // First, clear any existing token
+      localStorage.removeItem('doorpro_auth_token');
+      
+      // Make login request
+      const response = await apiRequest("POST", "/api/direct-auth/direct-login", {
+        username,
+        password
       });
-      navigate("/");
+      
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        // Store token
+        localStorage.setItem('doorpro_auth_token', data.token);
+        
+        setSuccess(`Login successful! Redirecting to dashboard...`);
+        
+        // Redirect after a short delay to show the success message
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      } else {
+        setError(data.message || "Invalid credentials");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
-      setLoginError(error.message || "Authentication failed. Please check your credentials and try again.");
+      setError("Authentication failed. Please check your credentials and try again.");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   }
 
@@ -69,62 +65,66 @@ export default function DirectLogin() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {(loginError || authError) && (
+            {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Login Failed</AlertTitle>
-                <AlertDescription>{loginError || authError}</AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="admin" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            {success && (
+              <Alert className="mb-4 bg-green-50 border-green-500 text-green-700">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                  Username
+                </label>
+                <Input 
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="admin"
+                  required
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <Input 
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
                 />
-                
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={isSubmitting || isLoading}
-                >
-                  {isSubmitting || isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Logging in...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Log in
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Log in
+                  </>
+                )}
+              </Button>
+            </form>
 
             <div className="mt-4 bg-blue-50 p-3 rounded-lg">
               <h4 className="text-sm font-semibold text-blue-700">Cross-Platform Access</h4>
@@ -135,9 +135,9 @@ export default function DirectLogin() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between flex-col space-y-2">
-            <Link to="/register" className="text-sm text-primary hover:underline">
-              Need an account? Register here
-            </Link>
+            <div className="text-sm text-primary hover:underline">
+              Need an account? Contact your administrator
+            </div>
             <div className="text-xs text-gray-400 text-center mt-4">
               Demo credentials: admin / password
             </div>
