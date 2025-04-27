@@ -273,10 +273,14 @@ export default function Customize() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-3 md:grid-cols-none h-auto">
+        <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-2 md:grid-cols-none h-auto">
           <TabsTrigger value="appearance" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             <Settings className="mr-2 h-4 w-4" />
             Appearance
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+            Dashboard Widgets
           </TabsTrigger>
           <TabsTrigger value="map-pins" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -604,6 +608,165 @@ export default function Customize() {
                       value={reminderTime} 
                       onChange={e => setReminderTime(Number(e.target.value))}
                     />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Dashboard Widgets Tab */}
+        <TabsContent value="dashboard" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dashboard Widgets</CardTitle>
+              <CardDescription>
+                Choose which stats and widgets appear on your dashboard and customize their order.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Enable/Disable Widgets</Label>
+                  <p className="text-sm text-muted-foreground">Select which widgets to display on your dashboard.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {DASHBOARD_WIDGETS.map(widget => (
+                      <div key={widget} className="flex items-center space-x-2 p-2 border rounded">
+                        <Checkbox 
+                          id={`widget-${widget}`} 
+                          checked={enabledWidgets.includes(widget)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEnabledWidgets([...enabledWidgets, widget]);
+                              if (!widgetOrder.includes(widget)) {
+                                setWidgetOrder([...widgetOrder, widget]);
+                              }
+                            } else {
+                              setEnabledWidgets(enabledWidgets.filter(w => w !== widget));
+                            }
+                          }}
+                        />
+                        <div className="flex-1">
+                          <Label 
+                            htmlFor={`widget-${widget}`} 
+                            className="font-medium cursor-pointer flex items-center justify-between"
+                          >
+                            <span>{DASHBOARD_WIDGET_LABELS[widget] || widget}</span>
+                            
+                            {editingWidgetLabel === widget ? (
+                              <Input 
+                                value={customWidgetLabels[widget] || DASHBOARD_WIDGET_LABELS[widget] || widget}
+                                onChange={(e) => setCustomWidgetLabels({
+                                  ...customWidgetLabels,
+                                  [widget]: e.target.value
+                                })}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-40 ml-2 text-sm"
+                                size={20}
+                              />
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setEditingWidgetLabel(widget);
+                                }}
+                                className="text-xs"
+                              >
+                                Edit Label
+                              </Button>
+                            )}
+                          </Label>
+                          
+                          {editingWidgetLabel === widget && (
+                            <div className="flex space-x-1 mt-1 justify-end">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => setEditingWidgetLabel(null)}
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => {
+                                  const updatedLabels = {...customWidgetLabels};
+                                  delete updatedLabels[widget];
+                                  setCustomWidgetLabels(updatedLabels);
+                                  setEditingWidgetLabel(null);
+                                }}
+                              >
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-5 space-y-2">
+                  <Label className="text-base font-semibold">Widget Order</Label>
+                  <p className="text-sm text-muted-foreground">Drag and drop to rearrange the order of widgets on your dashboard.</p>
+                  
+                  <div className="space-y-2 mt-3">
+                    {enabledWidgets.length === 0 ? (
+                      <div className="text-center p-4 border border-dashed rounded-md">
+                        <p className="text-muted-foreground">No widgets enabled. Enable widgets above to arrange them.</p>
+                      </div>
+                    ) : (
+                      widgetOrder
+                        .filter(widget => enabledWidgets.includes(widget))
+                        .map((widget, index) => (
+                        <div 
+                          key={widget} 
+                          className="flex items-center justify-between p-3 bg-muted/50 border rounded-md"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                              {index + 1}
+                            </span>
+                            <span>{customWidgetLabels[widget] || DASHBOARD_WIDGET_LABELS[widget] || widget}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (index === 0) return;
+                                const newOrder = [...widgetOrder];
+                                const temp = newOrder[index];
+                                newOrder[index] = newOrder[index - 1];
+                                newOrder[index - 1] = temp;
+                                setWidgetOrder(newOrder);
+                              }}
+                              disabled={index === 0}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="m18 15-6-6-6 6"/></svg>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (index === widgetOrder.filter(w => enabledWidgets.includes(w)).length - 1) return;
+                                const newOrder = [...widgetOrder];
+                                const temp = newOrder[index];
+                                newOrder[index] = newOrder[index + 1];
+                                newOrder[index + 1] = temp;
+                                setWidgetOrder(newOrder);
+                              }}
+                              disabled={index === widgetOrder.filter(w => enabledWidgets.includes(w)).length - 1}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="m6 9 6 6 6-6"/></svg>
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
