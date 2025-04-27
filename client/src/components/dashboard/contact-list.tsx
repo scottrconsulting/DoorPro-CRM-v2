@@ -13,7 +13,7 @@ export default function ContactList() {
   const [_, setLocation] = useLocation();
 
   // Fetch contacts
-  const { data: contacts = [], isLoading } = useQuery<Contact[]>({
+  const { data: contacts = [], isLoading, refetch } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
@@ -109,6 +109,13 @@ export default function ContactList() {
                 search
               </span>
             </div>
+            <button 
+              onClick={() => refetch()} 
+              className="mr-2 p-1 rounded hover:bg-neutral-100 text-neutral-500"
+              title="Refresh contacts"
+            >
+              <span className="material-icons text-sm">refresh</span>
+            </button>
             <Link href="/contacts" className="text-sm text-primary hover:text-primary-dark">
               View All
             </Link>

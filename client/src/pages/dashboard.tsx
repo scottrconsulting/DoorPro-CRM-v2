@@ -17,11 +17,11 @@ export default function Dashboard() {
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
   // Fetch data for dashboard statistics
-  const { data: contacts = [] } = useQuery<Contact[]>({
+  const { data: contacts = [], refetch: refetchContacts } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  const { data: visits = [] } = useQuery<Visit[]>({
+  const { data: visits = [], refetch: refetchVisits } = useQuery<Visit[]>({
     queryKey: ["/api/visits"],
   });
 
@@ -60,6 +60,17 @@ export default function Dashboard() {
           <p className="text-neutral-500">Here's your activity summary for today</p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
+          <Button 
+            variant="ghost" 
+            className="flex items-center" 
+            onClick={() => {
+              refetchContacts();
+              refetchVisits();
+            }}
+            title="Refresh data"
+          >
+            <span className="material-icons text-sm mr-1">refresh</span> Refresh
+          </Button>
           <Link href="/contacts">
             <Button variant="outline" className="flex items-center">
               <span className="material-icons text-sm mr-1">add</span> Add Contact

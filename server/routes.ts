@@ -1166,6 +1166,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch visits" });
     }
   });
+  
+  // Create a visit
+  app.post("/api/visits", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const visitData = {
+        ...req.body,
+        userId: user.id,
+        visitDate: req.body.visitDate || new Date().toISOString(),
+      };
+      const visit = await storage.createVisit(visitData);
+      return res.status(201).json(visit);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to create visit" });
+    }
+  });
 
   app.get("/api/reports", ensureProAccess, async (req, res) => {
     try {
