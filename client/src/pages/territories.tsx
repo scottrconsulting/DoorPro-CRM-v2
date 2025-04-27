@@ -600,6 +600,44 @@ export default function Territories() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               )}
+              
+              {/* Drawing Tools */}
+              <div className="absolute top-2 right-2 bg-white rounded-md shadow-md p-2 z-10">
+                <div className="flex flex-col space-y-2">
+                  <Button 
+                    size="sm" 
+                    className="flex items-center justify-center w-8 h-8 p-0"
+                    variant={drawingMode ? "default" : "outline"}
+                    onClick={toggleDrawingMode}
+                    title="Draw polygon"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18l-9 12z"></path>
+                    </svg>
+                  </Button>
+                  
+                  <Button 
+                    size="sm" 
+                    className="flex items-center justify-center w-8 h-8 p-0"
+                    variant="outline"
+                    onClick={clearDrawings}
+                    title="Clear drawing"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 3h18v18H3z"></path>
+                      <path d="M21 3L3 21"></path>
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Drawing Instructions */}
+              {drawingMode && (
+                <div className="absolute bottom-2 left-2 right-2 bg-white bg-opacity-90 rounded-md p-2 text-sm">
+                  <p className="font-medium">Drawing Mode Active</p>
+                  <p className="text-xs text-muted-foreground">Click on the map to create points for your territory boundary. Complete the shape by clicking on the first point.</p>
+                </div>
+              )}
             </div>
           </div>
           

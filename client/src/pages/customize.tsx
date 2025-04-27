@@ -102,6 +102,7 @@ export default function Customize() {
   const [appointmentTypes, setAppointmentTypes] = useState<string[]>([]);
   const [statusLabels, setStatusLabels] = useState<Record<string, string>>({});
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
+  const [editingAppointmentType, setEditingAppointmentType] = useState<{index: number, value: string} | null>(null);
   
   // Set initial values when data is loaded
   useEffect(() => {
