@@ -47,11 +47,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // Drawing mode states
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawingManager, setDrawingManager] = useState<google.maps.drawing.DrawingManager | null>(null);
-  const [currentPolygon, setCurrentPolygon] = useState<google.maps.Polygon | null>(null);
-  const [addressesInPolygon, setAddressesInPolygon] = useState<number>(0);
+  // Drawing mode states removed as requested
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
