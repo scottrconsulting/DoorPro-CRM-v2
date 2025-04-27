@@ -728,13 +728,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Display custom statuses from the image */}
+                    <SelectItem value="unknown">{getStatusLabel("unknown")}</SelectItem>
+                    <SelectItem value="presented">{getStatusLabel("presented")}</SelectItem>
+                    <SelectItem value="sold">{getStatusLabel("sold")}</SelectItem>
+                    <SelectItem value="no_soliciting">{getStatusLabel("no_soliciting")}</SelectItem>
+                    <SelectItem value="no_answer">{getStatusLabel("no_answer")}</SelectItem>
+                    <SelectItem value="booked">{getStatusLabel("booked")}</SelectItem>
+                    <SelectItem value="not_interested">{getStatusLabel("not_interested")}</SelectItem>
+                    <SelectItem value="check_back">{getStatusLabel("check_back")}</SelectItem>
+                    
+                    {/* Include standard statuses for backward compatibility */}
                     <SelectItem value="not_visited">{getStatusLabel("not_visited")}</SelectItem>
                     <SelectItem value="interested">{getStatusLabel("interested")}</SelectItem>
-                    <SelectItem value="not_interested">{getStatusLabel("not_interested")}</SelectItem>
-                    <SelectItem value="call_back">{getStatusLabel("call_back")}</SelectItem>
                     <SelectItem value="appointment_scheduled">{getStatusLabel("appointment_scheduled")}</SelectItem>
                     <SelectItem value="converted">{getStatusLabel("converted")}</SelectItem>
-                    <SelectItem value="no_soliciting">{getStatusLabel("no_soliciting")}</SelectItem>
+                    <SelectItem value="call_back">{getStatusLabel("call_back")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
