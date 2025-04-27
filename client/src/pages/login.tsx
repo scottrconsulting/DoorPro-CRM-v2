@@ -26,10 +26,39 @@ export default function Login() {
   
   // Check if we're in an external browser tab vs. the Replit preview
   useEffect(() => {
+    // Detect if we're on a mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     // If we're running in a new tab or external window
     const isExternalTab = window.location.host.includes('replit.app');
     const previewHost = window.location.host.includes('picard.replit.dev');
-    setIsCrossOriginIssue(isExternalTab && !previewHost);
+    const isCrossOrigin = isExternalTab && !previewHost;
+    
+    // Check for existence of the gateway error flag
+    const hasEncounteredGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
+    
+    // Set the cross-origin warning flag
+    setIsCrossOriginIssue(isCrossOrigin || (isMobile && hasEncounteredGatewayError));
+    
+    // If this is a mobile device, we want to be able to detect and recover from errors
+    if (isMobile) {
+      // Set up an error handler to detect gateway errors
+      window.addEventListener('error', (event) => {
+        console.log('Detected error:', event);
+        // If this is a network error, store a flag in localStorage
+        if (event.message && (
+            event.message.includes('network') || 
+            event.message.includes('gateway') ||
+            event.message.includes('502') ||
+            event.message.includes('timeout')
+          )) {
+          console.log('Detected gateway/network error, setting recovery flag');
+          window.localStorage.setItem('hadGatewayError', 'true');
+          // Force a reload to use the recovery path
+          window.location.reload();
+        }
+      });
+    }
   }, []);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
@@ -148,6 +177,9 @@ export default function Login() {
                     variant="outline" 
                     className="border-amber-400 text-amber-700 hover:bg-amber-100 flex items-center gap-2"
                     onClick={() => {
+                      // Clear the gateway error flag
+                      window.localStorage.removeItem('hadGatewayError');
+                      
                       // Open the Replit preview window which has better authentication support
                       window.open('https://door-pro-crm.scottrconsult.repl.co', '_blank');
                     }}

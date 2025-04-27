@@ -15,9 +15,18 @@ export async function apiRequest(
   // Always use the current browser domain for API requests
   let fullUrl = url;
   if (url.startsWith('/') && typeof window !== 'undefined') {
-    // IMPORTANT: This ensures we always use the same domain as the browser window
-    // rather than any domain that might be embedded in relative URLs
-    fullUrl = `${window.location.origin}${url}`;
+    // On mobile browsers, we may need to use a specific domain
+    // This helps avoid gateway errors on some mobile devices
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
+    
+    if (isMobile && hasGatewayError) {
+      // Use the Replit preview URL directly
+      fullUrl = `https://door-pro-crm.scottrconsult.repl.co${url}`;
+    } else {
+      // IMPORTANT: This ensures we always use the same domain as the browser window
+      fullUrl = `${window.location.origin}${url}`;
+    }
   }
   
   try {
@@ -57,9 +66,21 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
   return async ({ queryKey }) => {
     // Always use the current browser domain for API requests
     let url = queryKey[0] as string;
+    
+    // On mobile browsers, we may need to use a specific domain
+    // This helps avoid gateway errors on some mobile devices
     if (url.startsWith('/') && typeof window !== 'undefined') {
-      // IMPORTANT: This ensures we always use the current page domain for API requests
-      url = `${window.location.origin}${url}`;
+      // Force use of the Replit preview domain if we're on mobile and experiencing issues
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
+      
+      if (isMobile && hasGatewayError) {
+        // Use the Replit preview URL directly
+        url = `https://door-pro-crm.scottrconsult.repl.co${url}`;
+      } else {
+        // Use the current page domain
+        url = `${window.location.origin}${url}`;
+      }
     }
     
     try {
