@@ -1,27 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 interface MapOptions {
+  apiKey: string;
   center: {
     lat: number;
     lng: number;
   };
   zoom: number;
-  mapTypeId?: google.maps.MapTypeId;
+  mapTypeId?: string;
+  onLoad?: (map: any) => void;
 }
 
 interface UseMapResult {
   mapRef: React.RefObject<HTMLDivElement>;
-  map: google.maps.Map | null;
+  map: any | null;
   loading: boolean;
   error: Error | null;
   isLoaded: boolean;
   setMapType: (type: "roadmap" | "satellite" | "hybrid" | "terrain") => void;
   panTo: (position: { lat: number; lng: number }) => void;
-  addMarker: (position: { lat: number; lng: number }, options?: any) => google.maps.Marker | null;
+  addMarker: (position: { lat: number; lng: number }, options?: any) => any | null;
   clearMarkers: () => void;
 }
 
-export function useGoogleMaps(apiKey: string, options: MapOptions): UseMapResult {
+export function useGoogleMaps(options: MapOptions): UseMapResult {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,7 +43,7 @@ export function useGoogleMaps(apiKey: string, options: MapOptions): UseMapResult
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${options.apiKey}&libraries=places,drawing,geometry`;
       script.async = true;
       script.defer = true;
 
@@ -59,7 +61,7 @@ export function useGoogleMaps(apiKey: string, options: MapOptions): UseMapResult
     };
 
     loadGoogleMaps();
-  }, [apiKey, isLoaded]);
+  }, [options.apiKey, isLoaded]);
 
   // Initialize map when API is loaded and container is ready
   useEffect(() => {
