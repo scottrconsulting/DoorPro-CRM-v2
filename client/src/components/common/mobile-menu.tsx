@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 import { getPlanName, UserRole, FREE_PLAN_LIMITS } from "@/lib/auth";
 import { Link, useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
