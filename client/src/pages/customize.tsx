@@ -397,98 +397,104 @@ useEffect(() => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Default status customization section */}
-              <div>
-                <h3 className="text-base font-semibold mb-3">Customize Default Status Labels</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Default Status</TableHead>
-                      <TableHead>Custom Label</TableHead>
-                      <TableHead className="w-24">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {CONTACT_STATUSES.map(status => (
-                      <TableRow key={status}>
-                        <TableCell className="font-medium">
-                          {status.replace(/_/g, ' ')}
-                        </TableCell>
-                        <TableCell>
-                          {editingStatus === status ? (
-                            <Input 
-                              value={statusLabels[status] || status.replace(/_/g, ' ')}
-                              onChange={(e) => setStatusLabels({
-                                ...statusLabels,
-                                [status]: e.target.value
-                              })}
-                              autoFocus
-                              className="w-full"
-                            />
-                          ) : (
-                            <span>{statusLabels[status] || status.replace(/_/g, ' ')}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {editingStatus === status ? (
-                            <div className="flex space-x-1">
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                onClick={() => setEditingStatus(null)}
-                              >
-                                <Check className="h-4 w-4 text-green-500" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                onClick={() => {
-                                  const updatedLabels = {...statusLabels};
-                                  delete updatedLabels[status];
-                                  setStatusLabels(updatedLabels);
-                                  setEditingStatus(null);
-                                }}
-                              >
-                                <X className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          ) : (
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold mb-3">Contact Statuses</h3>
+                <div className="space-y-2">
+                  {CONTACT_STATUSES.map(status => (
+                    <div key={status} className="flex items-center justify-between p-2 border rounded">
+                      {editingStatus === status ? (
+                        <Input 
+                          value={statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          onChange={(e) => setStatusLabels({
+                            ...statusLabels,
+                            [status]: e.target.value
+                          })}
+                          autoFocus
+                          className="flex-1 mr-2"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-between flex-1">
+                          <span className="font-medium">{status.replace(/_/g, ' ')}</span>
+                          <span>{statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-1">
+                        {editingStatus === status ? (
+                          <>
                             <Button 
                               size="sm" 
                               variant="ghost"
-                              onClick={() => setEditingStatus(status)}
+                              onClick={() => setEditingStatus(null)}
                             >
-                              Edit
+                              <Check className="h-4 w-4 text-green-500" />
                             </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              <div className="border-t pt-5">
-                <h3 className="text-base font-semibold mb-3">Custom Statuses</h3>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {customStatuses.map(status => (
-                    <Badge key={status} variant="outline" className="text-sm flex items-center gap-1">
-                      {status}
-                      <button 
-                        className="ml-1 text-muted-foreground hover:text-destructive"
-                        onClick={() => setCustomStatuses(customStatuses.filter(s => s !== status))}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                const updatedLabels = {...statusLabels};
+                                delete updatedLabels[status];
+                                setStatusLabels(updatedLabels);
+                                setEditingStatus(null);
+                              }}
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setEditingStatus(status)}
+                              title="Edit"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
+              </div>
+              
+              <div className="border-t pt-5 space-y-4">
+                <h3 className="text-base font-semibold mb-3">Custom Statuses</h3>
                 
-                <div className="flex gap-2">
+                {customStatuses.length === 0 ? (
+                  <div className="text-center p-4 border border-dashed rounded-md">
+                    <p className="text-muted-foreground">No custom statuses added yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {customStatuses.map((status, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 border rounded">
+                        <span>{status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCustomStatuses(customStatuses.filter(s => s !== status))}
+                          disabled={!isPro}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex gap-2 mt-2">
                   <Input 
                     placeholder="New status name..." 
                     value={newStatus} 
                     onChange={e => setNewStatus(e.target.value)}
                     disabled={!isPro && customStatuses.length >= 3}
+                    className="flex-1"
                   />
                   <Button 
                     onClick={handleAddCustomStatus}
