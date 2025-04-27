@@ -824,7 +824,6 @@ useEffect(() => {
                       <TableHead>Display Label</TableHead>
                       <TableHead>Color</TableHead>
                       <TableHead className="w-24">Preview</TableHead>
-                      <TableHead className="w-32">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -907,42 +906,7 @@ useEffect(() => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // Reset to default color
-                                const defaultStatusColors: Record<string, string> = {
-                                  not_interested: "red",
-                                  booked: "blue",
-                                  presented: "orange",
-                                  no_answer: "yellow",
-                                  check_back: "green",
-                                  converted: "green",
-                                  sold: "green",
-                                  unknown: "blue",
-                                  not_visited: "blue",
-                                  interested: "yellow",
-                                  appointment_scheduled: "orange",
-                                  call_back: "purple",
-                                  no_soliciting: "purple"
-                                };
-                                
-                                updatePinColor(status, status in defaultStatusColors ? 
-                                  defaultStatusColors[status] : "blue");
-                                
-                                toast({
-                                  title: "Reset to Default",
-                                  description: "Pin color reset to the recommended default"
-                                });
-                              }}
-                            >
-                              Reset Default
-                            </Button>
-                          </div>
-                        </TableCell>
+
                       </TableRow>
                     ))}
                   </TableBody>
