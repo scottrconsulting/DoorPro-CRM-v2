@@ -47,9 +47,11 @@ export default function Territories() {
     loading: mapLoading,
     panTo,
     setMapType,
-  } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
+  } = useGoogleMaps({
+    apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
+    mapTypeId: "roadmap"
   });
   
   // Separate map instance for territory creation dialog
@@ -59,9 +61,11 @@ export default function Territories() {
     isLoaded: createMapIsLoaded,
     loading: createMapLoading,
     setMapType: setCreateMapType,
-  } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
+  } = useGoogleMaps({
+    apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 7,
+    mapTypeId: "roadmap"
   });
 
   // Drawing and polygons
