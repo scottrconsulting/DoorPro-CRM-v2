@@ -596,13 +596,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               { id: "converted", defaultLabel: "Converted" },
               { id: "call_back", defaultLabel: "Call Back" }
             ].filter(status => {
-              // Only show custom statuses if they exist in the customization settings
-              // or if they're one of our standard statuses
-              const isCustomStatus = customization?.statusLabels && status.id in customization.statusLabels;
-              const isStandardStatus = ["not_visited", "interested", "not_interested", 
-                                      "appointment_scheduled", "converted", "call_back", "no_soliciting"].includes(status.id);
+              // Only show the core statuses that we specifically want (matching the customization page)
+              const coreStatuses = [
+                "no_answer", "presented", "booked", "sold", 
+                "not_interested", "no_soliciting", "check_back"
+              ];
               
-              return isCustomStatus || isStandardStatus;
+              return coreStatuses.includes(status.id);
             }).map(status => (
               <Button
                 key={status.id}
