@@ -265,12 +265,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         });
         
         if (marker) {
-          // Click handler to view the contact
+          // Click handler to view existing contacts only
           marker.addListener("click", () => {
-            setSelectedContact(contact);
-            
-            if (onSelectContact) {
-              onSelectContact(contact.id);
+            if (!isAddingHouse) { // Only trigger if not in adding mode
+              setSelectedContact(contact);
+              if (onSelectContact) {
+                onSelectContact(contact.id);
+              }
             }
           });
           
@@ -358,34 +359,47 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       setMouseDownTime(Date.now());
     });
     
-    // Handle click with click vs hold detection
+    // Handle click with hold detection
     const clickListener = map.addListener("click", async (e: any) => {
-      if (!e.latLng) return;
+      if (!e.latLng || !isAddingHouse) return;
       setMouseUpTime(Date.now());
-      
-      // Check if the click is on an existing contact marker
-      // If it is, the existing marker's click handler will handle it
-      const clickedFeature = map.data?.getFeatureAt?.(e.latLng);
-      if (clickedFeature) return;
       
       // Calculate click duration
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
-      const isLongClick = clickDuration > 1000; // Threshold of 1 second for a long click/hold
+      const isLongClick = clickDuration > 500; // Reduced threshold to 500ms for better UX
       
-      // Create a new marker where the user clicked
-      const marker = addMarker(e.latLng.toJSON(), {
-        title: "New Contact",
-        draggable: true,
-        animation: window.google.maps.Animation.DROP,
-        icon: getMarkerIcon(activeStatus),
-      });
-      
-      setNewHouseMarker(marker);
-      
-      // Only show form dialog for long clicks
       if (isLongClick) {
-        // Show the contact dialog for long clicks
+        // Create a new marker where the user clicked
+        const marker = addMarker(e.latLng.toJSON(), {
+          title: "New Contact",
+          draggable: true,
+          animation: window.google.maps.Animation.DROP,
+          icon: getMarkerIcon(activeStatus, customization?.pinColors),
+        });
+        
+        setNewHouseMarker(marker);
         setShowNewContactDialog(true);
+        
+        // Get address for the new contact
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: e.latLng.toJSON() }, (
+          results: any, 
+          status: any
+        ) => {
+          if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+            const address = results[0].formatted_address;
+            setNewContactAddress(address);
+            setNewContactCoords(e.latLng.toJSON());
+            
+            // Pre-fill the form
+            setNewContactForm({
+              ...newContactForm,
+              address,
+              status: activeStatus,
+              notes: `Initial contact: ${new Date().toLocaleString()}`
+            });
+          }
+        });
       }
       
       setIsAddingHouse(true); // Auto-enable adding mode
