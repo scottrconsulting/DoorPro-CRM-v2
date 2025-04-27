@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,7 +78,14 @@ type PreferencesFormValues = z.infer<typeof preferencesSchema>;
 export default function Settings() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Set mounted state to avoid hydration issues with theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Profile form
   const profileForm = useForm<ProfileFormValues>({
@@ -103,7 +111,7 @@ export default function Settings() {
   const preferencesForm = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      theme: "light",
+      theme: mounted ? (theme as "light" | "dark" | "system") : "light",
       defaultMapType: "roadmap",
       notificationEmail: true,
       notificationPush: true,
@@ -111,6 +119,13 @@ export default function Settings() {
       autoCheckIn: false,
     },
   });
+  
+  // Update the form when theme changes
+  useEffect(() => {
+    if (mounted) {
+      preferencesForm.setValue("theme", theme as "light" | "dark" | "system");
+    }
+  }, [theme, mounted, preferencesForm]);
 
   const onProfileSubmit = (data: ProfileFormValues) => {
     setIsUpdating(true);
@@ -139,6 +154,12 @@ export default function Settings() {
 
   const onPreferencesSubmit = (data: PreferencesFormValues) => {
     setIsUpdating(true);
+    
+    // Update theme if it's changed
+    if (data.theme !== theme) {
+      setTheme(data.theme);
+    }
+    
     // In a real app, this would call a mutation to update preferences
     setTimeout(() => {
       toast({

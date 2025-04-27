@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { Contact } from "@shared/schema";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Sidebar() {
   const { user } = useAuth();
@@ -42,6 +43,7 @@ export default function Sidebar() {
             {getPlanName(user?.role)}
           </span>
         </div>
+        <ThemeToggle />
       </div>
       
       <div className="flex flex-col flex-grow overflow-y-auto">

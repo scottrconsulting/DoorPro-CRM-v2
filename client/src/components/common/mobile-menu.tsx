@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { Contact } from "@shared/schema";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -51,13 +52,16 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               {getPlanName(user?.role)}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-neutral-100"
-            aria-label="Close menu"
-          >
-            <span className="material-icons">close</span>
-          </button>
+          <div className="flex items-center">
+            <ThemeToggle />
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-neutral-100 ml-1"
+              aria-label="Close menu"
+            >
+              <span className="material-icons">close</span>
+            </button>
+          </div>
         </div>
         
         {/* Scrollable container */}
