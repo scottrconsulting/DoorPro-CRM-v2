@@ -140,11 +140,17 @@ export default function Territories() {
     },
   });
 
-  // Apply map type when it changes
+  // Apply map type when it changes for main map
   useEffect(() => {
     if (!map || !isLoaded) return;
     setMapType(currentMapType);
   }, [map, isLoaded, currentMapType, setMapType]);
+  
+  // Apply map type when it changes for create dialog map
+  useEffect(() => {
+    if (!createMap || !createMapIsLoaded || !isCreateDialogOpen) return;
+    setCreateMapType(currentMapType);
+  }, [createMap, createMapIsLoaded, currentMapType, setCreateMapType, isCreateDialogOpen]);
 
   // Setup drawing manager for main map
   useEffect(() => {
@@ -630,6 +636,45 @@ export default function Territories() {
             </div>
             
             <div className="lg:col-span-2 h-[400px] rounded-md overflow-hidden border relative">
+              {/* Map Type Controls for Creation Dialog */}
+              <div className="absolute top-2 left-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
+                <button
+                  className={`py-1 px-2 text-xs ${currentMapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                  onClick={() => {
+                    setCurrentMapType('roadmap');
+                    setCreateMapType('roadmap');
+                  }}
+                >
+                  Road
+                </button>
+                <button
+                  className={`py-1 px-2 text-xs ${currentMapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                  onClick={() => {
+                    setCurrentMapType('satellite');
+                    setCreateMapType('satellite');
+                  }}
+                >
+                  Satellite
+                </button>
+                <button
+                  className={`py-1 px-2 text-xs ${currentMapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                  onClick={() => {
+                    setCurrentMapType('hybrid');
+                    setCreateMapType('hybrid');
+                  }}
+                >
+                  Hybrid
+                </button>
+                <button
+                  className={`py-1 px-2 text-xs ${currentMapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+                  onClick={() => {
+                    setCurrentMapType('terrain');
+                    setCreateMapType('terrain');
+                  }}
+                >
+                  Terrain
+                </button>
+              </div>
               <div ref={createMapRef} className="w-full h-full" />
               {createMapLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
