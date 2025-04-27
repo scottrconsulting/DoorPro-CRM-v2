@@ -184,6 +184,12 @@ export const customizations = pgTable("customizations", {
     email: boolean;
     reminderTime: number; // minutes before appointment
   }>(),
+  // Dashboard customizations
+  dashboardWidgets: json("dashboard_widgets").$type<{
+    enabledWidgets: string[];
+    widgetOrder: string[];
+    customLabels: Record<string, string>;
+  }>(),
   // Other settings
   noteTemplates: json("note_templates").$type<Record<string, string>>(), // predefined note templates
   createdAt: timestamp("created_at").notNull().defaultNow(),
