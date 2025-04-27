@@ -1278,6 +1278,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all message templates for current user
+  app.get("/api/message-templates", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const templates = await storage.getMessageTemplatesByUser(user.id);
+      return res.json(templates);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch message templates" });
+    }
+  });
+  
   app.get("/api/message-templates/type/:type", ensureAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
