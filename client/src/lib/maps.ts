@@ -209,24 +209,15 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
   const label = statusLabels?.[status] || 
     status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   
-  // For backwards compatibility with older browsers or if advanced markers aren't supported
-  // We'll still map to a limited Google color to use as fallback
-  const fallbackGoogleColor = mapHexToGoogleColor(color);
+  // For now, we're using standard Google Maps markers due to compatibility issues
+  // We'll map any custom color to the closest available Google Maps marker color
+  const googleColor = mapHexToGoogleColor(color);
   
-  // Check if Advanced Markers are supported (this will be used as a check in the component)
-  if (typeof window !== 'undefined' && window.google?.maps?.marker?.AdvancedMarkerElement) {
-    // We'll create the SVG marker in the component using the createSvgMarker function
-    return {
-      url: createSvgMarker(color, label),
-      scaledSize: { width: 36, height: 48 },
-    };
-  } else {
-    // Fallback to standard Google Maps markers with limited colors
-    return {
-      url: `https://maps.google.com/mapfiles/ms/icons/${fallbackGoogleColor}-dot.png`,
-      scaledSize: { width: 32, height: 32 },
-    };
-  }
+  // Standard Google Maps markers with limited colors
+  return {
+    url: `https://maps.google.com/mapfiles/ms/icons/${googleColor}-dot.png`,
+    scaledSize: { width: 32, height: 32 },
+  };
 }
 
 // Function to map hex colors to the closest Google Maps marker color (for fallback)
