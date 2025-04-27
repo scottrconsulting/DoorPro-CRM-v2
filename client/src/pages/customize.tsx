@@ -27,6 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -913,23 +921,20 @@ useEffect(() => {
                 </Table>
               </div>
               
-              {activeColorPicker && (
-                <div className="mt-6 border rounded-md p-4">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h4 className="text-sm font-semibold">
-                      Custom Color for "{statusLabels[activeColorPicker] || activeColorPicker.replace(/_/g, ' ')}"
-                    </h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setActiveColorPicker(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+              {/* Color Picker Dialog */}
+              <Dialog open={!!activeColorPicker} onOpenChange={(open) => !open && setActiveColorPicker(null)}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>
+                      Custom Color for "{activeColorPicker ? (statusLabels[activeColorPicker] || activeColorPicker.replace(/_/g, ' ')) : ''}"
+                    </DialogTitle>
+                    <DialogDescription>
+                      Choose a custom color for this pin status. Google Maps will map your color to the closest available marker color.
+                    </DialogDescription>
+                  </DialogHeader>
                   
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div className="flex-1">
+                  <div className="flex flex-col gap-4 py-4">
+                    <div className="mx-auto">
                       <HexColorPicker 
                         color={currentColor} 
                         onChange={(color) => {
@@ -938,10 +943,10 @@ useEffect(() => {
                       />
                     </div>
                     
-                    <div className="space-y-4">
-                      <div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-grow">
                         <Label htmlFor="hexColor">Hex Color</Label>
-                        <div className="flex gap-2 mt-1">
+                        <div className="mt-1">
                           <Input 
                             id="hexColor"
                             value={currentColor}
@@ -951,31 +956,36 @@ useEffect(() => {
                       </div>
                       
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Preview</p>
+                        <Label>Preview</Label>
                         <div 
-                          className="w-16 h-16 rounded-full mx-auto"
+                          className="w-12 h-12 rounded-full mt-1 border"
                           style={{ backgroundColor: currentColor }}
                         />
                       </div>
-                      
-                      <Button
-                        onClick={() => {
-                          // Note: Google Maps only supports certain colors
-                          // The color will be mapped to the closest supported color in the getMarkerIcon function
+                    </div>
+                  </div>
+                  
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setActiveColorPicker(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (activeColorPicker) {
                           updatePinColor(activeColorPicker, currentColor);
                           toast({
                             title: "Color Updated",
-                            description: "The pin color has been updated. Note that Google Maps may adjust the color to the closest available marker color."
+                            description: "The pin color has been updated. Click Save Changes at the top to apply it to the map."
                           });
                           setActiveColorPicker(null);
-                        }}
-                      >
-                        Apply Color
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                        }
+                      }}
+                    >
+                      Apply Color
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground">
