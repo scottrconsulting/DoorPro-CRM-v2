@@ -39,7 +39,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
   const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
-  const [userAvatar, setUserAvatar] = useState<'male' | 'female'>('male');
+  // User avatar state removed as requested
   const [activeStatus, setActiveStatus] = useState<string>("not_visited");
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
   const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
