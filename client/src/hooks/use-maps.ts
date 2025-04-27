@@ -8,6 +8,7 @@ interface MapOptions {
   };
   zoom: number;
   mapTypeId?: string;
+  mapId?: string;
   onLoad?: (map: any) => void;
 }
 
@@ -69,14 +70,22 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
     if (!isLoaded || !mapRef.current || map) return;
 
     try {
-      const newMap = new window.google.maps.Map(mapRef.current, {
+      // Include mapId if provided for Advanced Markers support
+      const mapOptions: any = {
         center: options.center,
         zoom: options.zoom,
         mapTypeId: options.mapTypeId || google.maps.MapTypeId.ROADMAP,
         fullscreenControl: false,
         streetViewControl: true,
         mapTypeControl: false,
-      });
+      };
+      
+      // Add mapId if provided (needed for Advanced Markers)
+      if (options.mapId) {
+        mapOptions.mapId = options.mapId;
+      }
+      
+      const newMap = new window.google.maps.Map(mapRef.current, mapOptions);
 
       setMap(newMap);
     } catch (err) {

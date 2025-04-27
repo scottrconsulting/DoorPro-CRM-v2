@@ -140,7 +140,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
-    mapTypeId: "roadmap"
+    mapTypeId: "roadmap",
+    // Adding mapId param for Advanced Markers support
+    mapId: "8e0a97af9386fef"
   });
 
   // Create contact mutation
