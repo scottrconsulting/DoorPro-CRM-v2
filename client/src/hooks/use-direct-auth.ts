@@ -113,7 +113,7 @@ export function useDirectAuth() {
       });
       
       // Force hard redirect to login page to avoid caching issues
-      window.location.href = '/login';
+      window.location.href = '/direct-login';
     }
   };
 

@@ -33,26 +33,34 @@ import { useEffect, useState } from "react";
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated: isAuthAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { isAuthenticated: isDirectAuthenticated, isLoading: isDirectLoading } = useDirectAuth();
-  const [_, navigate] = useLocation();
+  const [redirected, setRedirected] = useState(false);
   
   // Combined auth state - user is authenticated if either system authenticates them
   const isAuthenticated = isAuthAuthenticated || isDirectAuthenticated;
-  const isLoading = isAuthLoading && isDirectLoading; // Only loading if both are loading
+  // Consider loading complete only when both systems have resolved
+  const isLoading = isAuthLoading || isDirectLoading;
   
   useEffect(() => {
-    // Log authentication state for debugging
-    console.log("Protected route - Auth state:", { 
+    // Debug authentication state
+    console.log("Auth debug:", { 
       standard: { isAuthAuthenticated, isAuthLoading },
       token: { isDirectAuthenticated, isDirectLoading },
-      combined: { isAuthenticated, isLoading }
+      combined: { isAuthenticated, isLoading },
+      redirected
     });
     
-    if (!isLoading && !isAuthenticated) {
-      // Use direct navigation to login page to avoid history issues
-      window.location.href = "/direct-login";
+    if (!isLoading && !isAuthenticated && !redirected) {
+      // Set redirected state to prevent multiple redirects
+      setRedirected(true);
+      // Use a short timeout to ensure state is fully resolved
+      setTimeout(() => {
+        console.log("Redirecting to login page...");
+        window.location.replace('/direct-login');
+      }, 100);
     }
-  }, [isLoading, isAuthenticated, isAuthAuthenticated, isDirectAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, redirected, isAuthAuthenticated, isAuthLoading, isDirectAuthenticated, isDirectLoading]);
   
+  // Show loading indicator when loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -61,7 +69,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  return isAuthenticated ? <>{children}</> : null;
+  // Show redirect message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen flex-col">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+        <p className="text-gray-500">Redirecting to login...</p>
+      </div>
+    );
+  }
+  
+  // Render children if authenticated
+  return <>{children}</>;
 };
 
 function App() {
@@ -84,6 +103,9 @@ function App() {
                   <AutoLogin />
                 </Route>
                 <Route path="/login">
+                  <Login />
+                </Route>
+                <Route path="/direct-login">
                   <DirectLogin />
                 </Route>
                 <Route path="/register">
