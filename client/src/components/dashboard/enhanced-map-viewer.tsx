@@ -410,7 +410,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           // For quick click, we need special handling if it's a status that needs scheduling
           if (!isLongClick) {
             // Check if it's a status that needs scheduling (call_back, appointment_scheduled, interested)
-            const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
+            const needsScheduling = ["appointment_scheduled", "interested"].includes(activeStatus);
             
             if (needsScheduling) {
               // For these statuses, we should always show the dialog instead of quick-adding
