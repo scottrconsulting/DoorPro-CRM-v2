@@ -52,7 +52,8 @@ export function useAuth() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/");
+      // Force reload after redirect to ensure clean state
+      window.location.href = '/';
     },
   });
 
