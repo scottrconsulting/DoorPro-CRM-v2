@@ -87,9 +87,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     panTo,
     addMarker,
     clearMarkers,
-  } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
+  } = useGoogleMaps({
+    apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
+    mapTypeId: "roadmap",
+    onLoad: (map) => {
+      // Drawing manager removed as requested
+    },
   });
 
   // Create contact mutation
@@ -476,62 +481,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, addMarker, newHouseMarker, toast, activeStatus, mouseDownTime, newContactForm, user?.id, createContactMutation]);
   
-  // Initialize drawing manager for polygon drawing
-  useEffect(() => {
-    if (!isLoaded || !map || !window.google || !window.google.maps.drawing) return;
-    
-    // Create drawing manager
-    const manager = new window.google.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: false, // We'll use our custom button
-      polygonOptions: {
-        fillColor: "#3B82F6",
-        fillOpacity: 0.3,
-        strokeColor: "#2563EB",
-        strokeWeight: 2,
-        editable: true,
-        zIndex: 1,
-      },
-    });
-    
-    manager.setMap(map);
-    setDrawingManager(manager);
-    
-    // Listen for polygon complete
-    window.google.maps.event.addListener(manager, 'polygoncomplete', function(polygon) {
-      // Store the polygon
-      setCurrentPolygon(polygon);
-      setIsDrawingMode(false);
-      
-      // Count contacts inside polygon
-      countContactsInPolygon(polygon);
-      
-      // Stop drawing mode
-      manager.setDrawingMode(null);
-      
-      // Add listeners to update count when polygon is edited
-      window.google.maps.event.addListener(polygon.getPath(), 'set_at', function() {
-        countContactsInPolygon(polygon);
-      });
-      
-      window.google.maps.event.addListener(polygon.getPath(), 'insert_at', function() {
-        countContactsInPolygon(polygon);
-      });
-      
-      window.google.maps.event.addListener(polygon.getPath(), 'remove_at', function() {
-        countContactsInPolygon(polygon);
-      });
-    });
-    
-    return () => {
-      if (manager) {
-        manager.setMap(null);
-      }
-      if (currentPolygon) {
-        currentPolygon.setMap(null);
-      }
-    };
-  }, [isLoaded, map]);
+  // Drawing manager functionality removed as requested
 
   // Function to count contacts inside polygon
   const countContactsInPolygon = useCallback((polygon) => {
