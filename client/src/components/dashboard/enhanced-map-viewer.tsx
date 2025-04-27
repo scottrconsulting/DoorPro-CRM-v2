@@ -31,7 +31,7 @@ interface MapViewerProps {
 export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [mapType, setMapType] = useState<"roadmap" | "satellite">("roadmap");
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap");
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [isAddingHouse, setIsAddingHouse] = useState(false);
   const [newHouseMarker, setNewHouseMarker] = useState<google.maps.Marker | null>(null);
@@ -46,6 +46,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Drawing mode states
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [drawingManager, setDrawingManager] = useState<google.maps.drawing.DrawingManager | null>(null);
+  const [currentPolygon, setCurrentPolygon] = useState<google.maps.Polygon | null>(null);
+  const [addressesInPolygon, setAddressesInPolygon] = useState<number>(0);
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
@@ -437,6 +443,123 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       window.google.maps.event.removeListener(clickListener);
     };
   }, [isLoaded, map, addMarker, newHouseMarker, toast, activeStatus, mouseDownTime, newContactForm, user?.id, createContactMutation]);
+  
+  // Initialize drawing manager for polygon drawing
+  useEffect(() => {
+    if (!isLoaded || !map || !window.google || !window.google.maps.drawing) return;
+    
+    // Create drawing manager
+    const manager = new window.google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: false, // We'll use our custom button
+      polygonOptions: {
+        fillColor: "#3B82F6",
+        fillOpacity: 0.3,
+        strokeColor: "#2563EB",
+        strokeWeight: 2,
+        editable: true,
+        zIndex: 1,
+      },
+    });
+    
+    manager.setMap(map);
+    setDrawingManager(manager);
+    
+    // Listen for polygon complete
+    window.google.maps.event.addListener(manager, 'polygoncomplete', function(polygon) {
+      // Store the polygon
+      setCurrentPolygon(polygon);
+      setIsDrawingMode(false);
+      
+      // Count contacts inside polygon
+      countContactsInPolygon(polygon);
+      
+      // Stop drawing mode
+      manager.setDrawingMode(null);
+      
+      // Add listeners to update count when polygon is edited
+      window.google.maps.event.addListener(polygon.getPath(), 'set_at', function() {
+        countContactsInPolygon(polygon);
+      });
+      
+      window.google.maps.event.addListener(polygon.getPath(), 'insert_at', function() {
+        countContactsInPolygon(polygon);
+      });
+      
+      window.google.maps.event.addListener(polygon.getPath(), 'remove_at', function() {
+        countContactsInPolygon(polygon);
+      });
+    });
+    
+    return () => {
+      if (manager) {
+        manager.setMap(null);
+      }
+      if (currentPolygon) {
+        currentPolygon.setMap(null);
+      }
+    };
+  }, [isLoaded, map]);
+
+  // Function to count contacts inside polygon
+  const countContactsInPolygon = useCallback((polygon) => {
+    if (!polygon || !contacts.length) return;
+    
+    // Create a function to check if a point is inside the polygon
+    const isPointInPolygon = (point, poly) => {
+      return window.google.maps.geometry.poly.containsLocation(
+        new window.google.maps.LatLng(point.lat, point.lng),
+        poly
+      );
+    };
+    
+    // Count contacts inside polygon
+    const count = contacts.filter(contact => {
+      if (!contact.latitude || !contact.longitude) return false;
+      
+      return isPointInPolygon(
+        { lat: parseFloat(contact.latitude), lng: parseFloat(contact.longitude) },
+        polygon
+      );
+    }).length;
+    
+    setAddressesInPolygon(count);
+    
+    toast({
+      title: "Area Analysis",
+      description: `Found ${count} addresses in the selected area`,
+    });
+  }, [contacts, toast]);
+  
+  // Toggle drawing mode
+  const toggleDrawingMode = useCallback(() => {
+    if (!drawingManager || !window.google) return;
+    
+    if (isDrawingMode) {
+      drawingManager.setDrawingMode(null);
+      setIsDrawingMode(false);
+      
+      toast({
+        title: "Drawing mode disabled",
+        description: "Click the button again to draw a new area",
+      });
+    } else {
+      // Clear existing polygon if any
+      if (currentPolygon) {
+        currentPolygon.setMap(null);
+        setCurrentPolygon(null);
+        setAddressesInPolygon(0);
+      }
+      
+      drawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
+      setIsDrawingMode(true);
+      
+      toast({
+        title: "Drawing mode enabled",
+        description: "Click on the map to create a shape",
+      });
+    }
+  }, [drawingManager, isDrawingMode, currentPolygon, toast]);
 
   // Work timer implementation (using refs to avoid render issues)
   useEffect(() => {
@@ -532,7 +655,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   }, [mapType, isLoaded, map, setGoogleMapType]);
 
   // Handle map type toggle
-  const handleMapTypeChange = (type: "roadmap" | "satellite") => {
+  const handleMapTypeChange = (type: "roadmap" | "satellite" | "hybrid" | "terrain") => {
     setMapType(type);
   };
 
@@ -816,6 +939,26 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               >
                 Satellite
               </button>
+              <button
+                onClick={() => handleMapTypeChange("hybrid")}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  mapType === "hybrid"
+                    ? "bg-primary text-white"
+                    : "text-neutral-600"
+                }`}
+              >
+                Hybrid
+              </button>
+              <button
+                onClick={() => handleMapTypeChange("terrain")}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  mapType === "terrain"
+                    ? "bg-primary text-white"
+                    : "text-neutral-600"
+                }`}
+              >
+                Terrain
+              </button>
             </div>
             <Button 
               onClick={toggleAddingHouse}
@@ -880,7 +1023,36 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 {userAvatar === 'male' ? 'man' : 'woman'}
               </span>
             </button>
+            <button
+              onClick={toggleDrawingMode}
+              className={`w-8 h-8 ${isDrawingMode ? 'bg-primary text-white' : 'bg-white text-neutral-600'} rounded-full shadow-md flex items-center justify-center`}
+              title="Draw polygon to count houses"
+            >
+              <span className="material-icons" style={{ fontSize: '18px' }}>draw</span>
+            </button>
           </div>
+          
+          {/* Polygon info display */}
+          {currentPolygon && addressesInPolygon > 0 && (
+            <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 px-4">
+              <div className="font-medium text-sm">Area Analysis</div>
+              <div className="text-sm text-neutral-600">
+                <span className="font-bold text-primary">{addressesInPolygon}</span> houses in selected area
+              </div>
+              <button 
+                onClick={() => {
+                  if (currentPolygon) {
+                    currentPolygon.setMap(null);
+                    setCurrentPolygon(null);
+                    setAddressesInPolygon(0);
+                  }
+                }}
+                className="mt-1 text-xs text-neutral-500 hover:text-red-500"
+              >
+                Clear selection
+              </button>
+            </div>
+          )}
           
           {/* Interactive Contact Status Legend */}
           <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-2">
