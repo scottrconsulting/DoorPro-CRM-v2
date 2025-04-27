@@ -64,6 +64,8 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"), // active, past_due, unpaid, canceled, etc.
   invitationToken: text("invitation_token"), // For team member invitations
   invitationExpiry: timestamp("invitation_expiry"), // Expiry time for invitations
+  resetToken: text("reset_token"), // For password reset
+  resetTokenExpiry: timestamp("reset_token_expiry"), // Expiry time for password reset token
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

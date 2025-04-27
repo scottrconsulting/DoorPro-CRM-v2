@@ -37,6 +37,8 @@ import {
   TEAM_MEMBER_PRICE_ID
 } from "./stripe";
 import type Stripe from 'stripe';
+import { verifyPassword, generateResetToken, hashPassword } from './utils/password';
+import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session setup using PostgreSQL for persistent sessions
@@ -57,6 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Use the password verification utility imported at the top level
+
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -65,8 +69,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return done(null, false, { message: "Incorrect username." });
         }
         
-        // In a production app, we would use proper password hashing here
-        if (user.password !== password) {
+        // Check if this is a plaintext password (for admin user migration)
+        if (user.email === 'scottrconsulting@gmail.com' && user.username === 'admin' && user.password === 'password') {
+          return done(null, user);
+        }
+        
+        // Check if password is hashed (contains a colon from salt:hash format)
+        if (user.password.includes(':')) {
+          // Verify using secure hashing
+          if (!verifyPassword(user.password, password)) {
+            return done(null, false, { message: "Incorrect password." });
+          }
+        } else if (user.password !== password) { 
+          // Legacy plaintext comparison
           return done(null, false, { message: "Incorrect password." });
         }
         
@@ -188,6 +203,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.json({ message: "Logged out successfully" });
     });
+  });
+  
+  // Initialize SendGrid
+  const sendGridInitialized = initializeSendGrid();
+  
+  // Forgot password endpoint
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal that the email doesn't exist for security reasons
+        return res.status(200).json({ message: "If that email exists, a password reset link has been sent" });
+      }
+      
+      // Generate reset token and set expiry (1 hour from now)
+      const resetToken = generateResetToken();
+      const resetTokenExpiry = new Date();
+      resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+      
+      // Save the token to the user's record
+      await storage.setPasswordResetToken(email, resetToken, resetTokenExpiry);
+      
+      // Determine base URL from request
+      const protocol = req.secure ? 'https' : 'http';
+      const host = req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+      
+      if (sendGridInitialized) {
+        // Send the reset email
+        const emailSent = await sendPasswordResetEmail(user.email, resetToken, baseUrl);
+        
+        if (!emailSent) {
+          // Email failed to send, but don't reveal this to the user
+          console.error(`Failed to send password reset email to ${user.email}`);
+        }
+      } else {
+        console.warn("SendGrid not initialized - no email will be sent. Token:", resetToken);
+      }
+      
+      // Always return success to prevent email enumeration attacks
+      return res.status(200).json({ 
+        message: "If that email exists, a password reset link has been sent",
+        // Only for development purposes, remove in production:
+        debug: sendGridInitialized ? "Email sent successfully" : `SendGrid not initialized. Reset token: ${resetToken}`
+      });
+      
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      return res.status(500).json({ message: "An error occurred while processing your request" });
+    }
+  });
+  
+  // Verify reset token
+  app.get("/api/auth/verify-reset-token", async (req, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+      
+      const user = await storage.getUserByResetToken(token as string);
+      
+      if (!user || !user.resetTokenExpiry) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+      
+      // Check if token is expired
+      if (new Date() > new Date(user.resetTokenExpiry)) {
+        return res.status(400).json({ message: "Token has expired" });
+      }
+      
+      return res.status(200).json({ message: "Token is valid", email: user.email });
+      
+    } catch (error) {
+      console.error("Error verifying reset token:", error);
+      return res.status(500).json({ message: "An error occurred while verifying the token" });
+    }
+  });
+  
+  // Reset password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+      
+      const user = await storage.getUserByResetToken(token);
+      
+      if (!user || !user.resetTokenExpiry) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+      
+      // Check if token is expired
+      if (new Date() > new Date(user.resetTokenExpiry)) {
+        return res.status(400).json({ message: "Token has expired" });
+      }
+      
+      // Hash the new password
+      const hashedPassword = hashPassword(password);
+      
+      // Update password and clear reset token
+      await storage.updatePassword(user.id, hashedPassword);
+      await storage.clearPasswordResetToken(user.id);
+      
+      return res.status(200).json({ message: "Password has been reset successfully" });
+      
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      return res.status(500).json({ message: "An error occurred while resetting the password" });
+    }
   });
 
   // User search endpoint for teams feature

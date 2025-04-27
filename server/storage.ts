@@ -67,6 +67,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(resetToken: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   getUsersByTeam(teamId: number): Promise<User[]>;
@@ -74,6 +75,9 @@ export interface IStorage {
   updateUserStripeCustomerId(id: number, stripeCustomerId: string): Promise<User | undefined>;
   updateUserStripeInfo(id: number, stripeCustomerId: string, stripeSubscriptionId?: string, subscriptionStatus?: string): Promise<User | undefined>;
   createInvitedUser(email: string, fullName: string, teamId: number, title?: string): Promise<User | undefined>;
+  setPasswordResetToken(email: string, resetToken: string, expiry: Date): Promise<boolean>;
+  clearPasswordResetToken(userId: number): Promise<boolean>;
+  updatePassword(userId: number, newPassword: string): Promise<boolean>;
   
   // Contact operations
   getContact(id: number): Promise<Contact | undefined>;
@@ -348,6 +352,72 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error fetching user by email:", error);
       return undefined;
+    }
+  }
+  
+  async getUserByResetToken(resetToken: string): Promise<User | undefined> {
+    try {
+      const result = await db.select().from(users).where(eq(users.resetToken, resetToken));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user by reset token:", error);
+      return undefined;
+    }
+  }
+  
+  async setPasswordResetToken(email: string, resetToken: string, expiry: Date): Promise<boolean> {
+    try {
+      const user = await this.getUserByEmail(email);
+      if (!user) return false;
+      
+      const result = await db.update(users)
+        .set({ 
+          resetToken,
+          resetTokenExpiry: expiry,
+          updatedAt: new Date()
+        })
+        .where(eq(users.email, email))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error setting password reset token:", error);
+      return false;
+    }
+  }
+  
+  async clearPasswordResetToken(userId: number): Promise<boolean> {
+    try {
+      const result = await db.update(users)
+        .set({ 
+          resetToken: null,
+          resetTokenExpiry: null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error clearing password reset token:", error);
+      return false;
+    }
+  }
+  
+  async updatePassword(userId: number, newPassword: string): Promise<boolean> {
+    try {
+      const result = await db.update(users)
+        .set({ 
+          password: newPassword,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error updating password:", error);
+      return false;
     }
   }
 
