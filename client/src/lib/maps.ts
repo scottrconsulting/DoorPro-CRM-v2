@@ -167,11 +167,20 @@ export function createSvgMarker(color: string, label?: string): string {
   const fillColor = color.startsWith('#') || color.startsWith('rgb') ? color : `#3b82f6`; // Default to blue if not valid
   const labelChar = label ? label.charAt(0).toUpperCase() : '';
   
+  // Determine text color based on background brightness (white or black)
+  const isWhiteOrLight = fillColor === '#ffffff' || fillColor === 'white' || 
+    (fillColor.startsWith('#') && parseInt(fillColor.slice(1), 16) > 0xcccccc);
+  
+  const textColor = isWhiteOrLight ? 'black' : 'white';
+  
+  // Add a stroke for white markers to make them visible against map background
+  const strokeAttr = isWhiteOrLight ? 'stroke="#000000" stroke-width="1.5"' : '';
+  
   // Create an SVG pin marker with the specified color
   return `data:image/svg+xml;utf-8,
     <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
-      <path fill="${fillColor}" d="M18 0C8.1 0 0 8.1 0 18c0 13.6 18 30 18 30s18-16.4 18-30C36 8.1 27.9 0 18 0z"/>
-      <text x="18" y="22" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">${labelChar}</text>
+      <path fill="${fillColor}" ${strokeAttr} d="M18 0C8.1 0 0 8.1 0 18c0 13.6 18 30 18 30s18-16.4 18-30C36 8.1 27.9 0 18 0z"/>
+      <text x="18" y="22" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="${textColor}">${labelChar}</text>
     </svg>`;
 }
 
@@ -186,7 +195,8 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
     considering: "#9c27b0",         // Purple
     not_interested: "#f44336",      // Red
     not_visited: "#2196f3",         // Blue
-    no_soliciting: "#9c27b0"        // Purple
+    no_soliciting: "#000000",       // Black
+    unknown: "#ffffff"              // White
   };
   
   // Determine the color to use
@@ -209,14 +219,13 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
   const label = statusLabels?.[status] || 
     status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   
-  // For now, we're using standard Google Maps markers due to compatibility issues
-  // We'll map any custom color to the closest available Google Maps marker color
-  const googleColor = mapHexToGoogleColor(color);
+  // Create an SVG marker for true color customization
+  // This ensures all colors including white, black, and any custom color are displayed correctly
+  const svgUrl = createSvgMarker(color, label.charAt(0));
   
-  // Standard Google Maps markers with limited colors
   return {
-    url: `https://maps.google.com/mapfiles/ms/icons/${googleColor}-dot.png`,
-    scaledSize: { width: 32, height: 32 },
+    url: svgUrl,
+    scaledSize: { width: 36, height: 48 },
   };
 }
 

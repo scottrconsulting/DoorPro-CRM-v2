@@ -565,15 +565,30 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <>
             {/* Show status buttons based on customization */}
             {[
-              // These statuses match the ones shown in your customization preview image
-              { id: "not_visited", defaultLabel: "Unknown" },
-              { id: "interested", defaultLabel: "Demoed" },
+              // Use the exact statuses from the user's image
+              { id: "unknown", defaultLabel: "Unknown" },
+              { id: "presented", defaultLabel: "Presented" },
+              { id: "sold", defaultLabel: "Sold" },
+              { id: "no_soliciting", defaultLabel: "No Soliciting" },
+              { id: "no_answer", defaultLabel: "No Answer" },
+              { id: "booked", defaultLabel: "Booked" },
               { id: "not_interested", defaultLabel: "Not Interested" },
-              { id: "appointment_scheduled", defaultLabel: "Booked" },
-              { id: "converted", defaultLabel: "Sold" },
-              { id: "no_soliciting", defaultLabel: "No Soliciting" }, 
-              { id: "call_back", defaultLabel: "Check Back" }
-            ].map(status => (
+              { id: "check_back", defaultLabel: "Check Back" },
+              // Include standard statuses for backward compatibility
+              { id: "not_visited", defaultLabel: "Unknown" },
+              { id: "interested", defaultLabel: "Interested" },
+              { id: "appointment_scheduled", defaultLabel: "Appointment" },
+              { id: "converted", defaultLabel: "Converted" },
+              { id: "call_back", defaultLabel: "Call Back" }
+            ].filter(status => {
+              // Only show custom statuses if they exist in the customization settings
+              // or if they're one of our standard statuses
+              const isCustomStatus = customization?.statusLabels && status.id in customization.statusLabels;
+              const isStandardStatus = ["not_visited", "interested", "not_interested", 
+                                      "appointment_scheduled", "converted", "call_back", "no_soliciting"].includes(status.id);
+              
+              return isCustomStatus || isStandardStatus;
+            }).map(status => (
               <Button
                 key={status.id}
                 variant={activeStatus === status.id ? "default" : "outline"}
@@ -582,8 +597,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className="rounded-full text-xs px-2 py-1 h-7"
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${getStatusColor(status.id)} mr-1`}
-                  style={getColorStyle(status.id)}
+                  className="w-2 h-2 rounded-full mr-1 border border-gray-200"
+                  style={{
+                    backgroundColor: customization?.pinColors?.[status.id] || 
+                      // Default colors for standard statuses
+                      (status.id === "not_visited" || status.id === "unknown" ? "#ffffff" :
+                      status.id === "no_soliciting" ? "#000000" :
+                      status.id === "converted" || status.id === "sold" ? "#00c853" :
+                      status.id === "interested" || status.id === "presented" ? "#ffd600" :
+                      status.id === "appointment_scheduled" || status.id === "booked" ? "#ff9800" :
+                      status.id === "not_interested" ? "#f44336" :
+                      status.id === "call_back" || status.id === "check_back" ? "#2196f3" :
+                      status.id === "no_answer" ? "#9c27b0" : "#cccccc")
+                  }}
                 />
                 {customization?.statusLabels && customization.statusLabels[status.id] 
                   ? customization.statusLabels[status.id] 
