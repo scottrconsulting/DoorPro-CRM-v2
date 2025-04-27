@@ -361,15 +361,51 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     
     // Handle click with hold detection
     const clickListener = map.addListener("click", async (e: any) => {
-      if (!e.latLng || !isAddingHouse) return;
+      if (!e.latLng) return;
       setMouseUpTime(Date.now());
       
       // Calculate click duration
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
-      const isLongClick = clickDuration > 500; // Reduced threshold to 500ms for better UX
+      const isLongClick = clickDuration > 500; // 500ms threshold for long press
       
+      // Quick click handling - add pin if in adding mode
+      if (!isLongClick && isAddingHouse) {
+        const marker = addMarker(e.latLng.toJSON(), {
+          title: "New Contact",
+          draggable: true,
+          animation: window.google.maps.Animation.DROP,
+          icon: getMarkerIcon(activeStatus, customization?.pinColors),
+        });
+        
+        setNewHouseMarker(marker);
+        
+        // Get address and create contact with minimal info
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: e.latLng.toJSON() }, (results: any, status: any) => {
+          if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+            const address = results[0].formatted_address;
+            const streetNumber = results[0].address_components.find((c: any) => 
+              c.types.includes('street_number'))?.short_name || '';
+            const street = results[0].address_components.find((c: any) => 
+              c.types.includes('route'))?.short_name || '';
+            const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+            
+            createContactMutation.mutate({
+              userId: user?.id || 0,
+              fullName: autoName,
+              address: address,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+              notes: `Quick add: ${new Date().toLocaleString()}`
+            });
+          }
+        });
+        return;
+      }
+      
+      // Long press handling - always show contact form
       if (isLongClick) {
-        // Create a new marker where the user clicked
         const marker = addMarker(e.latLng.toJSON(), {
           title: "New Contact",
           draggable: true,
