@@ -35,6 +35,9 @@ import ContactDetailModal from "@/components/contacts/contact-detail-modal";
 const contactFormSchema = insertContactSchema.extend({
   address: z.string().min(5, "Address must be at least 5 characters"),
   fullName: z.string().min(2, "Name must be at least 2 characters"),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -63,6 +66,9 @@ export default function Contacts() {
     defaultValues: {
       fullName: "",
       address: "",
+      city: "",
+      state: "",
+      zipCode: "",
       phone: "",
       email: "",
       status: "not_visited",

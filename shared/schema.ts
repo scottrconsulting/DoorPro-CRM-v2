@@ -47,6 +47,9 @@ export const contacts = pgTable("contacts", {
   userId: integer("user_id").notNull().references(() => users.id),
   fullName: text("full_name").notNull(),
   address: text("address").notNull(),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
   phone: text("phone"),
   email: text("email"),
   status: text("status").notNull(), // interested, not_interested, converted, considering, no_soliciting
