@@ -15,7 +15,9 @@ import {
   insertChatMessageSchema,
   PIN_COLORS,
   CONTACT_STATUSES,
-  QUICK_ACTIONS
+  QUICK_ACTIONS,
+  DASHBOARD_WIDGETS,
+  DASHBOARD_WIDGET_LABELS
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";

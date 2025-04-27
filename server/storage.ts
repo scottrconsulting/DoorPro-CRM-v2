@@ -46,7 +46,7 @@ import {
   type InsertChatMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, desc, asc, gte, lte, lt } from "drizzle-orm";
+import { eq, and, sql, desc, asc, gte, lte, lt, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -1408,9 +1408,29 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      return await db.select()
-        .from(chatConversations)
-        .where(sql`${chatConversations.id} IN (${conversationIds.join(',')})`);
+      // Process one ID at a time to avoid SQL issues
+      if (conversationIds.length === 1) {
+        // If there's only one ID, use equals
+        return await db.select()
+          .from(chatConversations)
+          .where(eq(chatConversations.id, conversationIds[0]));
+      } else {
+        // For multiple IDs, use a more reliable approach with OR conditions
+        const conversations: ChatConversation[] = [];
+        
+        // Query each conversation individually and combine results
+        for (const conversationId of conversationIds) {
+          const results = await db.select()
+            .from(chatConversations)
+            .where(eq(chatConversations.id, conversationId));
+            
+          if (results.length > 0) {
+            conversations.push(results[0]);
+          }
+        }
+        
+        return conversations;
+      }
     } catch (error) {
       console.error("Error fetching chat conversations by user:", error);
       return [];
