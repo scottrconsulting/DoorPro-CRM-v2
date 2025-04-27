@@ -114,7 +114,7 @@ export default function Dashboard() {
           );
         case "map":
           return (
-            <div key="map" className="mb-6">
+            <div key="map" className="mb-6 h-[500px]">
               <EnhancedMapViewer onSelectContact={handleContactSelect} />
             </div>
           );
