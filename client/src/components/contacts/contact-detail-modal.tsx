@@ -338,7 +338,7 @@ export default function ContactDetailModal({
   // Update contact mutation
   const updateContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
-      const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, contactData);
+      const res = await apiRequest("PUT", `/api/contacts/${contactId}`, contactData);
       return res.json();
     },
     onSuccess: () => {
