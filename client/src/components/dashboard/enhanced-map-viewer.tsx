@@ -368,76 +368,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
       const isLongClick = clickDuration > 500; // 500ms threshold for long press
       
-      // Quick click handling - always allow pin dropping
-      if (!isLongClick) {
-        const marker = addMarker(e.latLng.toJSON(), {
-          title: "New Contact",
-          draggable: true,
-          animation: window.google.maps.Animation.DROP,
-          icon: getMarkerIcon(activeStatus, customization?.pinColors),
-        });
-        
-        setNewHouseMarker(marker);
-        
-        // Get address and create contact with minimal info
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode({ location: e.latLng.toJSON() }, (results: any, status: any) => {
-          if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
-            const address = results[0].formatted_address;
-            const streetNumber = results[0].address_components.find((c: any) => 
-              c.types.includes('street_number'))?.short_name || '';
-            const street = results[0].address_components.find((c: any) => 
-              c.types.includes('route'))?.short_name || '';
-            const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
-            
-            createContactMutation.mutate({
-              userId: user?.id || 0,
-              fullName: autoName,
-              address: address,
-              status: activeStatus,
-              latitude: e.latLng.lat().toString(),
-              longitude: e.latLng.lng().toString(),
-              notes: `Quick add: ${new Date().toLocaleString()}`
-            });
-          }
-        });
-        return;
-      }
+      // Create a marker at the clicked location with the current active status
+      const marker = addMarker(e.latLng.toJSON(), {
+        title: "New Contact",
+        draggable: true,
+        animation: window.google.maps.Animation.DROP,
+        icon: getMarkerIcon(activeStatus, customization?.pinColors),
+      });
       
-      // Long press handling - always show contact form
-      if (isLongClick) {
-        const marker = addMarker(e.latLng.toJSON(), {
-          title: "New Contact",
-          draggable: true,
-          animation: window.google.maps.Animation.DROP,
-          icon: getMarkerIcon(activeStatus, customization?.pinColors),
-        });
-        
-        setNewHouseMarker(marker);
-        setShowNewContactDialog(true);
-        
-        // Get address for the new contact
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode({ location: e.latLng.toJSON() }, (
-          results: any, 
-          status: any
-        ) => {
-          if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
-            const address = results[0].formatted_address;
-            setNewContactAddress(address);
-            setNewContactCoords(e.latLng.toJSON());
-            
-            // Pre-fill the form
-            setNewContactForm({
-              ...newContactForm,
-              address,
-              status: activeStatus,
-              notes: `Initial contact: ${new Date().toLocaleString()}`
-            });
-          }
-        });
-      }
-      
+      setNewHouseMarker(marker);
       setIsAddingHouse(true); // Auto-enable adding mode
       
       // Get the address from the coordinates
@@ -451,126 +390,94 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           setNewContactAddress(address);
           setNewContactCoords(e.latLng.toJSON());
           
-          // Create the base newContactForm data
-          const newFormData = {
-            ...newContactForm,
-            address,
-            status: activeStatus,
-            notes: `Initial contact: ${new Date().toLocaleString()}`
-          };
+          // Extract address components for all contact creation paths
+          const streetNumber = results[0].address_components.find((c: any) => 
+            c.types.includes('street_number'))?.short_name || '';
+          const street = results[0].address_components.find((c: any) => 
+            c.types.includes('route'))?.short_name || '';
+          const city = results[0].address_components.find((c: any) => 
+            c.types.includes('locality'))?.short_name || '';
+          const state = results[0].address_components.find((c: any) => 
+            c.types.includes('administrative_area_level_1'))?.short_name || '';
+          const zipCode = results[0].address_components.find((c: any) => 
+            c.types.includes('postal_code'))?.short_name || '';
           
-          setNewContactForm(newFormData);
+          const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
           
-          // For quick click, we need special handling if it's a status that needs scheduling
-          if (!isLongClick) {
-            // Check if it's a status that needs scheduling (call_back, appointment_scheduled, interested)
-            const needsScheduling = ["appointment_scheduled", "interested"].includes(activeStatus);
+          // If it's a long click - show detailed form for ALL statuses
+          if (isLongClick) {
+            // Pre-fill the form with extracted address data
+            setNewContactForm({
+              ...newContactForm,
+              fullName: autoName,
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              notes: `Initial contact: ${new Date().toLocaleString()}`
+            });
             
-            if (needsScheduling) {
-              // For these statuses, we should always show the dialog instead of quick-adding
-              // Auto generate a name based on address
-              const streetNumber = results[0].address_components.find((c: any) => 
-                c.types.includes('street_number'))?.short_name || '';
-              const street = results[0].address_components.find((c: any) => 
-                c.types.includes('route'))?.short_name || '';
-              const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+            // Check if the selected status needs scheduling fields and show them
+            const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
+            setShowSchedulingFields(needsScheduling);
+            
+            // Show the form dialog
+            setShowNewContactDialog(true);
+          } 
+          // For quick clicks - just add the contact with the selected status for ALL statuses
+          else {
+            // Start work timer when first contact is added (if not already started)
+            if (!firstHouseRecordedRef.current) {
+              firstHouseRecordedRef.current = true;
+              timerActiveRef.current = true;
               
-              // Pre-fill the form with generated data
-              setNewContactForm({
-                ...newContactForm,
-                fullName: autoName,
-                status: activeStatus,
-                // Set default scheduling date to tomorrow
-                scheduleDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
-                // Set default scheduling time to noon
-                scheduleTime: '12:00',
+              // Add first session to the sessions list
+              sessionsRef.current.push({
+                startTime: new Date().toISOString(),
+                duration: 0
               });
-              
-              // Show scheduling fields and form dialog
-              setShowSchedulingFields(true);
-              setShowNewContactDialog(true);
               
               toast({
-                title: "Schedule required",
-                description: `Please set scheduling details for ${activeStatus.replace(/_/g, ' ')}`,
-              });
-            } else {
-              // For other statuses, continue with quick add
-              // Auto generate a name based on address if it's a quick click
-              const streetNumber = results[0].address_components.find((c: any) => 
-                c.types.includes('street_number'))?.short_name || '';
-              const street = results[0].address_components.find((c: any) => 
-                c.types.includes('route'))?.short_name || '';
-              const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
-              
-              // Extract city, state and zip code for the contact data
-              const city = results[0].address_components.find((c: any) => 
-                c.types.includes('locality'))?.short_name || '';
-              const state = results[0].address_components.find((c: any) => 
-                c.types.includes('administrative_area_level_1'))?.short_name || '';
-              const zipCode = results[0].address_components.find((c: any) => 
-                c.types.includes('postal_code'))?.short_name || '';
-              
-              // Create the contact with enhanced info
-              createContactMutation.mutate({
-                userId: user?.id || 0,
-                fullName: autoName,
-                address: address,
-                city: city,
-                state: state,
-                zipCode: zipCode,
-                status: activeStatus,
-                latitude: e.latLng.lat().toString(),
-                longitude: e.latLng.lng().toString(),
-                notes: `Quick add: ${new Date().toLocaleString()}`
-              });
-              
-              // Start work timer when first contact is added
-              if (!firstHouseRecordedRef.current) {
-                firstHouseRecordedRef.current = true;
-                timerActiveRef.current = true;
-                
-                // Add first session to the sessions list
-                sessionsRef.current.push({
-                  startTime: new Date().toISOString(),
-                  duration: 0
-                });
-                
-                toast({
-                  title: "Work timer started",
-                  description: "Timer has started tracking your work session"
-                });
-              }
-              
-              toast({
-                title: "Contact added",
-                description: `Quick-added pin at ${address}`,
+                title: "Work timer started",
+                description: "Timer has started tracking your work session"
               });
             }
             
-            // Note: For scheduling statuses, we don't show the "Contact added" toast
-            // as we've already shown the "Schedule required" toast
-          } else {
-            // Show form dialog for long clicks
-            setShowNewContactDialog(true);
+            // Create the contact with the current active status and all address components
+            createContactMutation.mutate({
+              userId: user?.id || 0,
+              fullName: autoName,
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+              notes: `Quick add: ${new Date().toLocaleString()}`
+            });
             
-            // Check if the selected status needs scheduling fields
-            const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
-            setShowSchedulingFields(needsScheduling);
+            toast({
+              title: "Contact added",
+              description: `Quick-added pin with status: ${activeStatus.replace(/_/g, ' ')}`,
+            });
           }
-        } else if (!isLongClick) {
-          // For quick clicks, just leave the marker without showing the form
-          toast({
-            title: "Pin added",
-            description: "Long press to add contact details",
-          });
-          return;
         } else {
-          toast({
-            title: "Could not find address",
-            description: "Unable to get the address for this location",
-            variant: "destructive",
-          });
+          // Could not get the address
+          if (isLongClick) {
+            toast({
+              title: "Could not find address",
+              description: "Unable to get the address for this location",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Pin added",
+              description: "Address could not be determined",
+              variant: "destructive",
+            });
+          }
         }
       });
     });
