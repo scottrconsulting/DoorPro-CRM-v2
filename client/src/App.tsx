@@ -21,6 +21,7 @@ import Chat from "@/pages/chat";
 import Routes from "@/pages/routes";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import AutoLogin from "@/pages/auto-login";
 import AppShell from "@/components/layout/app-shell";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,6 +68,9 @@ function App() {
             <Toaster />
             {mounted && (
               <Switch>
+                <Route path="/auto-login">
+                  <AutoLogin />
+                </Route>
                 <Route path="/login">
                   <Login />
                 </Route>
