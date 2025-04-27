@@ -30,20 +30,29 @@ export async function apiRequest(
   }
 
   try {
+    // Get auth token if it exists
+    const token = localStorage.getItem('doorpro_auth_token');
+    
+    // Create headers with authorization if we have a token
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    
+    // Add content-type for requests with data
+    if (data) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    // Add auth token if it exists
+    if (token && !url.includes('/api/direct-auth/direct-login')) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(fullUrl, {
       method,
-      headers: data 
-        ? { 
-            "Content-Type": "application/json",
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          } 
-        : {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
+      headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include", // This ensures cookies are sent with the request
       mode: 'cors', // Enable CORS for cross-domain requests
@@ -85,14 +94,26 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
 
     try {
       console.log(`Fetching from: ${url}`);
+      
+      // Get auth token if it exists
+      const token = localStorage.getItem('doorpro_auth_token');
+      
+      // Create headers
+      const headers: Record<string, string> = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+      
+      // Add auth token if it exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch(url, {
         credentials: "include", // Essential for sending cookies
         mode: 'cors',  // Use CORS for cross-domain requests
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+        headers
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
