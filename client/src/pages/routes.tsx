@@ -90,82 +90,55 @@ export default function Routes() {
   // Display contacts based on filter
   const displayContacts = showScheduled ? contactsWithSchedules : contacts;
 
-  // Initialize Google Maps
+  // Initialize DirectionsRenderer when map is loaded
   useEffect(() => {
-    if (!mapRef.current || map) return;
+    if (!map || !isLoaded) return;
+    
+    // Set up DirectionsRenderer
+    const renderer = new google.maps.DirectionsRenderer({
+      map: map,
+      suppressMarkers: false,
+      polylineOptions: {
+        strokeColor: "#3b82f6",
+        strokeWeight: 5,
+      },
+    });
+    setDirectionsRenderer(renderer);
 
-    const initMap = async () => {
-      // Check if Google Maps API is loaded
-      if (!window.google || !window.google.maps) {
+    // Try to get user's location
+    getCurrentLocation().then((position) => {
+      if (position) {
+        const userPos = {
+          lat: position.lat,
+          lng: position.lng,
+        };
+        setUserLocation(userPos);
+        map.setCenter(userPos);
+        map.setZoom(11);
+
+        // Add marker for user's position
+        new google.maps.Marker({
+          position: userPos,
+          map: map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#4285F4",
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "#FFFFFF",
+          },
+          title: "Your Location",
+        });
+      } else {
         toast({
-          title: "Maps API Error",
-          description: "Google Maps API failed to load",
+          title: "Location Error",
+          description: "Unable to get your current location",
           variant: "destructive",
         });
-        return;
       }
-
-      const mapInstance = new google.maps.Map(mapRef.current!, {
-        center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
-        zoom: 4,
-        mapTypeControl: true,
-        streetViewControl: true,
-        mapTypeId: google.maps.MapTypeId.ROADMAP
-      });
-
-      setMap(mapInstance);
-      setDirectionsService(new google.maps.DirectionsService());
-      
-      const renderer = new google.maps.DirectionsRenderer({
-        map: mapInstance,
-        suppressMarkers: false,
-        polylineOptions: {
-          strokeColor: "#3b82f6",
-          strokeWeight: 5,
-        },
-      });
-      setDirectionsRenderer(renderer);
-
-      // Try to get user's location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const userPos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            setUserLocation(userPos);
-            mapInstance.setCenter(userPos);
-            mapInstance.setZoom(11);
-
-            // Add marker for user's position
-            new google.maps.Marker({
-              position: userPos,
-              map: mapInstance,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: "#4285F4",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "#FFFFFF",
-              },
-              title: "Your Location",
-            });
-          },
-          () => {
-            toast({
-              title: "Location Error",
-              description: "Unable to get your current location",
-              variant: "destructive",
-            });
-          }
-        );
-      }
-    };
-
-    initMap();
-  }, [map, toast]);
+    });
+  }, [map, isLoaded, toast]);
 
   // Toggle contact selection
   const toggleContactSelection = (contact: Contact) => {
@@ -178,7 +151,7 @@ export default function Routes() {
 
   // Calculate route
   const calculateRoute = async () => {
-    if (!directionsService || !directionsRenderer || !map || selectedContacts.length === 0) {
+    if (!map || !isLoaded || selectedContacts.length === 0 || !directionsRenderer) {
       toast({
         title: "Unable to calculate route",
         description: "Please select at least one contact and ensure maps is loaded",
@@ -194,139 +167,165 @@ export default function Routes() {
       const locations = selectedContacts.map(contact => ({
         contact,
         geocoded: false,
-        latLng: null as google.maps.LatLngLiteral | null,
+        latLng: null as { lat: number; lng: number } | null,
       }));
 
       // Geocode addresses
-      const geocoder = new google.maps.Geocoder();
-      for (const location of locations) {
-        try {
-          // Use Promise-based geocoding
-          const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-            geocoder.geocode({ address: location.contact.address }, (results, status) => {
-              if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
-                resolve(results);
-              } else {
-                reject(new Error(`Geocoding failed: ${status}`));
-              }
+      if (window.google && window.google.maps) {
+        const geocoder = new window.google.maps.Geocoder();
+        for (const location of locations) {
+          try {
+            // Use Promise-based geocoding
+            const result = await new Promise<any[]>((resolve, reject) => {
+              geocoder.geocode({ address: location.contact.address }, (results: any, status: any) => {
+                if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                  resolve(results);
+                } else {
+                  reject(new Error(`Geocoding failed: ${status}`));
+                }
+              });
             });
-          });
-          
-          if (result[0]?.geometry?.location) {
-            location.geocoded = true;
-            location.latLng = {
-              lat: result[0].geometry.location.lat(),
-              lng: result[0].geometry.location.lng(),
-            };
+            
+            if (result[0]?.geometry?.location) {
+              location.geocoded = true;
+              location.latLng = {
+                lat: result[0].geometry.location.lat(),
+                lng: result[0].geometry.location.lng(),
+              };
+            }
+          } catch (error) {
+            console.error("Geocoding error:", error);
           }
-        } catch (error) {
-          console.error("Geocoding error:", error);
         }
-      }
 
-      // Filter out locations that couldn't be geocoded
-      const validLocations = locations.filter(loc => loc.geocoded && loc.latLng);
-      
-      if (validLocations.length === 0) {
-        throw new Error("None of the selected contacts have valid addresses");
-      }
+        // Filter out locations that couldn't be geocoded
+        const validLocations = locations.filter(loc => loc.geocoded && loc.latLng);
+        
+        if (validLocations.length === 0) {
+          throw new Error("None of the selected contacts have valid addresses");
+        }
 
-      // Start from user's location or first contact if user location not available
-      const origin = userLocation || validLocations[0].latLng!;
-      
-      // For routes with multiple stops
-      if (validLocations.length > 1) {
-        if (routeType === "optimized") {
-          // Use Directions API for route optimization with waypoints
-          const waypoints = validLocations.map(loc => ({
-            location: new google.maps.LatLng(loc.latLng!.lat, loc.latLng!.lng),
-            stopover: true,
-          }));
+        // Start from user's location or first contact if user location not available
+        const origin = userLocation || validLocations[0].latLng!;
+        
+        // For routes with multiple stops
+        if (validLocations.length > 1) {
+          if (routeType === "optimized") {
+            // Use Directions API for route optimization with waypoints
+            const waypoints = validLocations.map(loc => ({
+              location: new window.google.maps.LatLng(loc.latLng!.lat, loc.latLng!.lng),
+              stopover: true,
+            }));
+            
+            const directionsService = new window.google.maps.DirectionsService();
+            const travelModeValue = 
+              travelMode === "WALKING" ? window.google.maps.TravelMode.WALKING :
+              travelMode === "BICYCLING" ? window.google.maps.TravelMode.BICYCLING :
+              window.google.maps.TravelMode.DRIVING;
+            
+            const request = {
+              origin,
+              destination: origin, // Return to starting point
+              waypoints,
+              travelMode: travelModeValue,
+              optimizeWaypoints: true, // Let Google optimize the route
+            };
+            
+            directionsService.route(request, (result: any, status: any) => {
+              if (status === window.google.maps.DirectionsStatus.OK && result) {
+                directionsRenderer.setDirections(result);
+                
+                // Create optimized route from the result
+                const optimizedWaypoints = result.routes[0].waypoint_order;
+                const legs = result.routes[0].legs;
+                
+                const route: RouteStop[] = optimizedWaypoints.map((waypointIndex: number, idx: number) => {
+                  const location = validLocations[waypointIndex];
+                  const leg = legs[idx];
+                  return {
+                    contact: location.contact,
+                    order: idx + 1,
+                    distance: leg.distance?.value ?? 0,
+                    duration: leg.duration?.text ?? "",
+                  };
+                });
+                
+                setOptimizedRoute(route);
+              } else {
+                console.error(`Directions request failed: ${status}`);
+                toast({
+                  title: "Route Calculation Failed",
+                  description: `Directions request failed: ${status}`,
+                  variant: "destructive",
+                });
+              }
+              setIsCalculating(false);
+            });
+          } else {
+            // Sequential route (in order of selection)
+            // Create markers for each location
+            validLocations.forEach((location, index) => {
+              new window.google.maps.Marker({
+                position: location.latLng!,
+                map: map,
+                label: `${index + 1}`,
+                title: location.contact.fullName,
+              });
+            });
+            
+            // Fit bounds to show all markers
+            const bounds = new window.google.maps.LatLngBounds();
+            validLocations.forEach(loc => bounds.extend(loc.latLng!));
+            map.fitBounds(bounds);
+            
+            // Create sequential route
+            setOptimizedRoute(validLocations.map((location, index) => ({
+              contact: location.contact,
+              order: index + 1,
+            })));
+            setIsCalculating(false);
+          }
+        } else {
+          // Single destination
+          const destination = validLocations[0].latLng!;
           
-          const request: google.maps.DirectionsRequest = {
+          const directionsService = new window.google.maps.DirectionsService();
+          const travelModeValue = 
+            travelMode === "WALKING" ? window.google.maps.TravelMode.WALKING :
+            travelMode === "BICYCLING" ? window.google.maps.TravelMode.BICYCLING :
+            window.google.maps.TravelMode.DRIVING;
+          
+          const request = {
             origin,
-            destination: origin, // Return to starting point
-            waypoints,
-            travelMode,
-            optimizeWaypoints: true, // Let Google optimize the route
+            destination,
+            travelMode: travelModeValue,
           };
           
-          directionsService.route(request, (result, status) => {
-            if (status === google.maps.DirectionsStatus.OK && result) {
+          directionsService.route(request, (result: any, status: any) => {
+            if (status === window.google.maps.DirectionsStatus.OK && result) {
               directionsRenderer.setDirections(result);
               
-              // Create optimized route from the result
-              const optimizedWaypoints = result.routes[0].waypoint_order;
-              const legs = result.routes[0].legs;
-              
-              const route: RouteStop[] = optimizedWaypoints.map((waypointIndex, idx) => {
-                const location = validLocations[waypointIndex];
-                const leg = legs[idx];
-                return {
-                  contact: location.contact,
-                  order: idx + 1,
-                  distance: leg.distance?.value ?? 0,
-                  duration: leg.duration?.text ?? "",
-                };
-              });
-              
-              setOptimizedRoute(route);
+              // Create single-stop route
+              const leg = result.routes[0].legs[0];
+              setOptimizedRoute([{
+                contact: validLocations[0].contact,
+                order: 1,
+                distance: leg.distance?.value ?? 0,
+                duration: leg.duration?.text ?? "",
+              }]);
             } else {
-              throw new Error(`Directions request failed: ${status}`);
+              console.error(`Directions request failed: ${status}`);
+              toast({
+                title: "Route Calculation Failed",
+                description: `Directions request failed: ${status}`,
+                variant: "destructive",
+              });
             }
             setIsCalculating(false);
           });
-        } else {
-          // Sequential route (in order of selection)
-          // Create markers for each location
-          validLocations.forEach((location, index) => {
-            new google.maps.Marker({
-              position: location.latLng!,
-              map: map,
-              label: `${index + 1}`,
-              title: location.contact.fullName,
-            });
-          });
-          
-          // Fit bounds to show all markers
-          const bounds = new google.maps.LatLngBounds();
-          validLocations.forEach(loc => bounds.extend(loc.latLng!));
-          map.fitBounds(bounds);
-          
-          // Create sequential route
-          setOptimizedRoute(validLocations.map((location, index) => ({
-            contact: location.contact,
-            order: index + 1,
-          })));
-          setIsCalculating(false);
         }
       } else {
-        // Single destination
-        const destination = validLocations[0].latLng!;
-        
-        const request: google.maps.DirectionsRequest = {
-          origin,
-          destination,
-          travelMode,
-        };
-        
-        directionsService.route(request, (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result) {
-            directionsRenderer.setDirections(result);
-            
-            // Create single-stop route
-            const leg = result.routes[0].legs[0];
-            setOptimizedRoute([{
-              contact: validLocations[0].contact,
-              order: 1,
-              distance: leg.distance?.value ?? 0,
-              duration: leg.duration?.text ?? "",
-            }]);
-          } else {
-            throw new Error(`Directions request failed: ${status}`);
-          }
-          setIsCalculating(false);
-        });
+        throw new Error("Google Maps API not loaded");
       }
     } catch (error) {
       console.error("Route calculation error:", error);
@@ -387,15 +386,15 @@ export default function Routes() {
                 <Label htmlFor="travelMode">Travel Mode</Label>
                 <Select 
                   value={travelMode} 
-                  onValueChange={(value) => setTravelMode(value as google.maps.TravelMode)}
+                  onValueChange={(value) => setTravelMode(value)}
                 >
                   <SelectTrigger id="travelMode">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={google.maps.TravelMode.DRIVING}>Driving</SelectItem>
-                    <SelectItem value={google.maps.TravelMode.WALKING}>Walking</SelectItem>
-                    <SelectItem value={google.maps.TravelMode.BICYCLING}>Bicycling</SelectItem>
+                    <SelectItem value="DRIVING">Driving</SelectItem>
+                    <SelectItem value="WALKING">Walking</SelectItem>
+                    <SelectItem value="BICYCLING">Bicycling</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
