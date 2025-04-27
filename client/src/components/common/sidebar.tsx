@@ -152,7 +152,7 @@ export default function Sidebar() {
           >
             <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
             <span>Customize</span>
-            {user?.role !== "admin" && user?.role !== "pro" && (
+            {user?.role === "free" && (
               <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
             )}
           </Link>
