@@ -1006,27 +1006,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             >
               <span className="material-icons text-neutral-600">my_location</span>
             </button>
-            <button
-              onClick={() => {
-                const newAvatar = userAvatar === 'male' ? 'female' : 'male';
-                setUserAvatar(newAvatar);
-                
-                // Update the user marker icon if it exists
-                if (userMarker && window.google) {
-                  userMarker.setIcon(getUserAvatarIcon(newAvatar));
-                  toast({
-                    title: "Avatar updated",
-                    description: `Your map avatar is now ${newAvatar}`
-                  });
-                }
-              }}
-              title="Change Avatar Gender"
-              className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center"
-            >
-              <span className="material-icons text-neutral-600">
-                {userAvatar === 'male' ? 'man' : 'woman'}
-              </span>
-            </button>
+            {/* Avatar gender button removed as requested */}
           </div>
           
           {/* Polygon info display removed as requested */}
