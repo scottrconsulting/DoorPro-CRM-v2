@@ -17,6 +17,7 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -37,11 +39,28 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, SendHorizontal, PlusCircle, MoreVertical, Search, AlertCircle } from "lucide-react";
+import { 
+  Loader2, 
+  SendHorizontal, 
+  PlusCircle, 
+  MoreVertical, 
+  Search, 
+  AlertCircle, 
+  Hash, 
+  MessageSquare, 
+  Bell, 
+  BellOff, 
+  UserPlus, 
+  Users, 
+  ChevronDown,
+  MessageCircle
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Define the types for our data
 interface Conversation {
