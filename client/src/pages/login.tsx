@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { ExternalLink } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -20,6 +21,16 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function Login() {
   const { login, isLoginPending, loginError } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [location, setLocation] = useLocation();
+  const [isCrossOriginIssue, setIsCrossOriginIssue] = useState(false);
+  
+  // Check if we're in an external browser tab vs. the Replit preview
+  useEffect(() => {
+    // If we're running in a new tab or external window
+    const isExternalTab = window.location.host.includes('replit.app');
+    const previewHost = window.location.host.includes('picard.replit.dev');
+    setIsCrossOriginIssue(isExternalTab && !previewHost);
+  }, []);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -125,6 +136,30 @@ export default function Login() {
           </CardFooter>
         </Card>
         
+        {isCrossOriginIssue && (
+          <div className="mt-4">
+            <Alert className="bg-amber-50 border-amber-300">
+              <AlertDescription className="text-amber-800">
+                <div className="flex flex-col space-y-2">
+                  <p className="font-medium">Having trouble logging in?</p>
+                  <p>Use the button below to open the app in a preview window:</p>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="border-amber-400 text-amber-700 hover:bg-amber-100 flex items-center gap-2"
+                    onClick={() => {
+                      // Open a special preview window
+                      window.open('https://replit.com/@ScottRConsult/door-pro-crm?v=1', '_blank');
+                    }}
+                  >
+                    <ExternalLink size={16} /> Open in Preview Mode
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <div className="mt-8 text-center">
           <p className="text-sm text-neutral-500">
             By logging in, you agree to our{" "}
