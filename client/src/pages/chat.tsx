@@ -1231,32 +1231,32 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Conversations Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedConversations.length > 1 ? "Conversations" : "Conversation"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedConversations.length > 1 
+                ? `${selectedConversations.length} conversations` 
+                : "this conversation"}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteConversationsMutation.mutate(selectedConversations)}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteConversationsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-    
-    {/* Delete Conversations Confirmation Dialog */}
-    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {selectedConversations.length > 1 ? "Conversations" : "Conversation"}</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete {selectedConversations.length > 1 
-              ? `${selectedConversations.length} conversations` 
-              : "this conversation"}? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={() => deleteConversationsMutation.mutate(selectedConversations)}
-            className="bg-destructive hover:bg-destructive/90"
-          >
-            {deleteConversationsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : null}
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
