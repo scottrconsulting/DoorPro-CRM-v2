@@ -8,9 +8,10 @@ export const CONTACT_STATUSES = ['not_visited', 'interested', 'not_interested', 
 export const QUICK_ACTIONS = ['no_answer', 'not_interested', 'call_back', 'no_soliciting'];
 
 export const DASHBOARD_WIDGETS = [
-  "today_visits",
-  "conversions",
-  "follow_ups",
+  "stats",
+  "map", 
+  "contacts",
+  "schedule",
   "territory_coverage",
   "contacts_added_today",
   "appointments_today",
@@ -19,6 +20,10 @@ export const DASHBOARD_WIDGETS = [
 ];
 
 export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
+  "stats": "Statistics",
+  "map": "Territory Map",
+  "contacts": "Recent Contacts",
+  "schedule": "Schedule",
   "today_visits": "Today's Visits",
   "conversions": "Conversions",
   "follow_ups": "Follow-ups",

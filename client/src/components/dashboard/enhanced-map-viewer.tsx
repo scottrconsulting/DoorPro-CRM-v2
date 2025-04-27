@@ -46,6 +46,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Drawing mode states removed as requested
   const [newContactForm, setNewContactForm] = useState({
