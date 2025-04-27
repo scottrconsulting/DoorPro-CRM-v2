@@ -3,7 +3,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Pre-defined customization options for various elements
-export const PIN_COLORS = ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'teal', 'pink', 'brown', 'gray'];
+// Standard Google Maps pin colors only (these are the only reliable colors for Google Maps markers)
+export const PIN_COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink'];
 export const CONTACT_STATUSES = ['unknown', 'no_answer', 'presented', 'booked', 'sold', 'not_interested', 'no_soliciting', 'check_back'];
 export const QUICK_ACTIONS = ['no_answer', 'not_interested', 'call_back', 'no_soliciting'];
 

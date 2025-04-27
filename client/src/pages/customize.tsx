@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
 import { Customization, CONTACT_STATUSES, PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
-import { HexColorPicker } from "react-colorful";
 
 import {
   Card,
@@ -27,16 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -282,9 +272,7 @@ useEffect(() => {
     });
   };
   
-  // State for color picker
-  const [activeColorPicker, setActiveColorPicker] = useState<string | null>(null);
-  const [currentColor, setCurrentColor] = useState<string>("#000000");
+  // No color picker needed since we only use standard Google Maps colors
   
   return (
     <div className="container mx-auto py-6 space-y-8">
@@ -878,58 +866,33 @@ useEffect(() => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {isPro ? (
-                              <>
-                                <Select 
-                                  value={editedPinColors[status] || "blue"} 
-                                  onValueChange={color => {
-                                    updatePinColor(status, color);
-                                    setActiveColorPicker(null);
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[150px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {PIN_COLORS.map(color => (
-                                      <SelectItem key={color} value={color}>
-                                        <div className="flex items-center">
-                                          <div 
-                                            className="w-4 h-4 rounded-full mr-2" 
-                                            style={{ backgroundColor: color }}
-                                          />
-                                          {color.charAt(0).toUpperCase() + color.slice(1)}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </>
-                            ) : (
-                              <>
-                                <Select 
-                                  value={editedPinColors[status] || "blue"} 
-                                  onValueChange={color => updatePinColor(status, color)}
-                                >
-                                  <SelectTrigger className="w-[150px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {PIN_COLORS.map(color => (
-                                      <SelectItem key={color} value={color}>
-                                        <div className="flex items-center">
-                                          <div 
-                                            className="w-4 h-4 rounded-full mr-2" 
-                                            style={{ backgroundColor: color }}
-                                          />
-                                          {color.charAt(0).toUpperCase() + color.slice(1)}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </>
-                            )}
+                            <Select 
+                              value={editedPinColors[status] || "blue"} 
+                              onValueChange={color => updatePinColor(status, color)}
+                            >
+                              <SelectTrigger className="w-[150px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PIN_COLORS.map(color => (
+                                  <SelectItem key={color} value={color}>
+                                    <div className="flex items-center">
+                                      <div 
+                                        className="w-4 h-4 rounded-full mr-2" 
+                                        style={{ 
+                                          backgroundColor: color,
+                                          border: '1px solid #ddd'
+                                        }}
+                                      />
+                                      {color.charAt(0).toUpperCase() + color.slice(1)}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="text-xs text-muted-foreground">
+                              <span className="hidden md:inline">Standard Google Maps color</span>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -945,18 +908,38 @@ useEffect(() => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            {isPro && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setCurrentColor(editedPinColors[status] || "#3b82f6"); // Default to blue
-                                  setActiveColorPicker(status);
-                                }}
-                              >
-                                Custom Color
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // Reset to default color
+                                const defaultStatusColors: Record<string, string> = {
+                                  not_interested: "red",
+                                  booked: "blue",
+                                  presented: "orange",
+                                  no_answer: "yellow",
+                                  check_back: "green",
+                                  converted: "green",
+                                  sold: "green",
+                                  unknown: "blue",
+                                  not_visited: "blue",
+                                  interested: "yellow",
+                                  appointment_scheduled: "orange",
+                                  call_back: "purple",
+                                  no_soliciting: "purple"
+                                };
+                                
+                                updatePinColor(status, status in defaultStatusColors ? 
+                                  defaultStatusColors[status] : "blue");
+                                
+                                toast({
+                                  title: "Reset to Default",
+                                  description: "Pin color reset to the recommended default"
+                                });
+                              }}
+                            >
+                              Reset Default
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -965,71 +948,7 @@ useEffect(() => {
                 </Table>
               </div>
               
-              {/* Color Picker Dialog */}
-              <Dialog open={!!activeColorPicker} onOpenChange={(open) => !open && setActiveColorPicker(null)}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Custom Color for "{activeColorPicker ? (statusLabels[activeColorPicker] || activeColorPicker.replace(/_/g, ' ')) : ''}"
-                    </DialogTitle>
-                    <DialogDescription>
-                      Choose a custom color for this pin status. Google Maps will map your color to the closest available marker color.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="flex flex-col gap-4 py-4">
-                    <div className="mx-auto">
-                      <HexColorPicker 
-                        color={currentColor} 
-                        onChange={(color) => {
-                          setCurrentColor(color);
-                        }} 
-                      />
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="flex-grow">
-                        <Label htmlFor="hexColor">Hex Color</Label>
-                        <div className="mt-1">
-                          <Input 
-                            id="hexColor"
-                            value={currentColor}
-                            onChange={(e) => setCurrentColor(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label>Preview</Label>
-                        <div 
-                          className="w-12 h-12 rounded-full mt-1 border"
-                          style={{ backgroundColor: currentColor }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <DialogFooter className="gap-2 sm:gap-0">
-                    <Button variant="outline" onClick={() => setActiveColorPicker(null)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (activeColorPicker) {
-                          updatePinColor(activeColorPicker, currentColor);
-                          toast({
-                            title: "Color Updated",
-                            description: "The pin color has been updated. Click Save Changes at the top to apply it to the map."
-                          });
-                          setActiveColorPicker(null);
-                        }
-                      }}
-                    >
-                      Apply Color
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+
               
               {/* Legend Preview */}
               <div className="mt-8 bg-white p-4 border rounded-md">

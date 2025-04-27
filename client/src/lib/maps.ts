@@ -186,34 +186,34 @@ export function createSvgMarker(color: string, label?: string): string {
 
 // This function returns the icon for a given status using Google Maps markers
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>, statusLabels?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
-  // Simple direct mapping to reliable Google marker colors
-  const statusToColorMap: Record<string, string> = {
+  // Default status to color mapping (based on the user's requirements)
+  const defaultStatusColors: Record<string, string> = {
+    not_interested: "red",
+    booked: "blue",
+    presented: "orange",
+    no_answer: "yellow",
+    check_back: "green",
     converted: "green",
+    sold: "green",
+    unknown: "blue",
+    not_visited: "blue",
     interested: "yellow",
     appointment_scheduled: "orange",
-    call_back: "blue",
-    considering: "purple",
-    not_interested: "red",
-    not_visited: "blue",
-    no_soliciting: "purple",
-    presented: "pink"
+    call_back: "purple",
+    no_soliciting: "purple"
   };
   
   // Get color from customization if available, otherwise use defaults
   let markerColor: string = "blue"; // Default fallback
   
   if (pinColors && status in pinColors) {
-    const customColor = pinColors[status];
-    
-    // If it's one of the standard Google marker colors, use it directly
-    if (["red", "blue", "green", "yellow", "purple", "orange", "pink"].includes(customColor.toLowerCase())) {
-      markerColor = customColor.toLowerCase();
-    } else {
-      // Otherwise, map to closest standard color
-      markerColor = mapHexToGoogleColor(customColor);
+    // Only use the color if it's one of the standard Google marker colors
+    const customColor = pinColors[status].toLowerCase();
+    if (["red", "blue", "green", "yellow", "purple", "orange", "pink"].includes(customColor)) {
+      markerColor = customColor;
     }
-  } else if (status in statusToColorMap) {
-    markerColor = statusToColorMap[status];
+  } else if (status in defaultStatusColors) {
+    markerColor = defaultStatusColors[status];
   }
   
   // Use standard Google Maps markers for maximum compatibility
