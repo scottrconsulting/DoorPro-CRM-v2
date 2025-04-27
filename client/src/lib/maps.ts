@@ -178,35 +178,44 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
   // Get color from pin customization if available, otherwise use default
   let colorName = "blue"; // Default fallback
   
-  // First check if we have a predetermined default for this status - this guarantees
-  // colors match between pins and the legend buttons in the UI
-  if (defaultColors[status]) {
-    colorName = defaultColors[status];
-  }
-  // Next check for any custom colors from user settings (if available)
-  else if (pinColors && pinColors[status]) {
-    colorName = pinColors[status].toLowerCase();
-    
-    // Map any custom colors to the closest available Google maps color
-    if (!validGoogleColors.includes(colorName)) {
-      const colorMap: Record<string, string> = {
-        // Common color names mapped to Google's limited palette
-        "teal": "green",
-        "lime": "green",
-        "aqua": "blue",
-        "cyan": "blue",
-        "magenta": "purple",
-        "violet": "purple",
-        "indigo": "purple",
-        "amber": "yellow",
-        "gold": "yellow",
-        "maroon": "red",
-        "crimson": "red",
-        "salmon": "red"
-      };
+  // First check for any custom colors from user settings (if available)
+  if (pinColors && pinColors[status]) {
+    // Check if it's a hex color
+    if (pinColors[status].startsWith('#')) {
+      // Map hex colors to the closest available Google maps color
+      const hexColor = pinColors[status].toLowerCase();
+      colorName = mapHexToGoogleColor(hexColor);
+    } else {
+      colorName = pinColors[status].toLowerCase();
       
-      colorName = colorMap[colorName] || "blue"; // Default to blue if no match
+      // Map any custom color names to the closest available Google maps color
+      if (!validGoogleColors.includes(colorName)) {
+        const colorMap: Record<string, string> = {
+          // Common color names mapped to Google's limited palette
+          "teal": "green",
+          "lime": "green",
+          "aqua": "blue",
+          "cyan": "blue",
+          "magenta": "purple",
+          "violet": "purple",
+          "indigo": "purple",
+          "amber": "yellow",
+          "gold": "yellow",
+          "maroon": "red",
+          "crimson": "red",
+          "salmon": "red",
+          "brown": "orange",
+          "gray": "purple",
+          "grey": "purple"
+        };
+        
+        colorName = colorMap[colorName] || "blue"; // Default to blue if no match
+      }
     }
+  }
+  // If no custom color, use the default color for this status
+  else if (defaultColors[status]) {
+    colorName = defaultColors[status];
   }
   
   // Ensure the color is one of the valid Google marker colors
@@ -220,4 +229,42 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
     url: `https://maps.google.com/mapfiles/ms/icons/${colorName}-dot.png`,
     scaledSize: { width: 32, height: 32 },
   };
+}
+
+// Function to map hex colors to the closest Google Maps marker color
+function mapHexToGoogleColor(hexColor: string): string {
+  // Convert hex to RGB
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  
+  // Define Google Maps marker colors in RGB
+  const googleColors = {
+    "red": [255, 0, 0],
+    "blue": [0, 0, 255],
+    "green": [0, 128, 0],
+    "yellow": [255, 255, 0],
+    "purple": [128, 0, 128],
+    "orange": [255, 165, 0],
+    "pink": [255, 192, 203]
+  };
+  
+  // Find the closest color by Euclidean distance in RGB space
+  let closestColor = "blue";
+  let minDistance = Number.MAX_VALUE;
+  
+  for (const [color, rgb] of Object.entries(googleColors)) {
+    const distance = Math.sqrt(
+      Math.pow(r - rgb[0], 2) + 
+      Math.pow(g - rgb[1], 2) + 
+      Math.pow(b - rgb[2], 2)
+    );
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestColor = color;
+    }
+  }
+  
+  return closestColor;
 }
