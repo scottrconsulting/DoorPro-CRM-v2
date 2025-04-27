@@ -176,8 +176,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the direct-auth token verification
       try {
         if (verifyToken(token)) {
-          // We're authenticated via token
-          console.log("User authenticated via token");
+          // We're authenticated via token - set req.user with admin credentials
+          console.log("User authenticated via token, setting admin user");
+          
+          // Set the user property on the request to enable admin access
+          (req as any).user = {
+            id: 1,
+            username: 'admin',
+            email: 'scottrconsulting@gmail.com',
+            fullName: 'Admin User',
+            role: 'admin'
+          };
+          
           return next();
         }
       } catch (error) {
@@ -191,16 +201,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to check if user has pro access
   const ensureProAccess = (req: Request, res: Response, next: any) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Unauthorized" });
+    // If authenticated via session
+    if (req.isAuthenticated()) {
+      const user = req.user as any;
+      if (user.role === "admin" || user.role === "pro") {
+        return next();
+      }
+      return res.status(403).json({ message: "This feature requires a Pro subscription" });
     }
-
-    const user = req.user as any;
-    if (user.role === "admin" || user.role === "pro") {
-      return next();
+    
+    // If authenticated via token (check Authorization header)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      
+      try {
+        if (verifyToken(token)) {
+          // We're assuming all token auth users are admins for now
+          console.log("Token user granted Pro access");
+          return next();
+        }
+      } catch (error) {
+        console.error("Token verification error in Pro check:", error);
+      }
     }
-
-    res.status(403).json({ message: "This feature requires a Pro subscription" });
+    
+    return res.status(401).json({ message: "Unauthorized" });
   };
 
   // Register direct auth routes that don't use cookies - more reliable for cross-domain access
@@ -288,10 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/user", (req, res) => {
-    // Removed auto-authentication for demo
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ authenticated: false });
-    } else {
+    // Check for cookie/session authentication first
+    if (req.isAuthenticated()) {
       const user = req.user as any;
       return res.json({ 
         authenticated: true, 
@@ -303,7 +327,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: user.role 
         } 
       });
+    } 
+    
+    // If not authenticated via cookie/session, check for token
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      
+      try {
+        if (verifyToken(token)) {
+          // Return admin user info for token auth
+          console.log("Token authenticated user info request");
+          return res.json({ 
+            authenticated: true, 
+            user: { 
+              id: 1, 
+              username: 'admin', 
+              email: 'scottrconsulting@gmail.com', 
+              fullName: 'Admin User', 
+              role: 'admin' 
+            } 
+          });
+        }
+      } catch (error) {
+        console.error("Token verification error:", error);
+      }
     }
+    
+    // Not authenticated by any method
+    return res.status(401).json({ authenticated: false });
   });
 
   app.post("/api/auth/logout", (req, res) => {
