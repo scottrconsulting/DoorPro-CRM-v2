@@ -102,7 +102,7 @@ export default function CustomizeMessageTemplates() {
       setNewTemplate({
         name: "",
         subject: "",
-        content: "",
+        body: "",
         type: activeTab as "sms" | "email"
       });
       refetch();
@@ -259,14 +259,14 @@ export default function CustomizeMessageTemplates() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor="template-content">Message Content</Label>
+                          <Label htmlFor="template.body">Message Content</Label>
                           <div className="text-xs text-muted-foreground mb-1">
                             Use variables like {"{first_name}"}, {"{address}"}, {"{date}"}, etc.
                           </div>
                           <Textarea 
-                            id="template-content"
-                            value={newTemplate.content}
-                            onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                            id="template-body"
+                            value={newTemplate.body}
+                            onChange={(e) => setNewTemplate({...newTemplate, body: e.target.value})}
                             placeholder="Hi {first_name}, just confirming your appointment on {date} at {time}. Reply YES to confirm."
                             rows={4}
                           />
@@ -295,7 +295,7 @@ export default function CustomizeMessageTemplates() {
                                 type: "sms",
                                 isDefault: false
                               })}
-                              disabled={!newTemplate.name || !newTemplate.content}
+                              disabled={!newTemplate.name || !newTemplate.body}
                             >
                               Save Template
                             </Button>
@@ -387,10 +387,10 @@ export default function CustomizeMessageTemplates() {
                                   </div>
                                   <Textarea 
                                     id={`edit-content-${template.id}`}
-                                    value={template.content}
+                                    value={template.body}
                                     onChange={(e) => {
                                       const updatedTemplates = templates.map(t => 
-                                        t.id === template.id ? {...t, content: e.target.value} : t
+                                        t.id === template.id ? {...t, body: e.target.value} : t
                                       );
                                       queryClient.setQueryData(["/api/message-templates"], updatedTemplates);
                                     }}
@@ -419,7 +419,7 @@ export default function CustomizeMessageTemplates() {
                               </div>
                             ) : (
                               <div>
-                                <p className="text-sm whitespace-pre-wrap">{template.content}</p>
+                                <p className="text-sm whitespace-pre-wrap">{template.body}</p>
                               </div>
                             )}
                           </CardContent>
@@ -508,14 +508,14 @@ export default function CustomizeMessageTemplates() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor="template-content">Email Content</Label>
+                          <Label htmlFor="template.body">Email Content</Label>
                           <div className="text-xs text-muted-foreground mb-1">
                             Use variables like {"{first_name}"}, {"{address}"}, {"{date}"}, etc.
                           </div>
                           <Textarea 
-                            id="template-content"
-                            value={newTemplate.content}
-                            onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                            id="template-body"
+                            value={newTemplate.body}
+                            onChange={(e) => setNewTemplate({...newTemplate, body: e.target.value})}
                             placeholder="Dear {first_name},\n\nThank you for your interest in our service. We're excited to work with you.\n\nBest regards,\nYour Name"
                             rows={8}
                           />
@@ -544,7 +544,7 @@ export default function CustomizeMessageTemplates() {
                                 type: "email",
                                 isDefault: false
                               })}
-                              disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.content}
+                              disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.body}
                             >
                               Save Template
                             </Button>
@@ -651,10 +651,10 @@ export default function CustomizeMessageTemplates() {
                                   </div>
                                   <Textarea 
                                     id={`edit-content-${template.id}`}
-                                    value={template.content}
+                                    value={template.body}
                                     onChange={(e) => {
                                       const updatedTemplates = templates.map(t => 
-                                        t.id === template.id ? {...t, content: e.target.value} : t
+                                        t.id === template.id ? {...t, body: e.target.value} : t
                                       );
                                       queryClient.setQueryData(["/api/message-templates"], updatedTemplates);
                                     }}
@@ -683,7 +683,7 @@ export default function CustomizeMessageTemplates() {
                               </div>
                             ) : (
                               <div>
-                                <p className="text-sm whitespace-pre-wrap">{template.content}</p>
+                                <p className="text-sm whitespace-pre-wrap">{template.body}</p>
                               </div>
                             )}
                           </CardContent>
