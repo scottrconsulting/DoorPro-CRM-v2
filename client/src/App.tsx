@@ -14,6 +14,7 @@ import Reports from "@/pages/reports";
 import Login from "@/pages/login";
 import DirectLogin from "@/pages/direct-login";
 import SimpleLogin from "@/pages/simple-login";
+import LoginFix from "@/pages/login-fix";
 import Register from "@/pages/register";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
@@ -104,10 +105,10 @@ function App() {
                   <AutoLogin />
                 </Route>
                 <Route path="/login">
-                  <SimpleLogin />
+                  <LoginFix />
                 </Route>
                 <Route path="/direct-login">
-                  <SimpleLogin />
+                  <LoginFix />
                 </Route>
                 <Route path="/register">
                   <Register />
