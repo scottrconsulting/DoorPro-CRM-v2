@@ -31,9 +31,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useEffect, useState } from "react";
 
-// Simplified protected route that doesn't use any complex state management
+// Protected route that only uses token-based authentication
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useDirectAuth();
   
   // Show loading indicator when loading
   if (isLoading) {
@@ -46,7 +46,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    window.location.href = '/login';
+    window.location.href = '/direct-login';
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -78,10 +78,10 @@ function App() {
                   <AutoLogin />
                 </Route>
                 <Route path="/login">
-                  <LoginFix />
+                  <DirectLogin />
                 </Route>
                 <Route path="/direct-login">
-                  <LoginFix />
+                  <DirectLogin />
                 </Route>
                 <Route path="/register">
                   <Register />

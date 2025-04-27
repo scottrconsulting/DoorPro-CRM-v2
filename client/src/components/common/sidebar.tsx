@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { getPlanName, UserRole, FREE_PLAN_LIMITS } from "@/lib/auth";
 import { Link, useLocation } from "wouter";
 import { Progress } from "@/components/ui/progress";
@@ -7,7 +7,7 @@ import { Contact } from "@shared/schema";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Sidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useDirectAuth();
   const [location] = useLocation();
 
   // Get contacts count for the progress bar
@@ -23,16 +23,12 @@ export default function Sidebar() {
     : 0;
 
   const isActive = (path: string) => location === path;
-
-  const { logout } = useAuth();
   
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       logout();
       // Additional fallback redirect to ensure we always go to login page
-      setTimeout(() => {
-        window.location.href = '/direct-login';
-      }, 500);
+      window.location.href = '/direct-login';
     }
   };
 
