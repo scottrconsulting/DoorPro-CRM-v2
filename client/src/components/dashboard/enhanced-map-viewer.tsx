@@ -595,6 +595,42 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }
   };
 
+  // Handle location search
+  const handleSearchLocation = async () => {
+    if (!map || !isLoaded || !searchQuery.trim()) return;
+    
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode({ address: searchQuery }, (results, status) => {
+          if (status === google.maps.GeocoderStatus.OK && results && results.length) {
+            resolve(results);
+          } else {
+            reject(new Error(`Geocoding failed: ${status}`));
+          }
+        });
+      });
+      
+      const location = result[0].geometry.location;
+      if (location) {
+        panTo({ lat: location.lat(), lng: location.lng() });
+        map.setZoom(17); // Zoom in a bit more than the default
+        
+        toast({
+          title: "Location found",
+          description: `Found: ${result[0].formatted_address}`,
+        });
+      }
+    } catch (error) {
+      console.error("Search location error:", error);
+      toast({
+        title: "Search failed",
+        description: "Could not find the specified location",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Toggle adding house mode
   const toggleAddingHouse = () => {
     setIsAddingHouse(!isAddingHouse);
@@ -842,8 +878,40 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       </div>
       
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-        <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
+        <div className="border-b border-neutral-200 px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <h2 className="font-medium text-neutral-800">Territory Map</h2>
+          
+          {/* Search Bar */}
+          <div className="flex-1 max-w-sm relative">
+            <div className="relative flex items-center">
+              <span className="material-icons absolute left-2 text-neutral-500" style={{ fontSize: '18px' }}>search</span>
+              <input
+                type="text"
+                placeholder="Search for an address..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchLocation()}
+                className="pl-8 pr-2 py-1.5 w-full rounded-md border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {searchQuery && (
+                <button 
+                  className="absolute right-2 text-neutral-400 hover:text-neutral-600"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <span className="material-icons" style={{ fontSize: '16px' }}>close</span>
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <button 
+                className="mt-1 text-xs text-primary hover:text-primary/80 w-full text-left"
+                onClick={handleSearchLocation}
+              >
+                Search for "{searchQuery}"
+              </button>
+            )}
+          </div>
+          
           <div className="flex items-center space-x-2">
             <div className="flex items-center bg-neutral-100 rounded-full">
               <button
