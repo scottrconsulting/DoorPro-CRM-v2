@@ -53,7 +53,7 @@ export default function CustomizeMessageTemplates() {
   const [newTemplate, setNewTemplate] = useState({
     name: "",
     subject: "",
-    content: "",
+    body: "",
     type: activeTab as "sms" | "email"
   });
   const [isAddingTemplate, setIsAddingTemplate] = useState(false);

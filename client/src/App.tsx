@@ -105,7 +105,7 @@ function App() {
                         <Route path="/customize">
                           <Customize />
                         </Route>
-                        <Route path="/customize/message-templates">
+                        <Route path="/customize-message-templates">
                           <CustomizeMessageTemplates />
                         </Route>
                         <Route path="/chat">
