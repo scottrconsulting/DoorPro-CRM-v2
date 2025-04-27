@@ -140,37 +140,40 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     },
   });
 
-  // Auto-detect user location on map load and show user avatar
+  // Auto-detect user location on map load and show a standard marker instead of avatar
+  // (removed boy/girl icon as requested)
   useEffect(() => {
     const getUserLocation = async () => {
       if (isLoaded && map && window.google) {
         try {
           const position = await getCurrentLocation();
           if (position) {
-            // Only pan to user's location on initial load, not continuously
+            // Only pan to user's location on initial load
             if (!userMarker) {
               panTo(position);
               map.setZoom(16); // Zoom in close enough to see houses
               console.log("Auto-detected user location and centered map");
+              
+              // Create a fixed marker for user location - no animation to prevent flickering
+              const newUserMarker = new window.google.maps.Marker({
+                position,
+                map,
+                title: "Your Location",
+                // Using a standard blue marker instead of custom icon
+                icon: {
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: "#4285F4",
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: "#FFFFFF",
+                },
+                zIndex: 1000, // Make sure user marker is on top
+                optimized: true // For better performance
+              });
+              
+              setUserMarker(newUserMarker);
             }
-            
-            // Remove old user marker if it exists
-            if (userMarker) {
-              userMarker.setMap(null);
-            }
-            
-            // Add user avatar marker
-            const newUserMarker = new window.google.maps.Marker({
-              position,
-              map,
-              title: "Your Location",
-              icon: getUserAvatarIcon(userAvatar),
-              zIndex: 1000, // Make sure user avatar is on top
-              optimized: false, // For better animations
-              animation: window.google.maps.Animation.DROP
-            });
-            
-            setUserMarker(newUserMarker);
           }
         } catch (error) {
           console.error("Error getting current location:", error);
@@ -185,45 +188,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     
     getUserLocation();
     
-    // Watch for position changes (real-time location updates)
-    let watchId: number | null = null;
-    
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const newPosition = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          
-          // Update user marker position without moving the map
-          if (userMarker && map) {
-            userMarker.setPosition(newPosition);
-          }
-        },
-        (error) => {
-          console.error("Error watching position:", error);
-        },
-        { 
-          enableHighAccuracy: true, 
-          maximumAge: 10000, // 10 seconds
-          timeout: 15000 // 15 seconds timeout
-        }
-      );
-    }
+    // Removed the watchPosition implementation to prevent flickering on mobile
+    // Instead, we'll just use a static marker
     
     return () => {
-      // Clean up position watcher
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-      }
+      // No watcher to clean up since we removed watchPosition
       
       // Remove user marker
       if (userMarker) {
         userMarker.setMap(null);
       }
     };
-  }, [isLoaded, map, panTo, toast, userMarker, userAvatar]);
+  }, [isLoaded, map, panTo, toast, userMarker]);
 
   // Update markers when contacts change
   useEffect(() => {
@@ -343,6 +319,23 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               longitude: e.latLng.lng().toString(),
               notes: `Quick add: ${new Date().toLocaleString()}`
             });
+            
+            // Start work timer when first contact is added
+            if (!firstHouseRecordedRef.current) {
+              firstHouseRecordedRef.current = true;
+              timerActiveRef.current = true;
+              
+              // Add first session to the sessions list
+              sessionsRef.current.push({
+                startTime: new Date().toISOString(),
+                duration: 0
+              });
+              
+              toast({
+                title: "Work timer started",
+                description: "Timer has started tracking your work session"
+              });
+            }
             
             toast({
               title: "Contact added",
