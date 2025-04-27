@@ -138,6 +138,11 @@ export default function ChatPage() {
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
   const [enableNotifications, setEnableNotifications] = useState(true);
   const [notificationTarget, setNotificationTarget] = useState<"all" | "mentions" | "urgent" | "none">("all");
+  
+  // Multi-select chat conversations functionality
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedConversations, setSelectedConversations] = useState<number[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Form for creating a new conversation
   const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
@@ -334,6 +339,45 @@ export default function ChatPage() {
       });
     },
   });
+  
+  // Mutation for deleting conversations (single or multiple)
+  const deleteConversationsMutation = useMutation({
+    mutationFn: async (conversationIds: number[]) => {
+      const promises = conversationIds.map(id => 
+        apiRequest("DELETE", `/api/chat/conversations/${id}`)
+      );
+      return await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations"],
+      });
+      
+      // Reset selection state
+      setSelectedConversations([]);
+      setIsMultiSelectMode(false);
+      setIsDeleteDialogOpen(false);
+      
+      // If currently selected conversation was deleted, clear it
+      if (selectedConversation && selectedConversations.includes(selectedConversation)) {
+        setSelectedConversation(null);
+      }
+      
+      toast({
+        title: "Conversations deleted",
+        description: selectedConversations.length > 1 
+          ? `${selectedConversations.length} conversations have been deleted.`
+          : "The conversation has been deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting conversations",
+        description: error.message || "Failed to delete conversations",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Auto-scroll to the bottom of the messages when new messages arrive
   useEffect(() => {
@@ -445,6 +489,44 @@ export default function ChatPage() {
                     {unreadCount.count}
                   </div>
                 )}
+                
+                {/* Toggle multi-select mode */}
+                {isMultiSelectMode ? (
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      disabled={selectedConversations.length === 0}
+                    >
+                      Delete ({selectedConversations.length})
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setIsMultiSelectMode(false);
+                        setSelectedConversations([]);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setIsMultiSelectMode(true)}>
+                        Select Multiple
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                
                 <Dialog open={isNewConversationOpen} onOpenChange={setIsNewConversationOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">
@@ -559,16 +641,55 @@ export default function ChatPage() {
                   {directMessages.length > 0 ? (
                     <div>
                       {directMessages.map((conversation) => (
-                        <button
+                        <div
                           key={conversation.id}
                           className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                            isMultiSelectMode 
+                              ? selectedConversations.includes(conversation.id)
+                                ? "bg-accent/70 text-accent-foreground"
+                                : ""
+                              : selectedConversation === conversation.id 
+                                ? "bg-accent text-accent-foreground" 
+                                : ""
                           }`}
-                          onClick={() => setSelectedConversation(conversation.id)}
+                          onClick={() => {
+                            if (isMultiSelectMode) {
+                              setSelectedConversations(prev => 
+                                prev.includes(conversation.id)
+                                  ? prev.filter(id => id !== conversation.id)
+                                  : [...prev, conversation.id]
+                              );
+                            } else {
+                              setSelectedConversation(conversation.id);
+                            }
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setIsMultiSelectMode(true);
+                            setSelectedConversations(prev => 
+                              prev.includes(conversation.id) 
+                                ? prev 
+                                : [...prev, conversation.id]
+                            );
+                          }}
                         >
-                          <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {isMultiSelectMode && (
+                            <Checkbox 
+                              className="mr-2 h-4 w-4 flex-shrink-0"
+                              checked={selectedConversations.includes(conversation.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedConversations(prev => 
+                                  checked 
+                                    ? [...prev, conversation.id]
+                                    : prev.filter(id => id !== conversation.id)
+                                );
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
+                          <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="truncate">{conversation.name || "Unnamed Conversation"}</span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -587,16 +708,55 @@ export default function ChatPage() {
                   {groupChats.length > 0 ? (
                     <div>
                       {groupChats.map((conversation) => (
-                        <button
+                        <div
                           key={conversation.id}
                           className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                            isMultiSelectMode 
+                              ? selectedConversations.includes(conversation.id)
+                                ? "bg-accent/70 text-accent-foreground"
+                                : ""
+                              : selectedConversation === conversation.id 
+                                ? "bg-accent text-accent-foreground" 
+                                : ""
                           }`}
-                          onClick={() => setSelectedConversation(conversation.id)}
+                          onClick={() => {
+                            if (isMultiSelectMode) {
+                              setSelectedConversations(prev => 
+                                prev.includes(conversation.id)
+                                  ? prev.filter(id => id !== conversation.id)
+                                  : [...prev, conversation.id]
+                              );
+                            } else {
+                              setSelectedConversation(conversation.id);
+                            }
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setIsMultiSelectMode(true);
+                            setSelectedConversations(prev => 
+                              prev.includes(conversation.id) 
+                                ? prev 
+                                : [...prev, conversation.id]
+                            );
+                          }}
                         >
-                          <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {isMultiSelectMode && (
+                            <Checkbox 
+                              className="mr-2 h-4 w-4 flex-shrink-0"
+                              checked={selectedConversations.includes(conversation.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedConversations(prev => 
+                                  checked 
+                                    ? [...prev, conversation.id]
+                                    : prev.filter(id => id !== conversation.id)
+                                );
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
+                          <Users className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="truncate">{conversation.name || "Unnamed Group"}</span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -615,16 +775,55 @@ export default function ChatPage() {
                     </div>
                     <div>
                       {teamChannels.map((conversation) => (
-                        <button
+                        <div
                           key={conversation.id}
                           className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                            isMultiSelectMode 
+                              ? selectedConversations.includes(conversation.id)
+                                ? "bg-accent/70 text-accent-foreground"
+                                : ""
+                              : selectedConversation === conversation.id 
+                                ? "bg-accent text-accent-foreground" 
+                                : ""
                           }`}
-                          onClick={() => setSelectedConversation(conversation.id)}
+                          onClick={() => {
+                            if (isMultiSelectMode) {
+                              setSelectedConversations(prev => 
+                                prev.includes(conversation.id)
+                                  ? prev.filter(id => id !== conversation.id)
+                                  : [...prev, conversation.id]
+                              );
+                            } else {
+                              setSelectedConversation(conversation.id);
+                            }
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setIsMultiSelectMode(true);
+                            setSelectedConversations(prev => 
+                              prev.includes(conversation.id) 
+                                ? prev 
+                                : [...prev, conversation.id]
+                            );
+                          }}
                         >
-                          <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {isMultiSelectMode && (
+                            <Checkbox 
+                              className="mr-2 h-4 w-4 flex-shrink-0"
+                              checked={selectedConversations.includes(conversation.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedConversations(prev => 
+                                  checked 
+                                    ? [...prev, conversation.id]
+                                    : prev.filter(id => id !== conversation.id)
+                                );
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
+                          <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -730,18 +929,21 @@ export default function ChatPage() {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Add Participant</DialogTitle>
+                        <DialogDescription>
+                          Add a user to this conversation
+                        </DialogDescription>
                       </DialogHeader>
-                      <form
-                        onSubmit={addParticipantForm.handleSubmit(onSubmitAddParticipant)}
-                        className="space-y-4"
-                      >
+                      
+                      <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                          <FormLabel>Select User</FormLabel>
+                          <label className="text-sm font-medium leading-none" htmlFor="userId">
+                            Select User
+                          </label>
                           <select
+                            id="userId"
                             className="w-full border rounded-md p-2"
-                            {...addParticipantForm.register("userId", {
-                              required: true,
-                            })}
+                            value={addParticipantForm.watch("userId")}
+                            onChange={(e) => addParticipantForm.setValue("userId", e.target.value)}
                           >
                             <option value="">Select a user</option>
                             {teamMembers?.map((member) => (
@@ -751,6 +953,7 @@ export default function ChatPage() {
                             ))}
                           </select>
                         </div>
+                        
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="isAdmin"
@@ -763,15 +966,22 @@ export default function ChatPage() {
                             Make admin
                           </label>
                         </div>
+                        
                         <DialogFooter>
-                          <Button type="submit" disabled={addParticipantMutation.isPending}>
+                          <Button 
+                            onClick={() => onSubmitAddParticipant({
+                              userId: addParticipantForm.getValues("userId"),
+                              isAdmin: addParticipantForm.getValues("isAdmin")
+                            })}
+                            disabled={addParticipantMutation.isPending}
+                          >
                             {addParticipantMutation.isPending && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             )}
                             Add
                           </Button>
                         </DialogFooter>
-                      </form>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -1022,5 +1232,31 @@ export default function ChatPage() {
         )}
       </div>
     </div>
+    
+    {/* Delete Conversations Confirmation Dialog */}
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {selectedConversations.length > 1 ? "Conversations" : "Conversation"}</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete {selectedConversations.length > 1 
+              ? `${selectedConversations.length} conversations` 
+              : "this conversation"}? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={() => deleteConversationsMutation.mutate(selectedConversations)}
+            className="bg-destructive hover:bg-destructive/90"
+          >
+            {deleteConversationsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : null}
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
