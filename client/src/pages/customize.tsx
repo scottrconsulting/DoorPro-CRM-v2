@@ -124,7 +124,7 @@ useEffect(() => {
   // Set initial values when data is loaded
   useEffect(() => {
     if (customization) {
-      setEditedPinColors(customization.pinColors || {});
+      setEditedPinColors(customization.pinColors || DEFAULT_PIN_COLORS);
       setCustomStatuses(customization.customStatuses || []);
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
@@ -880,11 +880,23 @@ useEffect(() => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Select 
-                              value={editedPinColors[status] || "blue"} 
+                              value={editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue"} 
                               onValueChange={color => updatePinColor(status, color)}
                             >
                               <SelectTrigger className="w-[150px]">
-                                <SelectValue />
+                                <SelectValue>
+                                  <div className="flex items-center">
+                                    <div 
+                                      className="w-4 h-4 rounded-full mr-2" 
+                                      style={{ 
+                                        backgroundColor: editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue",
+                                        border: '1px solid #ddd'
+                                      }}
+                                    />
+                                    {(editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue").charAt(0).toUpperCase() + 
+                                     (editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue").slice(1)}
+                                  </div>
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
                                 {PIN_COLORS.map(color => (
@@ -903,16 +915,14 @@ useEffect(() => {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <div className="text-xs text-muted-foreground">
-                              <span className="hidden md:inline">Standard Google Maps color</span>
-                            </div>
+
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-center">
                             <div 
                               className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" 
-                              style={{ backgroundColor: editedPinColors[status] || "blue" }}
+                              style={{ backgroundColor: editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue" }}
                               title={statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                             >
                               {(statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')).charAt(0).toUpperCase()}
@@ -936,7 +946,7 @@ useEffect(() => {
                     <div key={status} className="flex items-center gap-2">
                       <div 
                         className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: editedPinColors[status] || "blue" }}
+                        style={{ backgroundColor: editedPinColors[status] || DEFAULT_PIN_COLORS[status as keyof typeof DEFAULT_PIN_COLORS] || "blue" }}
                       />
                       <span className="text-sm">
                         {statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
