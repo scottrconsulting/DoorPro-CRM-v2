@@ -48,6 +48,8 @@ export default function Contacts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>("updatedAt");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
@@ -114,6 +116,18 @@ export default function Contacts() {
     },
   });
 
+  // Handle sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle sort direction if clicking on the same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new sort field and default to ascending sort
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   // Filter and sort contacts
   const filteredContacts = contacts
     .filter(contact => {
@@ -129,7 +143,29 @@ export default function Contacts() {
       
       return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    .sort((a, b) => {
+      // Apply sorting based on current sort field and direction
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "fullName":
+          comparison = a.fullName.localeCompare(b.fullName);
+          break;
+        case "address":
+          comparison = a.address.localeCompare(b.address);
+          break;
+        case "status":
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case "updatedAt":
+        default:
+          comparison = new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          // Reverse for updatedAt to show newest first by default
+          return sortDirection === "asc" ? -comparison : comparison;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
 
   // Get contact status badge
   const getStatusBadge = (status: string) => {
@@ -316,11 +352,59 @@ export default function Contacts() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-3 text-left font-medium text-neutral-600">Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-600">Address</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-600">Contact</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-600">Status</th>
-                  <th className="px-4 py-3 text-right font-medium text-neutral-600">Actions</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
+                    <div 
+                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "fullName" ? "text-primary" : ""}`} 
+                      onClick={() => handleSort("fullName")}
+                    >
+                      Name
+                      {sortField === "fullName" ? (
+                        sortDirection === "asc" ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
+                        )
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
+                    <div 
+                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "address" ? "text-primary" : ""}`} 
+                      onClick={() => handleSort("address")}
+                    >
+                      Address
+                      {sortField === "address" ? (
+                        sortDirection === "asc" ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
+                        )
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-600">Contact Info</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
+                    <div 
+                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "status" ? "text-primary" : ""}`} 
+                      onClick={() => handleSort("status")}
+                    >
+                      Status
+                      {sortField === "status" ? (
+                        sortDirection === "asc" ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
+                        )
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-2 text-right font-medium text-neutral-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
