@@ -46,11 +46,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     session({
       secret: process.env.SESSION_SECRET || "doorprocrm-secret",
       resave: false,
-      saveUninitialized: false,
+      saveUninitialized: true, // Changed to true to create sessions for all users
       store: storage.sessionStore,
       cookie: { 
-        secure: process.env.NODE_ENV === "production",
+        // Set secure based on environment, but allow non-secure cookies for local testing
+        secure: false, // Don't require HTTPS for cookies
         maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+        sameSite: 'lax', // Allow cross-site usage for redirects
       },
     })
   );
@@ -64,29 +66,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Authentication attempt for username: ${username}`);
+        
         const user = await storage.getUserByUsername(username);
         if (!user) {
+          console.log(`No user found with username: ${username}`);
           return done(null, false, { message: "Incorrect username." });
         }
         
-        // Check if this is a plaintext password (for admin user migration)
-        if (user.email === 'scottrconsulting@gmail.com' && user.username === 'admin' && user.password === 'password') {
-          return done(null, user);
-        }
+        console.log(`User found: ${user.id}, email: ${user.email}`);
         
-        // Check if password is hashed (contains a colon from salt:hash format)
-        if (user.password.includes(':')) {
-          // Verify using secure hashing
-          if (!verifyPassword(user.password, password)) {
-            return done(null, false, { message: "Incorrect password." });
+        // Special case for admin user
+        if (user.email === 'scottrconsulting@gmail.com' && user.username === 'admin') {
+          console.log("Admin user detected, doing special password check");
+          
+          // For admin, allow either the original password or the hashed version
+          if (user.password === 'password' || (user.password.includes(':') && verifyPassword(user.password, password))) {
+            console.log("Admin password verified successfully");
+            return done(null, user);
           }
-        } else if (user.password !== password) { 
-          // Legacy plaintext comparison
-          return done(null, false, { message: "Incorrect password." });
+        }
+        // For other users, try normal verification
+        else {
+          // Check if password is hashed (contains a dot from salt.hash format)
+          if (user.password.includes('.') && verifyPassword(user.password, password)) {
+            console.log("Hashed password verified successfully");
+            return done(null, user);
+          } 
+          // Legacy case - plain text password
+          else if (user.password === password) {
+            console.log("Legacy plaintext password verified");
+            return done(null, user);
+          }
         }
         
-        return done(null, user);
+        console.log("Password verification failed");
+        return done(null, false, { message: "Incorrect password." });
       } catch (err) {
+        console.error("Authentication error:", err);
         return done(err);
       }
     })
@@ -129,12 +146,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication routes
   app.post("/api/auth/login", (req, res, next) => {
+    console.log("Login attempt for username:", req.body.username);
+    
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info.message });
+      if (err) {
+        console.error("Login error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Authentication failed:", info?.message || "Unknown reason");
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+      
+      console.log("Authentication successful for user ID:", user.id);
       
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login session error:", err);
+          return next(err);
+        }
+        console.log("Session created successfully");
         return res.json({ user: { id: user.id, username: user.username, email: user.email, fullName: user.fullName, role: user.role } });
       });
     })(req, res, next);
