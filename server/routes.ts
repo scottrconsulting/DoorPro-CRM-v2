@@ -46,11 +46,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get the origin from the request headers
     const origin = req.headers.origin || "*";
     
-    // Set CORS headers for all requests
+    // Set enhanced CORS headers for all requests
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma");
     res.header("Access-Control-Allow-Credentials", "true");
+    
+    // Set cache control headers to prevent caching
+    res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.header("Pragma", "no-cache");
+    res.header("Expires", "0");
     
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
@@ -69,10 +74,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       proxy: true, // Trust the reverse proxy when setting secure cookies
       cookie: { 
-        secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
+        secure: false, // Must be false to work in all environments
         httpOnly: true, // Helps prevent XSS attacks
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'lax', // Balance between security and cross-site functionality
+        sameSite: 'none', // Required for cross-site requests
         path: '/'
       },
       rolling: true // Reset expiration with every request

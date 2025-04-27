@@ -148,8 +148,8 @@ export default function Login() {
                     variant="outline" 
                     className="border-amber-400 text-amber-700 hover:bg-amber-100 flex items-center gap-2"
                     onClick={() => {
-                      // Open a special preview window
-                      window.open('https://replit.com/@ScottRConsult/door-pro-crm?v=1', '_blank');
+                      // Open the Replit preview window which has better authentication support
+                      window.open('https://door-pro-crm.scottrconsult.repl.co', '_blank');
                     }}
                   >
                     <ExternalLink size={16} /> Open in Preview Mode

@@ -23,9 +23,21 @@ export async function apiRequest(
   try {
     const res = await fetch(fullUrl, {
       method,
-      headers: data ? { "Content-Type": "application/json" } : {},
+      headers: data 
+        ? { 
+            "Content-Type": "application/json",
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          } 
+        : {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include", // This ensures cookies are sent with the request
+      mode: 'cors', // Enable CORS for cross-domain requests
     });
 
     await throwIfResNotOk(res);
@@ -55,6 +67,11 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
       const res = await fetch(url, {
         credentials: "include", // Essential for sending cookies
         mode: 'cors',  // Use CORS for cross-domain requests
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
