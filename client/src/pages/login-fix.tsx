@@ -18,6 +18,7 @@ const formSchema = z.object({
 export default function LoginFix() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -32,22 +33,53 @@ export default function LoginFix() {
     setError(null);
     
     try {
-      // Simple direct fetch to avoid any complex hooks
+      // Try standard cookie-based authentication first
+      console.log("Attempting standard login...");
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(values),
-        credentials: 'include' // Important for cookies
+        credentials: 'include'
       });
       
       const data = await response.json();
       
       if (response.ok) {
-        // Successfully logged in, redirect to dashboard
-        window.location.href = '/';
+        console.log("Standard login successful");
+        setLoginSuccess(true);
+        // Show success message briefly then redirect
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
+        return;
+      }
+      
+      // If standard login fails, try token-based authentication
+      console.log("Standard login failed, trying token-based login...");
+      const tokenResponse = await fetch('/api/direct-auth/direct-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values)
+      });
+      
+      const tokenData = await tokenResponse.json();
+      
+      if (tokenResponse.ok && tokenData.success && tokenData.token) {
+        console.log("Token-based login successful");
+        // Store token in localStorage
+        localStorage.setItem('doorpro_auth_token', tokenData.token);
+        setLoginSuccess(true);
+        // Show success message briefly then redirect
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
       } else {
+        // Both authentication methods failed
+        console.log("All login methods failed");
         setError(data.message || "Authentication failed. Please check your credentials and try again.");
       }
     } catch (error: any) {
@@ -75,6 +107,13 @@ export default function LoginFix() {
               <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Login Failed</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            {loginSuccess && (
+              <Alert variant="success" className="mb-4 bg-green-50 border-green-200 text-green-800">
+                <AlertTitle>Login Successful</AlertTitle>
+                <AlertDescription>Redirecting to dashboard...</AlertDescription>
               </Alert>
             )}
             

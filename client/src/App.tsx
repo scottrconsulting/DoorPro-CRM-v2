@@ -31,36 +31,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useEffect, useState } from "react";
 
-// Enhanced protected route component that works with both auth systems
+// Simplified protected route that doesn't use any complex state management
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated: isAuthAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { isAuthenticated: isDirectAuthenticated, isLoading: isDirectLoading } = useDirectAuth();
-  const [redirected, setRedirected] = useState(false);
-  
-  // Combined auth state - user is authenticated if either system authenticates them
-  const isAuthenticated = isAuthAuthenticated || isDirectAuthenticated;
-  // Consider loading complete only when both systems have resolved
-  const isLoading = isAuthLoading || isDirectLoading;
-  
-  useEffect(() => {
-    // Debug authentication state
-    console.log("Auth debug:", { 
-      standard: { isAuthAuthenticated, isAuthLoading },
-      token: { isDirectAuthenticated, isDirectLoading },
-      combined: { isAuthenticated, isLoading },
-      redirected
-    });
-    
-    if (!isLoading && !isAuthenticated && !redirected) {
-      // Set redirected state to prevent multiple redirects
-      setRedirected(true);
-      // Use a short timeout to ensure state is fully resolved
-      setTimeout(() => {
-        console.log("Redirecting to login page...");
-        window.location.replace('/direct-login');
-      }, 100);
-    }
-  }, [isLoading, isAuthenticated, redirected, isAuthAuthenticated, isAuthLoading, isDirectAuthenticated, isDirectLoading]);
+  const { isAuthenticated, isLoading } = useAuth();
   
   // Show loading indicator when loading
   if (isLoading) {
@@ -71,12 +44,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // Show redirect message if not authenticated
+  // Redirect if not authenticated
   if (!isAuthenticated) {
+    window.location.href = '/login';
     return (
-      <div className="flex items-center justify-center h-screen flex-col">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-        <p className="text-gray-500">Redirecting to login...</p>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }

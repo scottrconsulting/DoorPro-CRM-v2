@@ -69,16 +69,22 @@ export function useAuth() {
     },
   });
 
-  // Logout mutation
+  // Simplified logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/auth/logout", {});
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
-      // Force hard redirect to login page to avoid caching issues
-      window.location.href = '/direct-login';
+      // Clear all token-based auth
+      localStorage.removeItem('doorpro_auth_token');
+      // Reset query cache
+      queryClient.clear();
+      // Redirect to login page
+      window.location.href = '/login';
     },
   });
 
