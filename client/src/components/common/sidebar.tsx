@@ -152,8 +152,6 @@ export default function Sidebar() {
           >
             <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
             <span>Customize</span>
-            <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
-            <span>Customize</span>
           </Link>
           <Link 
             href="/settings"
