@@ -814,14 +814,14 @@ export default function ContactDetailModal({
                         <p className="text-neutral-500">No visit history yet</p>
                       </div>
                     ) : (
-                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200">
+                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
                         {visits
                           .sort((a, b) => 
                             new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
                           )
                           .map((visit) => (
-                            <div key={visit.id} className="p-3">
-                              <div className="flex justify-between items-start">
+                            <div key={visit.id} className="p-4 hover:bg-neutral-50">
+                              <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <div className="text-sm font-medium">
                                     {visit.visitType === "initial" ? "First Contact" : 
@@ -834,7 +834,7 @@ export default function ContactDetailModal({
                                 </div>
                                 {getVisitTypeBadge(visit.visitType)}
                               </div>
-                              <p className="text-sm text-neutral-600 mt-1">{visit.notes}</p>
+                              <p className="text-sm text-neutral-600 mt-1 whitespace-pre-wrap">{visit.notes}</p>
                             </div>
                           ))}
                       </div>
@@ -983,6 +983,7 @@ export default function ContactDetailModal({
                           placeholder="Additional notes about this sale"
                           value={saleNotes}
                           onChange={(e) => setSaleNotes(e.target.value)}
+                          className="min-h-[100px] resize-y"
                         />
                       </div>
                     </CardContent>
@@ -1071,6 +1072,7 @@ export default function ContactDetailModal({
                           placeholder="Add task details"
                           value={taskDescription}
                           onChange={(e) => setTaskDescription(e.target.value)}
+                          className="min-h-[100px] resize-y"
                         />
                       </div>
                       
@@ -1120,14 +1122,14 @@ export default function ContactDetailModal({
                         <p className="text-neutral-500">No open tasks</p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
                         {tasks
                           .filter(task => !task.completed)
                           .sort((a, b) => 
                             (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0)
                           )
                           .map((task) => (
-                            <div key={task.id} className="border border-neutral-200 rounded-lg p-3">
+                            <div key={task.id} className="p-4 hover:bg-neutral-50">
                               <div className="flex justify-between items-start">
                                 <div>
                                   <div className="text-base font-medium flex items-center">
@@ -1153,7 +1155,7 @@ export default function ContactDetailModal({
                                 </Button>
                               </div>
                               {task.description && (
-                                <p className="text-sm text-neutral-600 mt-2">{task.description}</p>
+                                <p className="text-sm text-neutral-600 mt-2 whitespace-pre-wrap">{task.description}</p>
                               )}
                             </div>
                           ))}
@@ -1204,6 +1206,7 @@ export default function ContactDetailModal({
                           placeholder="Brief description of this document"
                           value={documentDescription}
                           onChange={(e) => setDocumentDescription(e.target.value)}
+                          className="min-h-[100px] resize-y"
                         />
                       </div>
                       
@@ -1256,9 +1259,9 @@ export default function ContactDetailModal({
                         <p className="text-neutral-500">No documents uploaded yet</p>
                       </div>
                     ) : (
-                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200">
+                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
                         {documents.map((doc) => (
-                          <div key={doc.id} className="p-3 flex items-center justify-between">
+                          <div key={doc.id} className="p-4 hover:bg-neutral-50 flex items-center justify-between">
                             <div className="flex items-center">
                               <div className="mr-3 text-neutral-500">
                                 {doc.fileType?.includes('pdf') ? (
@@ -1274,6 +1277,9 @@ export default function ContactDetailModal({
                                 <p className="text-xs text-neutral-500">
                                   {format(new Date(doc.uploadDate), "MMM d, yyyy")} • {doc.category}
                                 </p>
+                                {doc.description && (
+                                  <p className="text-xs text-neutral-600 mt-1 max-w-md">{doc.description}</p>
+                                )}
                               </div>
                             </div>
                             <Button variant="ghost" size="sm">
