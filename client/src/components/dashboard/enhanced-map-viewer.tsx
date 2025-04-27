@@ -125,7 +125,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         contactId: newContact.id,
         userId: newContact.userId,
         visitType: "initial",
-        visitDate: new Date().toISOString(),
+        visitDate: new Date(),
         notes: `Initial contact created with status: ${newContact.status}`,
         outcome: newContact.status
       });

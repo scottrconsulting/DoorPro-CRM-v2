@@ -374,10 +374,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to add visits to this contact" });
       }
       
-      const visitData = insertVisitSchema.parse({ ...req.body, contactId, userId: user.id });
+      // Handle date conversion properly
+      let visitData = { ...req.body, contactId, userId: user.id };
+      
+      if (visitData.followUpDate && typeof visitData.followUpDate === 'string') {
+        visitData.followUpDate = new Date(visitData.followUpDate);
+      }
+      
+      if (visitData.visitDate && typeof visitData.visitDate === 'string') {
+        visitData.visitDate = new Date(visitData.visitDate);
+      } else if (!visitData.visitDate) {
+        visitData.visitDate = new Date();
+      }
+      
+      console.log("Creating contact visit with data:", visitData);
       const visit = await storage.createVisit(visitData);
       return res.status(201).json(visit);
     } catch (error) {
+      console.error("Error creating contact visit:", error);
       if (error instanceof ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
@@ -1171,14 +1185,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/visits", ensureAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
+      
+      // Handle date conversion properly
+      let visitDate;
+      if (req.body.visitDate) {
+        if (typeof req.body.visitDate === 'string') {
+          visitDate = new Date(req.body.visitDate);
+        } else {
+          visitDate = req.body.visitDate;
+        }
+      } else {
+        visitDate = new Date();
+      }
+      
       const visitData = {
         ...req.body,
         userId: user.id,
-        visitDate: req.body.visitDate || new Date().toISOString(),
+        visitDate,
       };
+      
+      console.log("Creating visit with data:", visitData);
       const visit = await storage.createVisit(visitData);
       return res.status(201).json(visit);
     } catch (error) {
+      console.error("Error creating visit:", error);
       return res.status(500).json({ message: "Failed to create visit" });
     }
   });

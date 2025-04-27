@@ -366,7 +366,7 @@ export default function ContactDetailModal({
           contactId: contactId,
           userId: contact.userId,
           visitType: "follow_up",
-          visitDate: new Date().toISOString(),
+          visitDate: new Date(),
           notes: `Status changed from ${contact.status} to ${updatedContact.status}`,
           outcome: updatedContact.status
         });
