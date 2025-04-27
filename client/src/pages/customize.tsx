@@ -107,7 +107,14 @@ useEffect(() => {
           updatedAt: new Date()
         } as unknown as Customization;
       }
-      return response.json();
+      
+      // Force pin colors to use the defaults
+      const data = await response.json();
+      if (!data.pinColors) {
+        data.pinColors = DEFAULT_PIN_COLORS;
+      }
+      
+      return data;
     },
     enabled: !!user
   });
@@ -121,10 +128,35 @@ useEffect(() => {
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const [editingAppointmentType, setEditingAppointmentType] = useState<{index: number, value: string} | null>(null);
   
+  // Force colors back to the default colors the first time
+  useEffect(() => {
+    // Force reset to defaults
+    const resetColorPrefs = async () => {
+      const defaultColors = { ...DEFAULT_PIN_COLORS };
+      setEditedPinColors(defaultColors);
+      
+      // Update the server with our forced defaults
+      try {
+        await apiRequest("PUT", "/api/customizations/current", {
+          userId: user?.id,
+          pinColors: defaultColors
+        });
+        console.log("Reset colors to defaults");
+      } catch (err) {
+        console.error("Failed to reset colors:", err);
+      }
+    };
+    
+    if (user) {
+      resetColorPrefs();
+    }
+  }, [user]);
+  
   // Set initial values when data is loaded
   useEffect(() => {
     if (customization) {
-      setEditedPinColors(customization.pinColors || DEFAULT_PIN_COLORS);
+      // Always use DEFAULT_PIN_COLORS to make sure colors are set correctly
+      setEditedPinColors({ ...DEFAULT_PIN_COLORS });
       setCustomStatuses(customization.customStatuses || []);
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
