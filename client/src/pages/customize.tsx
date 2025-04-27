@@ -1061,18 +1061,6 @@ useEffect(() => {
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="click-and-hold" className="flex items-center gap-2">
-                    <span>Enable click and hold for form</span>
-                    {!isPro && <Lock className="h-3 w-3 text-muted-foreground" />}
-                  </Label>
-                  <Switch 
-                    id="click-and-hold" 
-                    defaultChecked={true}
-                    disabled={!isPro}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
                   <Label htmlFor="default-quick-action">Default quick action</Label>
                   <Select disabled={!isPro} defaultValue="no_answer">
                     <SelectTrigger id="default-quick-action" className="w-[200px]">
