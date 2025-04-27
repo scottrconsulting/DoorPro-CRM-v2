@@ -28,26 +28,8 @@ export async function apiRequest(
 
     await throwIfResNotOk(res);
     
-    // For non-GET requests, try to parse JSON but handle empty responses
-    if (method !== 'GET') {
-      try {
-        const text = await res.text();
-        if (!text || text.trim() === '') {
-          return res;
-        }
-        // Create a clone of the response with the parsed JSON
-        const clonedRes = new Response(text, {
-          status: res.status,
-          statusText: res.statusText,
-          headers: res.headers
-        });
-        return clonedRes;
-      } catch (parseError) {
-        console.error(`Error parsing JSON in apiRequest (${method} ${url}):`, parseError);
-        return res;
-      }
-    }
-    
+    // Return the original response without trying to read its body
+    // This allows the caller to decide how to handle the response (as json, text, etc)
     return res;
   } catch (error) {
     console.error(`API Request error (${method} ${url}):`, error);

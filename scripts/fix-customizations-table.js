@@ -23,6 +23,13 @@ async function main() {
         font_family TEXT,
         logo_url TEXT,
         enable_dark_mode BOOLEAN DEFAULT true,
+        pin_colors JSONB DEFAULT '{}',
+        map_default_view TEXT DEFAULT 'roadmap',
+        timer_settings JSONB DEFAULT '{}',
+        notification_settings JSONB DEFAULT '{}',
+        language TEXT DEFAULT 'en',
+        date_format TEXT DEFAULT 'MM/DD/YYYY',
+        time_format TEXT DEFAULT 'hh:mm A',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )

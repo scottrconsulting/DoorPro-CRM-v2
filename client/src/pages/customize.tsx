@@ -154,7 +154,19 @@ export default function Customize() {
         "/api/customizations/current",
         updatedCustomization
       );
-      return response.json();
+      
+      // Check if the response status is 204 No Content
+      if (response.status === 204) {
+        return null;
+      }
+      
+      const clonedResponse = response.clone();
+      try {
+        return await clonedResponse.json();
+      } catch (error) {
+        console.log("Empty or invalid JSON response, returning null");
+        return null;
+      }
     },
     onSuccess: () => {
       toast({
