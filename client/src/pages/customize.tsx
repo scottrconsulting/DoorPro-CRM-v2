@@ -61,6 +61,8 @@ export default function Customize() {
   const [smsEnabled, setSmsEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState(30); // minutes
+  const [theme, setTheme] = useState<string>("light");
+  const [primaryColor, setPrimaryColor] = useState<string>("blue");
   
   // Fetch user's customization settings
   const { data: customization, isLoading } = useQuery<Customization>({
@@ -112,6 +114,10 @@ export default function Customize() {
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
       
+      // Set theme and primary color
+      setTheme(customization.theme || "light");
+      setPrimaryColor(customization.primaryColor || "blue");
+      
       // Initialize status labels for default statuses
       const initialStatusLabels: Record<string, string> = {};
       CONTACT_STATUSES.forEach(status => {
@@ -157,6 +163,8 @@ export default function Customize() {
   const handleSaveSettings = () => {
     saveCustomizationMutation.mutate({
       userId: user?.id,
+      theme,
+      primaryColor,
       pinColors: editedPinColors,
       quickActions,
       customStatuses,
@@ -275,7 +283,11 @@ export default function Customize() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="theme">Theme</Label>
-                  <Select disabled={!isPro}>
+                  <Select 
+                    value={theme} 
+                    onValueChange={setTheme} 
+                    disabled={!isPro}
+                  >
                     <SelectTrigger id="theme">
                       <SelectValue placeholder="Light" />
                     </SelectTrigger>
@@ -294,7 +306,11 @@ export default function Customize() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="primary-color">Primary Color</Label>
-                  <Select disabled={!isPro}>
+                  <Select 
+                    value={primaryColor} 
+                    onValueChange={setPrimaryColor} 
+                    disabled={!isPro}
+                  >
                     <SelectTrigger id="primary-color">
                       <SelectValue placeholder="Blue" />
                     </SelectTrigger>
