@@ -73,9 +73,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const sessionsRef = useRef<{startTime: string, duration: number}[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Fetch contacts
+  // Fetch contacts and customization settings
   const { data: contacts = [], isLoading: isLoadingContacts } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
+  });
+
+  const { data: customization } = useQuery<Customization>({
+    queryKey: ["/api/customizations/current"],
   });
 
   // Initialize map with default location (US center), but will immediately try to locate user
