@@ -50,35 +50,35 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
   const getScheduleBadgeColor = (type: string) => {
     switch (type) {
       case "route":
-        return "bg-blue-50 border-l-4 border-primary";
+        return "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-primary";
       case "follow_up":
-        return "bg-green-50 border-l-4 border-success";
+        return "bg-green-50 dark:bg-green-950/30 border-l-4 border-success";
       case "appointment":
-        return "bg-yellow-50 border-l-4 border-warning";
+        return "bg-yellow-50 dark:bg-yellow-950/30 border-l-4 border-warning";
       default:
-        return "bg-neutral-50 border-l-4 border-neutral-400";
+        return "bg-muted/50 border-l-4 border-muted-foreground";
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-      <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
-        <h2 className="font-medium text-neutral-800">{title}</h2>
+    <div className="bg-background rounded-lg shadow-sm border border-border overflow-hidden">
+      <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+        <h2 className="font-medium text-foreground">{title}</h2>
       </div>
 
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-medium text-neutral-800">{formattedDate}</div>
+          <div className="text-sm font-medium text-foreground">{formattedDate}</div>
           <div className="flex">
             <button
               onClick={handlePreviousDay}
-              className="p-1 text-neutral-400 hover:text-neutral-600"
+              className="p-1 text-muted-foreground hover:text-foreground"
             >
               <span className="material-icons text-sm">chevron_left</span>
             </button>
             <button
               onClick={handleNextDay}
-              className="p-1 text-neutral-600 hover:text-neutral-800"
+              className="p-1 text-muted-foreground hover:text-foreground"
             >
               <span className="material-icons text-sm">chevron_right</span>
             </button>
@@ -91,7 +91,7 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
           </div>
         ) : todaySchedules.length === 0 ? (
           <div className="py-6 text-center">
-            <p className="text-neutral-500">No schedules for this day</p>
+            <p className="text-muted-foreground">No schedules for this day</p>
             <Link href="/schedule" className="mt-2 text-sm text-primary hover:underline">
               Add a schedule
             </Link>
@@ -104,18 +104,18 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
                 className={`flex items-center p-2 rounded ${getScheduleBadgeColor(schedule.type)}`}
               >
                 <div className="flex-shrink-0 mr-3 text-center">
-                  <div className="text-xs text-neutral-500">
+                  <div className="text-xs text-muted-foreground">
                     {format(parseISO(schedule.startTime.toString()), "h:mm a")}
                   </div>
-                  <div className="text-xs text-neutral-500">
+                  <div className="text-xs text-muted-foreground">
                     {format(parseISO(schedule.endTime.toString()), "h:mm a")}
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-neutral-800">{schedule.title}</h4>
-                  <div className="text-xs text-neutral-600">{schedule.description}</div>
+                  <h4 className="text-sm font-medium text-foreground">{schedule.title}</h4>
+                  <div className="text-xs text-muted-foreground">{schedule.description}</div>
                   {schedule.type === "route" && schedule.contactIds && (
-                    <div className="text-xs text-neutral-600">
+                    <div className="text-xs text-muted-foreground">
                       {schedule.contactIds.length} houses planned
                     </div>
                   )}
@@ -125,9 +125,9 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
 
             {todaySchedules.length > 0 && (
               <>
-                <div className="border-t border-neutral-200 my-4"></div>
+                <div className="border-t border-border my-4"></div>
 
-                <div className="text-sm text-neutral-600">
+                <div className="text-sm text-muted-foreground">
                   <div className="flex items-center justify-between">
                     <span>Total houses planned:</span>
                     <span className="font-medium">{totalHouses}</span>
@@ -145,8 +145,8 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
         )}
       </div>
 
-      <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50">
-        <Link href="/schedule" className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-md text-sm text-neutral-700 hover:bg-neutral-50 flex items-center justify-center">
+      <div className="border-t border-border px-4 py-3 bg-muted/50">
+        <Link href="/schedule" className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground hover:bg-muted flex items-center justify-center">
           <span className="material-icons text-sm mr-1">add</span> Add Appointment
         </Link>
       </div>

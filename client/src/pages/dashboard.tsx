@@ -170,19 +170,19 @@ export default function Dashboard() {
       
       {/* Feature Highlights - For Free Account */}
       {user?.role === 'free' && (
-        <div className="mt-6 bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-          <div className="border-b border-neutral-200 px-4 py-3">
-            <h2 className="font-medium text-neutral-800">Upgrade to DoorPro CRM Pro</h2>
+        <div className="mt-6 bg-background rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="border-b border-border px-4 py-3">
+            <h2 className="font-medium text-foreground">Upgrade to DoorPro CRM Pro</h2>
           </div>
           
           <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {PRO_FEATURES.slice(0, 3).map((feature, index) => (
-                <div key={index} className="border border-neutral-200 rounded-lg p-4 flex flex-col">
+                <div key={index} className="border border-border rounded-lg p-4 flex flex-col">
                   <span className={`material-icons text-primary text-xl mb-2`}>{feature.icon}</span>
-                  <h3 className="text-sm font-medium text-neutral-800 mb-1">{feature.title}</h3>
-                  <p className="text-sm text-neutral-600 flex-grow">{feature.description}</p>
-                  <span className="mt-2 text-xs bg-neutral-100 text-neutral-500 px-2 py-1 rounded">Pro Feature</span>
+                  <h3 className="text-sm font-medium text-foreground mb-1">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground flex-grow">{feature.description}</p>
+                  <span className="mt-2 text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Pro Feature</span>
                 </div>
               ))}
             </div>

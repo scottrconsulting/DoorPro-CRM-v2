@@ -34,30 +34,30 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
   const getStatusBadge = (status: string) => {
     const config: Record<string, { bg: string; text: string; label: string }> = {
       interested: {
-        bg: "bg-green-100",
-        text: "text-green-800",
+        bg: "bg-green-100 dark:bg-green-900/30",
+        text: "text-green-800 dark:text-green-300",
         label: "Interested",
       },
       not_interested: {
-        bg: "bg-red-100",
-        text: "text-red-800",
+        bg: "bg-red-100 dark:bg-red-900/30",
+        text: "text-red-800 dark:text-red-300",
         label: "Not interested",
       },
       converted: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
+        bg: "bg-blue-100 dark:bg-blue-900/30",
+        text: "text-blue-800 dark:text-blue-300",
         label: "Converted",
       },
       considering: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
+        bg: "bg-yellow-100 dark:bg-yellow-900/30",
+        text: "text-yellow-800 dark:text-yellow-300",
         label: "Considering",
       },
     };
 
     const { bg, text, label } = config[status] || {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
+      bg: "bg-gray-100 dark:bg-gray-800/50",
+      text: "text-gray-800 dark:text-gray-300",
       label: status,
     };
 
@@ -97,9 +97,9 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-        <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
-          <h2 className="font-medium text-neutral-800">{title}</h2>
+      <div className="bg-background rounded-lg shadow-sm border border-border overflow-hidden">
+        <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+          <h2 className="font-medium text-foreground">{title}</h2>
           <div className="flex items-center">
             <div className="relative mr-2">
               <Input
@@ -109,18 +109,18 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
               />
-              <span className="material-icons text-neutral-400 absolute left-2 top-1/2 transform -translate-y-1/2 text-sm">
+              <span className="material-icons text-muted-foreground absolute left-2 top-1/2 transform -translate-y-1/2 text-sm">
                 search
               </span>
             </div>
             <button 
               onClick={() => refetch()} 
-              className="mr-2 p-1 rounded hover:bg-neutral-100 text-neutral-500"
+              className="mr-2 p-1 rounded hover:bg-muted text-muted-foreground"
               title="Refresh contacts"
             >
               <span className="material-icons text-sm">refresh</span>
             </button>
-            <Link href="/contacts" className="text-sm text-primary hover:text-primary-dark">
+            <Link href="/contacts" className="text-sm text-primary hover:text-primary/90">
               View All
             </Link>
           </div>
@@ -132,17 +132,17 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
           </div>
         ) : filteredContacts.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-neutral-500">No contacts found</p>
+            <p className="text-muted-foreground">No contacts found</p>
             <Link href="/contacts" className="mt-2 inline-block text-primary hover:underline">
               Add your first contact
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-200 max-h-96 overflow-y-auto">
+          <div className="divide-y divide-border max-h-96 overflow-y-auto">
             {filteredContacts.slice(0, 4).map((contact) => (
               <div
                 key={contact.id}
-                className="px-4 py-3 hover:bg-neutral-50 cursor-pointer"
+                className="px-4 py-3 hover:bg-muted/50 cursor-pointer"
                 onClick={() => handleContactClick(contact.id)}
               >
                 <div className="flex items-center">
@@ -151,24 +151,24 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
                       contact.status === "converted" ? "bg-success" :
                       contact.status === "interested" ? "bg-primary-light" :
                       contact.status === "considering" ? "bg-secondary-light" :
-                      "bg-neutral-400"
+                      "bg-muted"
                     } text-white rounded-full flex items-center justify-center`}
                   >
                     <span className="material-icons">person</span>
                   </div>
                   <div className="ml-4 flex-1">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-neutral-800">
+                      <h3 className="text-sm font-medium text-foreground">
                         {contact.fullName}
                       </h3>
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-muted-foreground">
                         {formatTime(contact.updatedAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-neutral-600 truncate">{contact.address}</p>
+                    <p className="text-sm text-muted-foreground truncate">{contact.address}</p>
                     <div className="mt-1 flex items-center">
                       {getStatusBadge(contact.status)}
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-muted-foreground">
                         {getFollowUpText(contact.status)}
                       </span>
                     </div>
@@ -179,9 +179,9 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
           </div>
         )}
 
-        <div className="border-t border-neutral-200 px-4 py-3 bg-neutral-50">
+        <div className="border-t border-border px-4 py-3 bg-muted/50">
           <div className="text-center">
-            <Link href="/contacts" className="px-3 py-1 border border-neutral-300 rounded text-sm text-neutral-600 hover:bg-neutral-100 inline-block">
+            <Link href="/contacts" className="px-3 py-1 border border-border rounded text-sm text-foreground hover:bg-muted inline-block">
               View All Contacts
             </Link>
           </div>
