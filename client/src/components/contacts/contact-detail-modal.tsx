@@ -1171,13 +1171,43 @@ export default function ContactDetailModal({
               </div>
               
               <div>
-                <Label htmlFor="editAddress">Address</Label>
+                <Label htmlFor="editAddress">Street Address</Label>
                 <Input 
                   id="editAddress" 
                   value={editAddress} 
                   onChange={(e) => setEditAddress(e.target.value)} 
                   className="mt-1"
                 />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="editCity">City</Label>
+                  <Input 
+                    id="editCity" 
+                    value={editCity} 
+                    onChange={(e) => setEditCity(e.target.value)} 
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editState">State</Label>
+                  <Input 
+                    id="editState" 
+                    value={editState} 
+                    onChange={(e) => setEditState(e.target.value)} 
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editZipCode">Zip Code</Label>
+                  <Input 
+                    id="editZipCode" 
+                    value={editZipCode} 
+                    onChange={(e) => setEditZipCode(e.target.value)} 
+                    className="mt-1"
+                  />
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
