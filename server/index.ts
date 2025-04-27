@@ -8,7 +8,9 @@ const app = express();
 
 // Configure CORS for all domains, especially the deployed domain
 app.use(cors({
-  origin: true,
+  origin: function(origin, callback) {
+    callback(null, true);
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
