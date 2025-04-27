@@ -62,10 +62,10 @@ export default function DirectLogin() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center text-primary">
-              Token-Based Login
+              DoorPro CRM
             </CardTitle>
             <CardDescription className="text-center">
-              This login uses a token-based system for more reliable access
+              Log in to your account to continue
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -127,17 +127,16 @@ export default function DirectLogin() {
             </Form>
 
             <div className="mt-4 bg-blue-50 p-3 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-700">About this login method</h4>
+              <h4 className="text-sm font-semibold text-blue-700">Cross-Platform Access</h4>
               <p className="text-xs text-blue-600 mt-1">
-                This page uses a token-based authentication system that bypasses cookies entirely. 
-                Use this login method if you experience issues with the standard login page 
-                when accessing from external browsers.
+                This secure login works across all devices including mobile apps, web browsers, 
+                and desktop applications - ensuring consistent access no matter how you connect.
               </p>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between flex-col space-y-2">
-            <Link to="/login" className="text-sm text-primary hover:underline">
-              Return to standard login
+            <Link to="/register" className="text-sm text-primary hover:underline">
+              Need an account? Register here
             </Link>
             <div className="text-xs text-gray-400 text-center mt-4">
               Demo credentials: admin / password

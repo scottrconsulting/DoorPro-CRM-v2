@@ -83,9 +83,6 @@ function App() {
                   <AutoLogin />
                 </Route>
                 <Route path="/login">
-                  <Login />
-                </Route>
-                <Route path="/direct-login">
                   <DirectLogin />
                 </Route>
                 <Route path="/register">
