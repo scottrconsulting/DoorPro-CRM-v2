@@ -43,7 +43,18 @@ export default function Register() {
   const onSubmit = (data: RegisterFormValues) => {
     setErrorMessage(null);
     const { confirmPassword, ...userData } = data;
-    registerUser({ ...userData, isAdmin });
+    
+    // Only allow admin privileges for the master account email
+    const adminEmail = "scottrconsulting@gmail.com";
+    const requestedAdmin = isAdmin;
+    
+    // If user is trying to register as admin but doesn't have the correct email
+    if (requestedAdmin && userData.email !== adminEmail) {
+      setErrorMessage("Admin privileges are restricted to authorized email addresses only.");
+      return;
+    }
+    
+    registerUser({ ...userData, isAdmin: requestedAdmin });
   };
 
   // Extract error message from registerError
