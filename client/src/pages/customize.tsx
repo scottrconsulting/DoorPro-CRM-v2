@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
-import { Customization, CONTACT_STATUSES, PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
+import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
 
 import {
   Card,
@@ -92,7 +92,7 @@ useEffect(() => {
           teamId: null,
           theme: "light",
           primaryColor: "blue",
-          pinColors: Object.fromEntries(CONTACT_STATUSES.map((status, i) => [status, PIN_COLORS[i % PIN_COLORS.length]])),
+          pinColors: DEFAULT_PIN_COLORS,
           quickActions: QUICK_ACTIONS,
           customStatuses: [],
           customFields: [],
@@ -134,10 +134,22 @@ useEffect(() => {
       setPrimaryColor(customization.primaryColor || "blue");
       
       // Initialize status labels for default statuses
-      const initialStatusLabels: Record<string, string> = {};
-      CONTACT_STATUSES.forEach(status => {
-        initialStatusLabels[status] = customization.statusLabels?.[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-      });
+      const initialStatusLabels: Record<string, string> = {
+        no_answer: "No Answer",
+        presented: "Demoed",
+        booked: "Booked",
+        sold: "Sold",
+        not_interested: "Not Interested",
+        no_soliciting: "No Soliciting",
+        check_back: "Check Back"
+      };
+      
+      // If there are custom status labels in customization, use those
+      if (customization.statusLabels) {
+        Object.keys(customization.statusLabels).forEach(status => {
+          initialStatusLabels[status] = customization.statusLabels?.[status] || initialStatusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        });
+      }
       setStatusLabels(initialStatusLabels);
       
       if (customization.confirmationOptions) {
