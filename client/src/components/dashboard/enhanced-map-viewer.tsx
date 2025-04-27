@@ -563,35 +563,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     });
   }, [contacts, toast]);
   
-  // Toggle drawing mode
-  const toggleDrawingMode = useCallback(() => {
-    if (!drawingManager || !window.google) return;
-    
-    if (isDrawingMode) {
-      drawingManager.setDrawingMode(null);
-      setIsDrawingMode(false);
-      
-      toast({
-        title: "Drawing mode disabled",
-        description: "Click the button again to draw a new area",
-      });
-    } else {
-      // Clear existing polygon if any
-      if (currentPolygon) {
-        currentPolygon.setMap(null);
-        setCurrentPolygon(null);
-        setAddressesInPolygon(0);
-      }
-      
-      drawingManager.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
-      setIsDrawingMode(true);
-      
-      toast({
-        title: "Drawing mode enabled",
-        description: "Click on the map to create a shape",
-      });
-    }
-  }, [drawingManager, isDrawingMode, currentPolygon, toast]);
+  // Drawing mode toggle removed as requested
 
   // Work timer implementation (using refs to avoid render issues)
   useEffect(() => {
@@ -1055,36 +1027,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 {userAvatar === 'male' ? 'man' : 'woman'}
               </span>
             </button>
-            <button
-              onClick={toggleDrawingMode}
-              className={`w-8 h-8 ${isDrawingMode ? 'bg-primary text-white' : 'bg-white text-neutral-600'} rounded-full shadow-md flex items-center justify-center`}
-              title="Draw polygon to count houses"
-            >
-              <span className="material-icons" style={{ fontSize: '18px' }}>draw</span>
-            </button>
           </div>
           
-          {/* Polygon info display */}
-          {currentPolygon && addressesInPolygon > 0 && (
-            <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 px-4">
-              <div className="font-medium text-sm">Area Analysis</div>
-              <div className="text-sm text-neutral-600">
-                <span className="font-bold text-primary">{addressesInPolygon}</span> houses in selected area
-              </div>
-              <button 
-                onClick={() => {
-                  if (currentPolygon) {
-                    currentPolygon.setMap(null);
-                    setCurrentPolygon(null);
-                    setAddressesInPolygon(0);
-                  }
-                }}
-                className="mt-1 text-xs text-neutral-500 hover:text-red-500"
-              >
-                Clear selection
-              </button>
-            </div>
-          )}
+          {/* Polygon info display removed as requested */}
           
           {/* Interactive Contact Status Legend */}
           <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-2">
