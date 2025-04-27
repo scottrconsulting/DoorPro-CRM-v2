@@ -206,15 +206,14 @@ export default function Territories() {
     
     // Load drawing library if not already loaded
     if (!window.google.maps.drawing) {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initDrawingManager`;
-      script.async = true;
-      script.defer = true;
-      
       // Define callback to initialize drawing manager
       window.initDrawingManager = () => {
         setupDrawingManager();
       };
+      
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initDrawingManager`;
+      script.async = true; // Only use async, remove defer for better performance
       
       document.head.appendChild(script);
       return;

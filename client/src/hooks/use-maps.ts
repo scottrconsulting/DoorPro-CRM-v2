@@ -42,16 +42,17 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
         return;
       }
 
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${options.apiKey}&libraries=places,drawing,geometry`;
-      script.async = true;
-      script.defer = true;
-
-      script.onload = () => {
+      // Define a callback function that will be called when the API is loaded
+      window.initGoogleMaps = () => {
         setIsLoaded(true);
         setLoading(false);
       };
-
+      
+      // Create the script element with the recommended loading pattern
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${options.apiKey}&libraries=places,drawing,geometry&callback=initGoogleMaps`;
+      script.async = true; // Make sure async is set to true
+      
       script.onerror = () => {
         setError(new Error("Failed to load Google Maps API"));
         setLoading(false);
