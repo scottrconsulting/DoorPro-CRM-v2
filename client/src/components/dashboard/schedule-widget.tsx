@@ -5,7 +5,11 @@ import { format, addDays, isSameDay, parseISO } from "date-fns";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
-export default function ScheduleWidget() {
+interface ScheduleWidgetProps {
+  title?: string;
+}
+
+export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleWidgetProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Fetch schedules
@@ -59,7 +63,7 @@ export default function ScheduleWidget() {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
       <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
-        <h2 className="font-medium text-neutral-800">Today's Schedule</h2>
+        <h2 className="font-medium text-neutral-800">{title}</h2>
       </div>
 
       <div className="p-4">

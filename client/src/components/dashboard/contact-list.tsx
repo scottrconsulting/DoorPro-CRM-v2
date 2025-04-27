@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ContactDetailModal from "@/components/contacts/contact-detail-modal";
 
-export default function ContactList() {
+interface ContactListProps {
+  title?: string;
+}
+
+export default function ContactList({ title = "Recent Contacts" }: ContactListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [_, setLocation] = useLocation();
@@ -95,7 +99,7 @@ export default function ContactList() {
     <>
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
         <div className="border-b border-neutral-200 px-4 py-3 flex items-center justify-between">
-          <h2 className="font-medium text-neutral-800">Recent Contacts</h2>
+          <h2 className="font-medium text-neutral-800">{title}</h2>
           <div className="flex items-center">
             <div className="relative mr-2">
               <Input

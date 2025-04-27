@@ -25,6 +25,17 @@ export default function Dashboard() {
   const { data: visits = [], refetch: refetchVisits } = useQuery<Visit[]>({
     queryKey: ["/api/visits"],
   });
+  
+  // Get user's customization settings
+  const { data: customization } = useQuery<Customization>({
+    queryKey: ["/api/customizations/current"],
+    enabled: !!user
+  });
+
+  // Get user's widget preferences with defaults
+  const enabledWidgets = customization?.dashboardWidgets?.enabledWidgets || DASHBOARD_WIDGETS;
+  const widgetOrder = customization?.dashboardWidgets?.widgetOrder || DASHBOARD_WIDGETS;
+  const widgetLabels = customization?.dashboardWidgets?.customLabels || {};
 
   // Count today's visits
   const todayVisits = visits.filter(visit => {
@@ -51,14 +62,88 @@ export default function Dashboard() {
     setSelectedContactId(contactId);
   };
 
+  // Render dashboard widgets in the user's custom order
+  const renderWidgets = () => {
+    return widgetOrder.map(widgetId => {
+      if (!enabledWidgets.includes(widgetId)) return null;
+      
+      switch (widgetId) {
+        case "stats":
+          return (
+            <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard
+                title={widgetLabels["todayVisits"] || DASHBOARD_WIDGET_LABELS["todayVisits"]}
+                value={todayVisits.length}
+                icon="door_front"
+                iconBgColor="bg-blue-100"
+                trend={{
+                  value: "20%",
+                  label: "from yesterday",
+                  isPositive: true
+                }}
+              />
+              
+              <StatCard
+                title={widgetLabels["conversions"] || DASHBOARD_WIDGET_LABELS["conversions"]}
+                value={conversions.length}
+                icon="check_circle"
+                iconBgColor="bg-green-100"
+                trend={{
+                  value: contacts.length > 0 ? `${Math.round((conversions.length / contacts.length) * 100)}%` : "0%",
+                  label: "conversion rate",
+                  isPositive: true
+                }}
+              />
+              
+              <StatCard
+                title={widgetLabels["followUps"] || DASHBOARD_WIDGET_LABELS["followUps"]}
+                value={followUps.length}
+                icon="schedule"
+                iconBgColor="bg-yellow-100"
+                trend={{
+                  value: "2",
+                  label: "urgent today",
+                  isPositive: false
+                }}
+              />
+            </div>
+          );
+        case "map":
+          return (
+            <div key="map" className="mb-6">
+              <EnhancedMapViewer onSelectContact={handleContactSelect} />
+            </div>
+          );
+        case "contacts":
+          return (
+            <div key="contacts" className="mb-6">
+              <ContactList 
+                title={widgetLabels["contacts"] || DASHBOARD_WIDGET_LABELS["contacts"]} 
+              />
+            </div>
+          );
+        case "schedule":
+          return (
+            <div key="schedule" className="mb-6">
+              <ScheduleWidget 
+                title={widgetLabels["schedule"] || DASHBOARD_WIDGET_LABELS["schedule"]} 
+              />
+            </div>
+          );
+        default:
+          return null;
+      }
+    });
+  };
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-sans text-neutral-800">
+          <h1 className="text-2xl font-bold font-sans text-foreground">
             Welcome back, {user?.fullName?.split(' ')[0] || 'User'}
           </h1>
-          <p className="text-neutral-500">Here's your activity summary for today</p>
+          <p className="text-muted-foreground">Here's your activity summary for today</p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
           <Button 
@@ -80,57 +165,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title="Today's Visits"
-          value={todayVisits.length}
-          icon="door_front"
-          iconBgColor="bg-blue-100"
-          trend={{
-            value: "20%",
-            label: "from yesterday",
-            isPositive: true
-          }}
-        />
-        
-        <StatCard
-          title="Conversions"
-          value={conversions.length}
-          icon="check_circle"
-          iconBgColor="bg-green-100"
-          trend={{
-            value: contacts.length > 0 ? `${Math.round((conversions.length / contacts.length) * 100)}%` : "0%",
-            label: "conversion rate",
-            isPositive: true
-          }}
-        />
-        
-        <StatCard
-          title="Follow-ups"
-          value={followUps.length}
-          icon="schedule"
-          iconBgColor="bg-yellow-100"
-          trend={{
-            value: "2",
-            label: "urgent today",
-            isPositive: false
-          }}
-        />
-        
-        {/* Territory stat card removed as requested */}
-      </div>
-
-      {/* Map Section - Enhanced with ability to click on houses */}
-      <EnhancedMapViewer onSelectContact={handleContactSelect} />
-
-      {/* Recent Contacts & Schedule Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2">
-          <ContactList />
-        </div>
-        <ScheduleWidget />
-      </div>
+      {/* Render widgets in user's custom order */}
+      {renderWidgets()}
       
       {/* Feature Highlights - For Free Account */}
       {user?.role === 'free' && (
