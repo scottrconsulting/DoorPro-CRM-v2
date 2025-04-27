@@ -64,9 +64,13 @@ export default function Dashboard() {
 
   // Render dashboard widgets in the user's custom order
   const renderWidgets = () => {
-    return widgetOrder.map(widgetId => {
-      if (!enabledWidgets.includes(widgetId)) return null;
+    // Filter to only enabled widgets in the correct order
+    // Use non-empty enabledWidgets array, otherwise fallback to all widgets
+    const filteredWidgets = (enabledWidgets.length > 0) 
+      ? widgetOrder.filter(widget => enabledWidgets.includes(widget))
+      : widgetOrder;
       
+    return filteredWidgets.map(widgetId => {
       switch (widgetId) {
         case "stats":
           return (

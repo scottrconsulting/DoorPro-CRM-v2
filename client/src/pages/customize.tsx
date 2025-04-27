@@ -263,9 +263,9 @@ export default function Customize() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.location.href = "/customize-message-templates"}>
-            Message Templates
-          </Button>
+          <Link href="/customize-message-templates">
+            <Button variant="outline">Message Templates</Button>
+          </Link>
           <Button onClick={handleSaveSettings} disabled={saveCustomizationMutation.isPending}>
             {saveCustomizationMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
@@ -637,8 +637,11 @@ export default function Customize() {
                           id={`widget-${widget}`} 
                           checked={enabledWidgets.includes(widget)}
                           onCheckedChange={(checked) => {
-                            if (checked) {
-                              setEnabledWidgets([...enabledWidgets, widget]);
+                            if (checked === true) {
+                              const newEnabledWidgets = [...enabledWidgets, widget];
+                              setEnabledWidgets(newEnabledWidgets);
+                              
+                              // Add to widget order if not already there
                               if (!widgetOrder.includes(widget)) {
                                 setWidgetOrder([...widgetOrder, widget]);
                               }
