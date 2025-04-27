@@ -40,8 +40,8 @@ import type Stripe from 'stripe';
 import { verifyPassword, generateResetToken, hashPassword } from './utils/password';
 import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 
-// Import direct auth router
-import directAuthRouter from './direct-auth';
+// Import direct auth router and token verification function
+import directAuthRouter, { verifyToken } from './direct-auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Special static route for HTML login page outside of Vite/React
@@ -159,6 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Use the verifyToken function imported at the top
+
   // Middleware to ensure the user is authenticated - supports both session and token authentication
   const ensureAuthenticated = async (req: Request, res: Response, next: any) => {
     // First check standard cookie-based authentication
@@ -171,15 +173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
       
+      // Use the direct-auth token verification
       try {
-        // Use the direct-auth token verification logic
-        const isValid = await import('./direct-auth').then(module => {
-          // Use a special function to validate the token
-          return module.verifyToken(token);
-        });
-        
-        if (isValid) {
-          // We're authenticated via token - we could set req.user here if needed
+        if (verifyToken(token)) {
+          // We're authenticated via token
           console.log("User authenticated via token");
           return next();
         }

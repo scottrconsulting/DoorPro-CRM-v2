@@ -109,6 +109,9 @@ function isValidToken(token: string): boolean {
   return true;
 }
 
+// Export for use in other modules
+export const verifyToken = isValidToken;
+
 // Run cleanup every 5 minutes
 setInterval(cleanupExpiredTokens, 5 * 60 * 1000);
 
