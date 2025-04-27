@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Customization, CONTACT_STATUSES, PIN_COLORS, QUICK_ACTIONS } from "@shared/schema";
+import { Customization, CONTACT_STATUSES, PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
 
 import {
   Card,
@@ -63,6 +63,12 @@ export default function Customize() {
   const [reminderTime, setReminderTime] = useState(30); // minutes
   const [theme, setTheme] = useState<string>("light");
   const [primaryColor, setPrimaryColor] = useState<string>("blue");
+  
+  // Dashboard widgets state
+  const [enabledWidgets, setEnabledWidgets] = useState<string[]>(DASHBOARD_WIDGETS);
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(DASHBOARD_WIDGETS);
+  const [customWidgetLabels, setCustomWidgetLabels] = useState<Record<string, string>>({});
+  const [editingWidgetLabel, setEditingWidgetLabel] = useState<string | null>(null);
   
   // Fetch user's customization settings
   const { data: customization, isLoading } = useQuery<Customization>({
@@ -130,6 +136,13 @@ export default function Customize() {
         setEmailEnabled(customization.confirmationOptions.email);
         setReminderTime(customization.confirmationOptions.reminderTime);
       }
+      
+      // Initialize dashboard widgets settings
+      if (customization.dashboardWidgets) {
+        setEnabledWidgets(customization.dashboardWidgets.enabledWidgets || DASHBOARD_WIDGETS);
+        setWidgetOrder(customization.dashboardWidgets.widgetOrder || DASHBOARD_WIDGETS);
+        setCustomWidgetLabels(customization.dashboardWidgets.customLabels || {});
+      }
     }
   }, [customization]);
   
@@ -174,6 +187,11 @@ export default function Customize() {
         sms: smsEnabled,
         email: emailEnabled,
         reminderTime
+      },
+      dashboardWidgets: {
+        enabledWidgets,
+        widgetOrder,
+        customLabels: customWidgetLabels
       }
     });
   };

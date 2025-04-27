@@ -7,6 +7,28 @@ export const PIN_COLORS = ['blue', 'green', 'red', 'yellow', 'purple', 'orange',
 export const CONTACT_STATUSES = ['not_visited', 'interested', 'not_interested', 'converted', 'considering', 'no_soliciting', 'call_back', 'appointment_scheduled', 'no_answer'];
 export const QUICK_ACTIONS = ['no_answer', 'not_interested', 'call_back', 'no_soliciting'];
 
+export const DASHBOARD_WIDGETS = [
+  "today_visits",
+  "conversions",
+  "follow_ups",
+  "territory_coverage",
+  "contacts_added_today",
+  "appointments_today",
+  "recent_sales",
+  "weekly_goal_progress"
+];
+
+export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
+  "today_visits": "Today's Visits",
+  "conversions": "Conversions",
+  "follow_ups": "Follow-ups",
+  "territory_coverage": "Territory Coverage",
+  "contacts_added_today": "New Contacts Today",
+  "appointments_today": "Today's Appointments",
+  "recent_sales": "Recent Sales",
+  "weekly_goal_progress": "Weekly Goal Progress"
+};
+
 // Teams model for grouping users
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
