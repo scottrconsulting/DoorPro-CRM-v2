@@ -400,7 +400,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return undefined;
   };
 
-  // Update markers when contacts change
+  // Update markers when contacts or customization changes
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
     
