@@ -187,6 +187,19 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span>Account</span>
             </Link>
             <Link
+              href="/customize"
+              onClick={onClose}
+              className={`flex items-center px-4 py-2 ${isActive("/customize") 
+                ? "text-foreground bg-muted border-l-4 border-primary" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+            >
+              <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
+              <span>Customize</span>
+              {user?.role === "free" && (
+                <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
+              )}
+            </Link>
+            <Link
               href="/upgrade"
               onClick={onClose}
               className={`flex items-center px-4 py-2 ${isActive("/upgrade") 
