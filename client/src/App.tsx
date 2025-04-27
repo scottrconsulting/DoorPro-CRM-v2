@@ -13,6 +13,7 @@ import Teams from "@/pages/enhanced-teams";
 import Reports from "@/pages/reports";
 import Login from "@/pages/login";
 import DirectLogin from "@/pages/direct-login";
+import SimpleLogin from "@/pages/simple-login";
 import Register from "@/pages/register";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
@@ -103,10 +104,10 @@ function App() {
                   <AutoLogin />
                 </Route>
                 <Route path="/login">
-                  <Login />
+                  <SimpleLogin />
                 </Route>
                 <Route path="/direct-login">
-                  <DirectLogin />
+                  <SimpleLogin />
                 </Route>
                 <Route path="/register">
                   <Register />
