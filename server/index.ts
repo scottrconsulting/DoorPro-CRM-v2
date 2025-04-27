@@ -8,13 +8,11 @@ const app = express();
 
 // Configure CORS for all domains, especially the deployed domain
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow any origin (remove this in production and use a whitelist)
-    return callback(null, true);
-  },
-  credentials: true, // Critical for cookies to work cross-domain
+  origin: true,
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["set-cookie"]
 }));
 
 // Add cache control headers to prevent caching issues

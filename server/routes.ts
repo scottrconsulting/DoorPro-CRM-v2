@@ -69,18 +69,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "doorprocrm-secret",
-      resave: true,
-      saveUninitialized: true,
+      resave: false,
+      saveUninitialized: false,
       store: storage.sessionStore,
-      proxy: true, // Trust the reverse proxy when setting secure cookies
+      proxy: true,
       cookie: { 
-        secure: false, // Must be false to work in all environments
-        httpOnly: false, // Allow JavaScript access to cookies for debugging
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'lax', // More permissive setting for cross-site
+        secure: 'auto',
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        sameSite: 'none',
         path: '/'
       },
-      rolling: true // Reset expiration with every request
+      rolling: true
     })
   );
 
@@ -201,7 +201,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return next(err);
           }
           console.log("Session created and saved successfully");
-          return res.json({ user: { id: user.id, username: user.username, email: user.email, fullName: user.fullName, role: user.role } });
+          return res.status(200).json({ 
+            authenticated: true,
+            user: { 
+              id: user.id, 
+              username: user.username, 
+              email: user.email, 
+              fullName: user.fullName, 
+              role: user.role 
+            } 
+          });
         });
       });
     })(req, res, next);
