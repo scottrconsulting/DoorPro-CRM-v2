@@ -52,6 +52,15 @@ export default function Customize() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isPro = user?.role === "pro" || user?.role === "admin";
+useEffect(() => {
+  // Force pro access for admin users
+  if (user?.role === "admin") {
+    queryClient.setQueryData(["/api/auth/user"], (old: any) => ({
+      ...old,
+      user: { ...old.user, role: "admin" }
+    }));
+  }
+}, [user]);
   
   // State for customization settings
   const [activeTab, setActiveTab] = useState("appearance");
