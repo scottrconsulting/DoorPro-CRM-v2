@@ -22,6 +22,7 @@ interface Customization {
   userId: number;
   teamId: number | null;
   pinColors: Record<string, string>;
+  statusLabels: Record<string, string>;
   enabledWidgets: string[];
   widgetOrder: string[];
   defaultMapType: string;
@@ -240,7 +241,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         title: "New Contact",
         draggable: true,
         animation: window.google.maps.Animation.DROP,
-        icon: getMarkerIcon(activeStatus, customization?.pinColors),
+        icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
       });
       
       setNewHouseMarker(marker);
@@ -435,7 +436,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       // Get the proper marker icon based on status and customization settings
       // This ensures consistent pin colors for all status types
-      const markerIcon = getMarkerIcon(contact.status, customization?.pinColors);
+      const markerIcon = getMarkerIcon(contact.status, customization?.pinColors, customization?.statusLabels);
       
       // Create the map marker with the correct icon
       const marker = addMarker(position, {
