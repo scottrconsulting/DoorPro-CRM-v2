@@ -368,8 +368,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
       const isLongClick = clickDuration > 500; // 500ms threshold for long press
       
-      // Quick click handling - add pin if in adding mode
-      if (!isLongClick && isAddingHouse) {
+      // Quick click handling - always allow pin dropping
+      if (!isLongClick) {
         const marker = addMarker(e.latLng.toJSON(), {
           title: "New Contact",
           draggable: true,

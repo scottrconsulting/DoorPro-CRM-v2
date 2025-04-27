@@ -158,40 +158,20 @@ export function getUserAvatarIcon(type: 'male' | 'female'): { url: string; scale
 }
 
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
-  let color: string;
-  
-  // Use customization colors if available
-  if (pinColors && pinColors[status]) {
-    color = pinColors[status];
-  } else {
-    // Fallback colors
-    switch (status) {
-      case "converted":
-        color = "green";
-        break;
-      case "interested":
-        color = "yellow";
-        break;
-      case "appointment_scheduled":
-        color = "orange";
-        break;
-      case "call_back":
-        color = "blue";
-        break;
-      case "considering":
-        color = "purple";
-        break;
-      case "not_interested":
-        color = "red";
-        break;
-      case "not_visited":
-        color = "blue";
-        break;
-      default:
-        color = "purple";
-        break;
-    }
-  }
+  // Default colors if customization is not available
+  const defaultColors: Record<string, string> = {
+    converted: "green",
+    interested: "yellow",
+    appointment_scheduled: "orange",
+    call_back: "blue",
+    considering: "purple",
+    not_interested: "red",
+    not_visited: "blue",
+    no_soliciting: "purple"
+  };
+
+  // Use customization colors if available, otherwise fall back to defaults
+  const color = (pinColors && pinColors[status]) || defaultColors[status] || "blue";
   
   return {
     url: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
