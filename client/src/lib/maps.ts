@@ -157,34 +157,40 @@ export function getUserAvatarIcon(type: 'male' | 'female'): { url: string; scale
   }
 }
 
-export function getMarkerIcon(status: string): { url: string; scaledSize: { width: number; height: number } } {
+export function getMarkerIcon(status: string, pinColors?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
   let color: string;
   
-  switch (status) {
-    case "converted":
-      color = "green";
-      break;
-    case "interested":
-      color = "yellow"; // Changed from blue to yellow as requested
-      break;
-    case "appointment_scheduled":
-      color = "orange";
-      break;
-    case "call_back":
-      color = "blue"; // Using blue to match UI
-      break;
-    case "considering":
-      color = "purple";
-      break;
-    case "not_interested":
-      color = "red";
-      break;
-    case "not_visited":
-      color = "blue"; // Default for not visited
-      break;
-    default:
-      color = "purple";
-      break;
+  // Use customization colors if available
+  if (pinColors && pinColors[status]) {
+    color = pinColors[status];
+  } else {
+    // Fallback colors
+    switch (status) {
+      case "converted":
+        color = "green";
+        break;
+      case "interested":
+        color = "yellow";
+        break;
+      case "appointment_scheduled":
+        color = "orange";
+        break;
+      case "call_back":
+        color = "blue";
+        break;
+      case "considering":
+        color = "purple";
+        break;
+      case "not_interested":
+        color = "red";
+        break;
+      case "not_visited":
+        color = "blue";
+        break;
+      default:
+        color = "purple";
+        break;
+    }
   }
   
   return {

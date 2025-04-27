@@ -257,7 +257,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         
         const marker = addMarker(position, {
           title: contact.fullName,
-          icon: getMarkerIcon(contact.status),
+          icon: getMarkerIcon(contact.status, customization?.pinColors),
         });
         
         if (marker) {
