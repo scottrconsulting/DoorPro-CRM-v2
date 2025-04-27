@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Contact, Visit } from "@shared/schema";
@@ -9,6 +9,7 @@ import { hasPlanAccess, UserRole } from "@/lib/auth";
 import { Link } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, getDay, isToday } from 'date-fns';
+import { Download, RefreshCw } from "lucide-react";
 import { 
   Table, 
   TableBody, 
