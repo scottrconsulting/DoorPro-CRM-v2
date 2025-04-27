@@ -159,6 +159,7 @@ export default function Customize() {
       pinColors: editedPinColors,
       quickActions,
       customStatuses,
+      statusLabels,
       appointmentTypes,
       confirmationOptions: {
         sms: smsEnabled,
@@ -235,7 +236,7 @@ export default function Customize() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/customize-message-templates")}>
+          <Button variant="outline" onClick={() => window.location.href = "/customize-message-templates"}>
             Message Templates
           </Button>
           <Button onClick={handleSaveSettings} disabled={saveCustomizationMutation.isPending}>
@@ -318,49 +319,118 @@ export default function Customize() {
             <CardHeader>
               <CardTitle>Contact Statuses</CardTitle>
               <CardDescription>
-                Add custom statuses for your contacts beyond the default options.
+                Customize status labels and add new statuses for your contacts.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {CONTACT_STATUSES.map(status => (
-                  <Badge key={status} variant="secondary" className="text-sm">
-                    {status.replace(/_/g, ' ')}
-                  </Badge>
-                ))}
-                {customStatuses.map(status => (
-                  <Badge key={status} variant="outline" className="text-sm flex items-center gap-1">
-                    {status}
-                    <button 
-                      className="ml-1 text-muted-foreground hover:text-destructive"
-                      onClick={() => setCustomStatuses(customStatuses.filter(s => s !== status))}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
+            <CardContent className="space-y-6">
+              {/* Default status customization section */}
+              <div>
+                <h3 className="text-base font-semibold mb-3">Customize Default Status Labels</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Default Status</TableHead>
+                      <TableHead>Custom Label</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {CONTACT_STATUSES.map(status => (
+                      <TableRow key={status}>
+                        <TableCell className="font-medium">
+                          {status.replace(/_/g, ' ')}
+                        </TableCell>
+                        <TableCell>
+                          {editingStatus === status ? (
+                            <Input 
+                              value={statusLabels[status] || status.replace(/_/g, ' ')}
+                              onChange={(e) => setStatusLabels({
+                                ...statusLabels,
+                                [status]: e.target.value
+                              })}
+                              autoFocus
+                              className="w-full"
+                            />
+                          ) : (
+                            <span>{statusLabels[status] || status.replace(/_/g, ' ')}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingStatus === status ? (
+                            <div className="flex space-x-1">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => setEditingStatus(null)}
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => {
+                                  const updatedLabels = {...statusLabels};
+                                  delete updatedLabels[status];
+                                  setStatusLabels(updatedLabels);
+                                  setEditingStatus(null);
+                                }}
+                              >
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => setEditingStatus(status)}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
               
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="New status name..." 
-                  value={newStatus} 
-                  onChange={e => setNewStatus(e.target.value)}
-                  disabled={!isPro && customStatuses.length >= 3}
-                />
-                <Button 
-                  onClick={handleAddCustomStatus}
-                  disabled={!newStatus || (!isPro && customStatuses.length >= 3)}
-                >
-                  Add
-                </Button>
+              <div className="border-t pt-5">
+                <h3 className="text-base font-semibold mb-3">Custom Statuses</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {customStatuses.map(status => (
+                    <Badge key={status} variant="outline" className="text-sm flex items-center gap-1">
+                      {status}
+                      <button 
+                        className="ml-1 text-muted-foreground hover:text-destructive"
+                        onClick={() => setCustomStatuses(customStatuses.filter(s => s !== status))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="New status name..." 
+                    value={newStatus} 
+                    onChange={e => setNewStatus(e.target.value)}
+                    disabled={!isPro && customStatuses.length >= 3}
+                  />
+                  <Button 
+                    onClick={handleAddCustomStatus}
+                    disabled={!newStatus || (!isPro && customStatuses.length >= 3)}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {!isPro && (
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Info className="h-3 w-3 mr-1" /> Free accounts limited to 3 custom statuses. Upgrade to Pro for unlimited.
+                  </p>
+                )}
               </div>
-              
-              {!isPro && (
-                <p className="text-xs text-muted-foreground flex items-center mt-1">
-                  <Info className="h-3 w-3 mr-1" /> Free accounts limited to 3 custom statuses. Upgrade to Pro for unlimited.
-                </p>
-              )}
             </CardContent>
           </Card>
           

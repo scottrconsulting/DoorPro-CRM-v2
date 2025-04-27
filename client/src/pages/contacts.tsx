@@ -330,33 +330,49 @@ export default function Contacts() {
                     className="border-b border-neutral-200 hover:bg-neutral-50 cursor-pointer"
                     onClick={() => setSelectedContactId(contact.id)}
                   >
-                    <td className="px-4 py-3 font-medium">{contact.fullName}</td>
-                    <td className="px-4 py-3 text-neutral-600 max-w-xs truncate">{contact.address}</td>
-                    <td className="px-4 py-3 text-neutral-600">
+                    <td className="px-4 py-2 font-medium">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">{contact.fullName}</span>
+                        <span className="text-xs text-neutral-500">Last updated: {new Date(contact.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-neutral-600">
+                      <div className="flex flex-col">
+                        <span className="text-sm truncate max-w-[250px]">{contact.address}</span>
+                        {(contact.latitude && contact.longitude) ? (
+                          <span className="text-xs text-green-600">✓ Mapped</span>
+                        ) : (
+                          <span className="text-xs text-orange-500">Not on map</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-neutral-600">
                       {contact.phone || contact.email ? (
-                        <div>
-                          {contact.phone && <div>{contact.phone}</div>}
-                          {contact.email && <div className="text-xs text-neutral-500">{contact.email}</div>}
+                        <div className="flex flex-col">
+                          {contact.phone && <span className="text-sm">{contact.phone}</span>}
+                          {contact.email && <span className="text-xs text-neutral-500 truncate max-w-[150px]">{contact.email}</span>}
                         </div>
                       ) : (
-                        <span className="text-neutral-400">No contact info</span>
+                        <span className="text-xs text-neutral-400">No contact info</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(contact.status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm("Are you sure you want to delete this contact?")) {
-                            deleteContactMutation.mutate(contact.id);
-                          }
-                        }}
-                      >
-                        <span className="material-icons text-neutral-500">delete</span>
-                      </Button>
+                    <td className="px-4 py-2">{getStatusBadge(contact.status)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("Are you sure you want to delete this contact?")) {
+                              deleteContactMutation.mutate(contact.id);
+                            }
+                          }}
+                        >
+                          <span className="material-icons text-neutral-500 text-sm">delete</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -166,6 +166,7 @@ export const customizations = pgTable("customizations", {
   quickActions: json("quick_actions").$type<string[]>(), // actions available on quick-click
   // Form customizations
   customStatuses: json("custom_statuses").$type<string[]>(), // additional contact statuses
+  statusLabels: json("status_labels").$type<Record<string, string>>(), // custom labels for statuses
   customFields: json("custom_fields").$type<Array<{
     name: string;
     label: string;
