@@ -31,7 +31,7 @@ export default function Sidebar() {
       logout();
       // Additional fallback redirect to ensure we always go to login page
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = '/direct-login';
       }, 500);
     }
   };

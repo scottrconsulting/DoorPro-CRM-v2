@@ -21,7 +21,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       onClose();
       // Additional fallback redirect to ensure we always go to login page
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = '/direct-login';
       }, 500);
     }
   };
