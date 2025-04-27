@@ -137,13 +137,22 @@ export function getMarkerIcon(status: string): { url: string; scaledSize: { widt
       color = "green";
       break;
     case "interested":
-      color = "blue";
+      color = "yellow"; // Changed from blue to yellow as requested
+      break;
+    case "appointment_scheduled":
+      color = "orange";
+      break;
+    case "call_back":
+      color = "ltblue"; // Light blue
       break;
     case "considering":
-      color = "yellow";
+      color = "purple";
       break;
     case "not_interested":
       color = "red";
+      break;
+    case "not_visited":
+      color = "blue"; // Default for not visited
       break;
     default:
       color = "purple";
