@@ -882,16 +882,16 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <h2 className="font-medium text-neutral-800">Territory Map</h2>
           
           {/* Search Bar */}
-          <div className="flex-1 max-w-sm relative">
+          <div className="flex-1 md:min-w-[300px] lg:min-w-[400px] relative">
             <div className="relative flex items-center">
-              <span className="material-icons absolute left-2 text-neutral-500" style={{ fontSize: '18px' }}>search</span>
+              <span className="material-icons absolute left-3 text-neutral-500" style={{ fontSize: '20px' }}>search</span>
               <input
                 type="text"
                 placeholder="Search for an address..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchLocation()}
-                className="pl-8 pr-2 py-1.5 w-full rounded-md border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-primary"
+                className="pl-10 pr-3 py-2.5 w-full text-base rounded-md border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {searchQuery && (
                 <button 

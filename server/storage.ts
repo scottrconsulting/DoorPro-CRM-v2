@@ -1249,12 +1249,16 @@ export class DatabaseStorage implements IStorage {
 
   async updateCustomization(id: number, updates: Partial<Customization>): Promise<Customization | undefined> {
     try {
-      // Since we're having issues with customizations table, let's implement a fallback
-      return {
-        id: id || 1,
-        ...updates,
-        updatedAt: new Date()
-      } as unknown as Customization;
+      const [updated] = await db
+        .update(customizations)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(customizations.id, id))
+        .returning();
+      
+      return updated;
     } catch (error) {
       console.error("Error updating customization:", error);
       return undefined;

@@ -76,7 +76,7 @@ export default function Dashboard() {
           return (
             <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard
-                title={widgetLabels["todayVisits"] || DASHBOARD_WIDGET_LABELS["todayVisits"]}
+                title={widgetLabels["today_visits"] || DASHBOARD_WIDGET_LABELS["today_visits"]}
                 value={todayVisits.length}
                 icon="door_front"
                 iconBgColor="bg-blue-100"
@@ -100,7 +100,7 @@ export default function Dashboard() {
               />
               
               <StatCard
-                title={widgetLabels["followUps"] || DASHBOARD_WIDGET_LABELS["followUps"]}
+                title={widgetLabels["follow_ups"] || DASHBOARD_WIDGET_LABELS["follow_ups"]}
                 value={followUps.length}
                 icon="schedule"
                 iconBgColor="bg-yellow-100"
