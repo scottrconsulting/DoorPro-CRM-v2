@@ -581,16 +581,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <>
             {/* Show status buttons based on customization */}
             {[
-              // Use the exact statuses from the user's image
-              { id: "unknown", defaultLabel: "Unknown" },
-              { id: "presented", defaultLabel: "Presented" },
-              { id: "sold", defaultLabel: "Sold" },
-              { id: "no_soliciting", defaultLabel: "No Soliciting" },
+              // Core statuses with the right display labels as shown in customization page
               { id: "no_answer", defaultLabel: "No Answer" },
+              { id: "presented", defaultLabel: "Demoed" }, // Changed to match customization page
               { id: "booked", defaultLabel: "Booked" },
+              { id: "sold", defaultLabel: "Sold" },
               { id: "not_interested", defaultLabel: "Not Interested" },
+              { id: "no_soliciting", defaultLabel: "No Soliciting" },
               { id: "check_back", defaultLabel: "Check Back" },
-              // Include standard statuses for backward compatibility
+              // Include other standard statuses for backward compatibility
               { id: "not_visited", defaultLabel: "Unknown" },
               { id: "interested", defaultLabel: "Interested" },
               { id: "appointment_scheduled", defaultLabel: "Appointment" },
