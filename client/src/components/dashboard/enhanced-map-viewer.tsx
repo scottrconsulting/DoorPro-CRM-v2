@@ -57,6 +57,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     scheduleTime: "",
     sendConfirmation: false,
     confirmationType: "none", // none, text, email, both
+    confirmationTiming: "before", // immediate, before, both
     reminderTime: 30 // minutes before appointment
   });
   
@@ -541,7 +542,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
 
-    createContactMutation.mutate({
+    // Prepare contact data
+    const contactData: any = {
       userId: user?.id || 0,
       fullName: newContactForm.fullName,
       address: newContactForm.address,
@@ -551,7 +553,31 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       notes: newContactForm.notes,
       latitude: newContactCoords.lat.toString(),
       longitude: newContactCoords.lng.toString(),
-    });
+    };
+    
+    // Add scheduling information if applicable
+    if (showSchedulingFields && newContactForm.scheduleDate && newContactForm.scheduleTime) {
+      contactData.scheduleDate = newContactForm.scheduleDate;
+      contactData.scheduleTime = newContactForm.scheduleTime;
+      
+      // Add confirmation details if selected
+      if (newContactForm.sendConfirmation) {
+        contactData.sendConfirmation = true;
+        contactData.confirmationType = newContactForm.confirmationType;
+        contactData.confirmationTiming = newContactForm.confirmationTiming;
+        contactData.reminderTime = newContactForm.reminderTime;
+        
+        // If immediate confirmation is requested, show user feedback
+        if (newContactForm.confirmationTiming === "immediate" || newContactForm.confirmationTiming === "both") {
+          toast({
+            title: "Confirmation will be sent",
+            description: `An immediate ${newContactForm.confirmationType} confirmation will be sent to the contact.`,
+          });
+        }
+      }
+    }
+    
+    createContactMutation.mutate(contactData);
   };
 
   // Count selected contacts
@@ -1011,6 +1037,30 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     
                     {newContactForm.sendConfirmation && (
                       <div className="grid gap-2 mt-1">
+                        <div className="grid grid-cols-1 items-center gap-1">
+                          <label htmlFor="confirmationTiming" className="text-xs font-medium">
+                            When to send
+                          </label>
+                          <Select 
+                            value={newContactForm.confirmationTiming || "before"} 
+                            onValueChange={(value) => {
+                              setNewContactForm(prev => ({
+                                ...prev,
+                                confirmationTiming: value
+                              }));
+                            }}
+                          >
+                            <SelectTrigger id="confirmationTiming">
+                              <SelectValue placeholder="When to send" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="immediate">Send immediately</SelectItem>
+                              <SelectItem value="before">Send before appointment</SelectItem>
+                              <SelectItem value="both">Send both times</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
                         <div className="grid grid-cols-1 items-center gap-1">
                           <label htmlFor="confirmationType" className="text-xs font-medium">
                             Confirmation Type
