@@ -38,7 +38,7 @@ export default function Territories() {
     queryKey: ["/api/territories"],
   });
 
-  // Initialize map
+  // Main map for viewing territories
   const {
     mapRef,
     map,
@@ -48,6 +48,17 @@ export default function Territories() {
   } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
+  });
+  
+  // Separate map instance for territory creation dialog
+  const {
+    mapRef: createMapRef,
+    map: createMap,
+    isLoaded: createMapIsLoaded,
+    loading: createMapLoading,
+  } = useGoogleMaps(GOOGLE_MAPS_API_KEY, {
+    center: { lat: 39.8283, lng: -98.5795 },
+    zoom: 7,
   });
 
   // Drawing and polygons
@@ -126,7 +137,7 @@ export default function Territories() {
     },
   });
 
-  // Setup drawing manager when map is loaded
+  // Setup drawing manager for main map
   useEffect(() => {
     if (!isLoaded || !map || !window.google) return;
 
@@ -167,6 +178,51 @@ export default function Territories() {
       }
     };
   }, [map, isLoaded]);
+  
+  // Setup drawing manager for create territory dialog map
+  const [createDrawingManager, setCreateDrawingManager] = useState<google.maps.drawing.DrawingManager | null>(null);
+  
+  useEffect(() => {
+    if (!createMapIsLoaded || !createMap || !window.google || !isCreateDialogOpen) return;
+    
+    if (window.google.maps.drawing) {
+      const manager = new window.google.maps.drawing.DrawingManager({
+        drawingMode: null,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_CENTER,
+          drawingModes: [google.maps.drawing.OverlayType.POLYGON],
+        },
+        polygonOptions: {
+          fillColor: "#3B82F6",
+          fillOpacity: 0.3,
+          strokeColor: "#2563EB",
+          strokeWeight: 2,
+          editable: true,
+          zIndex: 1,
+        },
+      });
+
+      manager.setMap(createMap);
+      setCreateDrawingManager(manager);
+
+      // Listen for polygon complete in create dialog
+      window.google.maps.event.addListener(manager, 'polygoncomplete', function(polygon: google.maps.Polygon) {
+        const points = polygon.getPath().getArray().map(point => ({
+          lat: point.lat(),
+          lng: point.lng(),
+        }));
+        setDrawingPoints(points);
+        manager.setDrawingMode(null);
+      });
+      
+      return () => {
+        if (manager) {
+          manager.setMap(null);
+        }
+      };
+    }
+  }, [createMap, createMapIsLoaded, isCreateDialogOpen]);
 
   // Toggle drawing mode
   const toggleDrawingMode = () => {
