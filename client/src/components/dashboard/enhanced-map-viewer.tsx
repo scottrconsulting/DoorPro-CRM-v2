@@ -76,6 +76,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLegend, setShowLegend] = useState(true); // For legend toggle
   
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
@@ -269,7 +270,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           
           const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
           
-          // For quick clicks - just add the contact with the selected status for ALL statuses
           // Start work timer when first contact is added (if not already started)
           if (!firstHouseRecordedRef.current) {
             firstHouseRecordedRef.current = true;
@@ -287,24 +287,48 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             });
           }
           
-          // Create the contact with the current active status and all address components
-          createContactMutation.mutate({
-            userId: user?.id || 0,
-            fullName: autoName,
-            address: address,
-            city: city,
-            state: state,
-            zipCode: zipCode,
-            status: activeStatus,
-            latitude: e.latLng.lat().toString(),
-            longitude: e.latLng.lng().toString(),
-            notes: `Quick add: ${new Date().toLocaleString()}`
-          });
-          
-          toast({
-            title: "Contact added",
-            description: `Added pin with status: ${activeStatus.replace(/_/g, ' ')}`,
-          });
+          // Different behavior based on click duration
+          if (isLongClick) {
+            // Long press - show detailed contact form
+            setNewContactForm(prev => ({
+              ...prev,
+              fullName: autoName,
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+            }));
+            
+            // Show the form dialog for long press
+            setShowNewContactDialog(true);
+            
+            toast({
+              title: "New Contact Form",
+              description: "Fill in the details to add this contact",
+            });
+          } else {
+            // Quick click - just add the contact with minimal info
+            createContactMutation.mutate({
+              userId: user?.id || 0,
+              fullName: autoName,
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+              notes: `Quick add: ${new Date().toLocaleString()}`
+            });
+            
+            toast({
+              title: "Contact added",
+              description: `Added pin with status: ${activeStatus.replace(/_/g, ' ')}`,
+            });
+          }
         } else {
           // Could not get the address
           toast({
@@ -452,77 +476,95 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       </div>
       
-      {/* Status Selection Controls - Bottom */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-2 rounded-lg shadow-lg flex items-center gap-2 flex-wrap justify-center z-10">
-        <Button 
-          variant={activeStatus === "not_visited" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("not_visited")}
-          className="rounded-full"
+      {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10">
+        {/* Toggle button for showing/hiding the legend */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-full shrink-0"
+          onClick={() => setShowLegend(!showLegend)}
+          title={showLegend ? "Minimize legend" : "Maximize legend"}
         >
-          <div className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
-          Not Visited
+          <span className="material-icons text-sm">
+            {showLegend ? "remove" : "add"}
+          </span>
         </Button>
         
-        <Button 
-          variant={activeStatus === "interested" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("interested")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
-          Interested
-        </Button>
-        
-        <Button 
-          variant={activeStatus === "not_interested" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("not_interested")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-red-500 mr-2" />
-          Not Interested
-        </Button>
-        
-        <Button 
-          variant={activeStatus === "call_back" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("call_back")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
-          Call Back
-        </Button>
-        
-        <Button 
-          variant={activeStatus === "appointment_scheduled" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("appointment_scheduled")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-orange-500 mr-2" />
-          Appointment
-        </Button>
-        
-        <Button 
-          variant={activeStatus === "converted" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("converted")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-green-500 mr-2" />
-          Converted
-        </Button>
-        
-        <Button 
-          variant={activeStatus === "no_soliciting" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveStatus("no_soliciting")}
-          className="rounded-full"
-        >
-          <div className="w-3 h-3 rounded-full bg-purple-500 mr-2" />
-          No Soliciting
-        </Button>
+        {/* Only show the status buttons if legend is visible */}
+        {showLegend && (
+          <>
+            <Button 
+              variant={activeStatus === "not_visited" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("not_visited")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
+              Not Visited
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "interested" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("interested")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1" />
+              Interested
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "not_interested" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("not_interested")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-red-500 mr-1" />
+              Not Interested
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "call_back" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("call_back")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
+              Call Back
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "appointment_scheduled" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("appointment_scheduled")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-orange-500 mr-1" />
+              Appointment
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "converted" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("converted")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-green-500 mr-1" />
+              Converted
+            </Button>
+            
+            <Button 
+              variant={activeStatus === "no_soliciting" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveStatus("no_soliciting")}
+              className="rounded-full text-xs px-2 py-1 h-7"
+            >
+              <div className="w-2 h-2 rounded-full bg-purple-500 mr-1" />
+              No Solicit
+            </Button>
+          </>
+        )}
       </div>
       
       {/* Delete Confirmation Dialog */}
