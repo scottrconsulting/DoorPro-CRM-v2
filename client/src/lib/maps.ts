@@ -24,10 +24,35 @@ export async function geocodeAddress(address: string): Promise<IGeocodingResult 
     if (!result) return null;
 
     const location = result[0].geometry.location;
+    let city = "";
+    let state = "";
+    let zipCode = "";
+    
+    // Extract address components
+    if (result[0].address_components) {
+      for (const component of result[0].address_components) {
+        // City
+        if (component.types.includes("locality")) {
+          city = component.long_name;
+        }
+        // State
+        else if (component.types.includes("administrative_area_level_1")) {
+          state = component.short_name; // Use short_name for state codes (e.g., CA, NY)
+        }
+        // Zip code
+        else if (component.types.includes("postal_code")) {
+          zipCode = component.long_name;
+        }
+      }
+    }
+    
     return {
       address: result[0].formatted_address,
       latitude: location.lat().toString(),
       longitude: location.lng().toString(),
+      city: city || undefined,
+      state: state || undefined,
+      zipCode: zipCode || undefined,
     };
   } catch (error) {
     console.error("Geocoding error:", error);

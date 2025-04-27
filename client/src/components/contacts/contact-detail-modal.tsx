@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { geocodeAddress } from "@/lib/maps";
 import { 
   Contact, 
   Visit, 
@@ -522,6 +523,32 @@ export default function ContactDetailModal({
       email: editEmail || null,
       status: editStatus,
     });
+  };
+  
+  // Helper to auto-populate address components when address changes
+  const handleAddressChange = async (newAddress: string) => {
+    setEditAddress(newAddress);
+    
+    try {
+      // Only attempt geocoding if the address has enough content
+      if (newAddress.trim().length > 5) {
+        const geocoded = await geocodeAddress(newAddress);
+        if (geocoded) {
+          // Auto-populate city, state, and zip code fields
+          if (geocoded.city) {
+            setEditCity(geocoded.city);
+          }
+          if (geocoded.state) {
+            setEditState(geocoded.state);
+          }
+          if (geocoded.zipCode) {
+            setEditZipCode(geocoded.zipCode);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error geocoding address:", error);
+    }
   };
   
   // Format currency
@@ -1253,7 +1280,7 @@ export default function ContactDetailModal({
                 <Input 
                   id="editAddress" 
                   value={editAddress} 
-                  onChange={(e) => setEditAddress(e.target.value)} 
+                  onChange={(e) => handleAddressChange(e.target.value)} 
                   className="mt-1"
                 />
               </div>

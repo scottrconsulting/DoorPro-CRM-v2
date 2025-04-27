@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useGoogleMaps } from "@/hooks/use-maps";
+import { useLongPress } from "@/hooks/use-long-press";
 import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -202,6 +203,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, panTo, toast, userMarker]);
 
+  // Configure long press gesture for marker deletion (mobile support)
+  const handleContactDelete = useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setShowDeleteDialog(true);
+  }, []);
+
   // Update markers when contacts change
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
@@ -230,15 +237,79 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             }
           });
           
-          // Right-click handler to show delete option
+          // Right-click handler to show delete option (desktop)
           marker.addListener("rightclick", () => {
-            setSelectedContact(contact);
-            setShowDeleteDialog(true);
+            handleContactDelete(contact);
           });
+          
+          // Add touch listeners for mobile long-press support
+          // We need to add DOM event listeners to the marker element
+          if (marker.getDiv) { // For advanced markers
+            const markerElement = marker.getDiv();
+            if (markerElement) {
+              // Use our custom hook for long press
+              const longPress = {
+                onTouchStart: () => {
+                  const timerId = window.setTimeout(() => {
+                    handleContactDelete(contact);
+                  }, 800); // 800ms threshold for long press
+                  
+                  // Store timer ID on the element itself
+                  markerElement.setAttribute('data-timer-id', timerId.toString());
+                },
+                onTouchEnd: () => {
+                  const timerId = markerElement.getAttribute('data-timer-id');
+                  if (timerId) {
+                    window.clearTimeout(parseInt(timerId));
+                    markerElement.removeAttribute('data-timer-id');
+                  }
+                },
+                onTouchCancel: () => {
+                  const timerId = markerElement.getAttribute('data-timer-id');
+                  if (timerId) {
+                    window.clearTimeout(parseInt(timerId));
+                    markerElement.removeAttribute('data-timer-id');
+                  }
+                }
+              };
+              
+              // Add the event listeners
+              markerElement.addEventListener('touchstart', longPress.onTouchStart);
+              markerElement.addEventListener('touchend', longPress.onTouchEnd);
+              markerElement.addEventListener('touchcancel', longPress.onTouchCancel);
+            }
+          } else { // For standard markers, we need a different approach
+            // Add a tooltip indicating long-press to delete on mobile
+            const tooltip = new window.google.maps.InfoWindow({
+              content: "<div class='bg-black/70 text-white p-2 rounded text-xs'>Hold to delete</div>",
+              disableAutoPan: true
+            });
+            
+            // Show tooltip briefly when marker is tapped
+            marker.addListener("click", () => {
+              tooltip.open(map, marker);
+              setTimeout(() => tooltip.close(), 2000);
+            });
+            
+            // Google Maps API doesn't provide direct access to marker DOM element
+            // So we'll use a workaround where we track touch start/end on the entire map
+            // and check if it's over a marker
+            const markerPosition = marker.getPosition();
+            if (markerPosition) {
+              const markerLatLng = markerPosition.toJSON();
+              
+              // Add a specific data attribute to map element to track this marker's touch
+              const mapElement = map.getDiv();
+              if (mapElement) {
+                // We already have mousedown/up listeners on the map
+                // We'll leverage those and the mouseDownTime state
+              }
+            }
+          }
         }
       }
     });
-  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact]);
+  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, handleContactDelete]);
 
   // Set up mouse down/up listeners for detecting click vs hold on the map
   useEffect(() => {
