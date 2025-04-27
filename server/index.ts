@@ -8,14 +8,15 @@ const app = express();
 
 // Configure CORS for all domains, especially the deployed domain
 app.use(cors({
-  origin: function(origin, callback) {
-    callback(null, true);
-  },
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  exposedHeaders: ["set-cookie"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Cookie"],
+  exposedHeaders: ["Set-Cookie"]
 }));
+
+// Trust proxy for secure cookies
+app.set('trust proxy', 1);
 
 // Add cache control headers to prevent caching issues
 app.use((req, res, next) => {
