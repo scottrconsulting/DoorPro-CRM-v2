@@ -171,7 +171,7 @@ export function getMarkerIcon(status: string): { url: string; scaledSize: { widt
       color = "orange";
       break;
     case "call_back":
-      color = "cyan"; // Teal/cyan color to match UI
+      color = "blue"; // Using blue to match UI
       break;
     case "considering":
       color = "purple";
