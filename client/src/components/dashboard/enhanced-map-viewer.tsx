@@ -327,7 +327,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             
             toast({
               title: "Contact added",
-              description: `Added pin with status: ${activeStatus.replace(/_/g, ' ')}`,
+              description: `Added pin with status: ${getStatusLabel(activeStatus)}`,
             });
           }
         } else {
@@ -460,7 +460,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               // Provide consistent user feedback
               toast({
                 title: "Contact selected",
-                description: `${contact.fullName || "Unknown"} - ${contact.status.replace(/_/g, ' ')}`,
+                description: `${contact.fullName || "Unknown"} - ${getStatusLabel(contact.status)}`,
               });
             }
           }
@@ -475,7 +475,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     
     console.log("Status counts for debugging:", statusCounts);
     
-  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization?.pinColors, handleContactDelete]);
+  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization, handleContactDelete]);
   
   // Change map type when mapType state changes
   useEffect(() => {
@@ -758,13 +758,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="not_visited">Not Visited</SelectItem>
-                    <SelectItem value="interested">Interested</SelectItem>
-                    <SelectItem value="not_interested">Not Interested</SelectItem>
-                    <SelectItem value="call_back">Call Back</SelectItem>
-                    <SelectItem value="appointment_scheduled">Appointment Scheduled</SelectItem>
-                    <SelectItem value="converted">Converted</SelectItem>
-                    <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                    <SelectItem value="not_visited">{getStatusLabel("not_visited")}</SelectItem>
+                    <SelectItem value="interested">{getStatusLabel("interested")}</SelectItem>
+                    <SelectItem value="not_interested">{getStatusLabel("not_interested")}</SelectItem>
+                    <SelectItem value="call_back">{getStatusLabel("call_back")}</SelectItem>
+                    <SelectItem value="appointment_scheduled">{getStatusLabel("appointment_scheduled")}</SelectItem>
+                    <SelectItem value="converted">{getStatusLabel("converted")}</SelectItem>
+                    <SelectItem value="no_soliciting">{getStatusLabel("no_soliciting")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
