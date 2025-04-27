@@ -53,6 +53,7 @@ export default function Contacts() {
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
 
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
@@ -102,25 +103,67 @@ export default function Contacts() {
 
   // Delete contact mutation
   const deleteContactMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/contacts/${id}`, {});
-      return res.json();
+    mutationFn: async (ids: number | number[]) => {
+      if (Array.isArray(ids)) {
+        // Mass deletion
+        const promises = ids.map(id => 
+          apiRequest("DELETE", `/api/contacts/${id}`, {})
+        );
+        await Promise.all(promises);
+      } else {
+        // Single deletion
+        await apiRequest("DELETE", `/api/contacts/${ids}`, {});
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      setSelectedContacts([]);
       toast({
-        title: "Contact deleted",
-        description: "Contact was successfully deleted",
+        title: "Contact(s) deleted",
+        description: "Selected contacts were successfully deleted",
       });
     },
     onError: () => {
       toast({
-        title: "Failed to delete contact",
-        description: "There was an error deleting the contact",
+        title: "Failed to delete contact(s)",
+        description: "There was an error deleting the contacts",
         variant: "destructive",
       });
     },
   });
+
+  // Handle mass deletion
+  const handleMassDelete = () => {
+    if (selectedContacts.length === 0) {
+      toast({
+        title: "No contacts selected",
+        description: "Please select contacts to delete",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete ${selectedContacts.length} contacts?`)) {
+      deleteContactMutation.mutate(selectedContacts);
+    }
+  };
+
+  // Handle CSV export
+  const handleExportCSV = () => {
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      "Name,Address,City,State,Zip Code,Phone,Email,Status\n" +
+      filteredContacts.map(contact => {
+        return `"${contact.fullName}","${contact.address}","${contact.city || ''}","${contact.state || ''}","${contact.zipCode || ''}","${contact.phone || ''}","${contact.email || ''}","${contact.status}"`;
+      }).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `contacts_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Handle sorting
   const handleSort = (field: string) => {
@@ -322,6 +365,27 @@ export default function Contacts() {
             </Select>
           </div>
         </div>
+        {/* Mass actions */}
+        <div className="flex flex-wrap gap-2 mt-4 items-center">
+          <span className="text-sm text-neutral-600">{selectedContacts.length} selected</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleMassDelete}
+            disabled={selectedContacts.length === 0}
+          >
+            <span className="material-icons text-sm mr-1">delete</span>
+            Delete Selected
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+          >
+            <span className="material-icons text-sm mr-1">download</span>
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Contacts List */}
@@ -358,6 +422,17 @@ export default function Contacts() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th className="px-4 py-2">
+                    <Checkbox
+                      checked={selectedContacts.length === filteredContacts.length}
+                      onCheckedChange={(checked) => {
+                        setSelectedContacts(checked 
+                          ? filteredContacts.map(c => c.id)
+                          : []
+                        );
+                      }}
+                    />
+                  </th>
                   <th className="px-4 py-2 text-left font-medium text-neutral-600">
                     <div 
                       className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "fullName" ? "text-primary" : ""}`} 
@@ -419,8 +494,20 @@ export default function Contacts() {
                   <tr 
                     key={contact.id}
                     className="border-b border-neutral-200 hover:bg-neutral-50 cursor-pointer"
-                    onClick={() => setSelectedContactId(contact.id)}
                   >
+                    <td className="px-4 py-2">
+                      <Checkbox
+                        checked={selectedContacts.includes(contact.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedContacts(prev => 
+                            checked 
+                              ? [...prev, contact.id]
+                              : prev.filter(id => id !== contact.id)
+                          );
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="px-4 py-2 font-medium">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold">{contact.fullName}</span>
