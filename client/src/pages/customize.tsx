@@ -139,9 +139,12 @@ export default function Customize() {
       
       // Initialize dashboard widgets settings
       if (customization.dashboardWidgets) {
-        setEnabledWidgets(customization.dashboardWidgets.enabledWidgets || DASHBOARD_WIDGETS);
-        setWidgetOrder(customization.dashboardWidgets.widgetOrder || DASHBOARD_WIDGETS);
-        setCustomWidgetLabels(customization.dashboardWidgets.customLabels || {});
+        setEnabledWidgets(customization.dashboardWidgets || DASHBOARD_WIDGETS);
+        setWidgetOrder(customization.dashboardWidgets || DASHBOARD_WIDGETS);
+      }
+      
+      if (customization.dashboardWidgetLabels) {
+        setCustomWidgetLabels(customization.dashboardWidgetLabels || {});
       }
     }
   }, [customization]);
@@ -200,11 +203,8 @@ export default function Customize() {
         email: emailEnabled,
         reminderTime
       },
-      dashboardWidgets: {
-        enabledWidgets,
-        widgetOrder,
-        customLabels: customWidgetLabels
-      }
+      dashboardWidgets: enabledWidgets,
+      dashboardWidgetLabels: customWidgetLabels
     });
   };
   

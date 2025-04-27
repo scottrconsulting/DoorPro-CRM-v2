@@ -191,34 +191,41 @@ export const customizations = pgTable("customizations", {
   // App-wide customizations
   theme: text("theme").default("light"), // light, dark, system
   primaryColor: text("primary_color").default("blue"),
+  colorScheme: text("color_scheme"),
+  secondaryColor: text("secondary_color"),
+  accentColor: text("accent_color"),
+  fontFamily: text("font_family"),
+  logoUrl: text("logo_url"),
+  enableDarkMode: boolean("enable_dark_mode").default(true),
+  
   // Map customizations
-  pinColors: json("pin_colors").$type<Record<string, string>>(), // status -> color mapping
-  quickActions: json("quick_actions").$type<string[]>(), // actions available on quick-click
+  pinColors: json("pin_colors").$type<Record<string, string>>().default({}), // status -> color mapping
+  mapDefaultView: text("map_default_view").default("roadmap"),
+  quickActions: text("quick_actions").array(), // actions available on quick-click
+  
   // Form customizations
-  customStatuses: json("custom_statuses").$type<string[]>(), // additional contact statuses
-  statusLabels: json("status_labels").$type<Record<string, string>>(), // custom labels for statuses
-  customFields: json("custom_fields").$type<Array<{
-    name: string;
-    label: string;
-    type: string;
-    options?: string[];
-    required?: boolean;
-  }>>(), // additional custom form fields
+  customStatuses: text("custom_statuses").array(), // additional contact statuses
+  statusLabels: json("status_labels").$type<Record<string, string>>().default({}), // custom labels for statuses
+  
   // Appointment scheduling customizations
-  appointmentTypes: json("appointment_types").$type<string[]>(), // types of appointments
+  appointmentTypes: text("appointment_types").array(), // types of appointments
   confirmationOptions: json("confirmation_options").$type<{
     sms: boolean;
     email: boolean;
     reminderTime: number; // minutes before appointment
-  }>(),
+  }>().default({}),
+  
   // Dashboard customizations
-  dashboardWidgets: json("dashboard_widgets").$type<{
-    enabledWidgets: string[];
-    widgetOrder: string[];
-    customLabels: Record<string, string>;
-  }>(),
+  dashboardWidgets: text("dashboard_widgets").array(),
+  dashboardWidgetLabels: json("dashboard_widget_labels").$type<Record<string, string>>().default({}),
+  
   // Other settings
-  noteTemplates: json("note_templates").$type<Record<string, string>>(), // predefined note templates
+  timerSettings: json("timer_settings").$type<Record<string, any>>().default({}),
+  notificationSettings: json("notification_settings").$type<Record<string, any>>().default({}),
+  language: text("language").default("en"),
+  dateFormat: text("date_format").default("MM/DD/YYYY"),
+  timeFormat: text("time_format").default("hh:mm A"),
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

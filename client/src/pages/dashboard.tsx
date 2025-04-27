@@ -33,9 +33,9 @@ export default function Dashboard() {
   });
 
   // Get user's widget preferences with defaults
-  const enabledWidgets = customization?.dashboardWidgets?.enabledWidgets || DASHBOARD_WIDGETS;
-  const widgetOrder = customization?.dashboardWidgets?.widgetOrder || DASHBOARD_WIDGETS;
-  const widgetLabels = customization?.dashboardWidgets?.customLabels || {};
+  const enabledWidgets = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
+  const widgetOrder = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
+  const widgetLabels = customization?.dashboardWidgetLabels || {};
 
   // Count today's visits
   const todayVisits = visits.filter(visit => {
