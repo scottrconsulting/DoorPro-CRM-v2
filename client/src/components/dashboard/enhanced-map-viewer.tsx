@@ -348,6 +348,58 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
 
+  // Function to get the CSS color for a status based on customization
+  const getStatusColor = (status: string): string => {
+    // Default color mapping
+    const defaultColorMap: Record<string, string> = {
+      not_visited: 'bg-blue-500',
+      interested: 'bg-yellow-500',
+      not_interested: 'bg-red-500',
+      call_back: 'bg-blue-500',
+      appointment_scheduled: 'bg-orange-500',
+      converted: 'bg-green-500',
+      no_soliciting: 'bg-purple-500',
+      considering: 'bg-purple-500',
+    };
+    
+    // If customization is available, use the customized color
+    if (customization?.pinColors && customization.pinColors[status]) {
+      const customColor = customization.pinColors[status];
+      
+      // If it's a hex color, use it directly as an inline style
+      if (customColor.startsWith('#')) {
+        // Return null so we can use inline style instead
+        return '';
+      }
+      
+      // Convert color name to tailwind classes
+      const colorClassMap: Record<string, string> = {
+        'red': 'bg-red-500',
+        'blue': 'bg-blue-500',
+        'green': 'bg-green-500',
+        'yellow': 'bg-yellow-500',
+        'purple': 'bg-purple-500',
+        'orange': 'bg-orange-500',
+        'pink': 'bg-pink-500',
+      };
+      
+      return colorClassMap[customColor.toLowerCase()] || defaultColorMap[status] || 'bg-blue-500';
+    }
+    
+    return defaultColorMap[status] || 'bg-blue-500';
+  };
+  
+  // Function to get inline style if it's a hex color
+  const getColorStyle = (status: string): React.CSSProperties | undefined => {
+    if (customization?.pinColors && customization.pinColors[status]) {
+      const customColor = customization.pinColors[status];
+      if (customColor.startsWith('#')) {
+        return { backgroundColor: customColor };
+      }
+    }
+    return undefined;
+  };
+
   // Update markers when contacts change
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
@@ -501,8 +553,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("not_visited")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
-              Not Visited
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("not_visited")} mr-1`} 
+                style={getColorStyle("not_visited")}
+              />
+              {customization?.statusLabels?.not_visited || "Not Visited"}
             </Button>
             
             <Button 
@@ -511,8 +566,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("interested")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1" />
-              Interested
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("interested")} mr-1`}
+                style={getColorStyle("interested")}
+              />
+              {customization?.statusLabels?.interested || "Interested"}
             </Button>
             
             <Button 
@@ -521,8 +579,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("not_interested")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-red-500 mr-1" />
-              Not Interested
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("not_interested")} mr-1`}
+                style={getColorStyle("not_interested")}
+              />
+              {customization?.statusLabels?.not_interested || "Not Interested"}
             </Button>
             
             <Button 
@@ -531,8 +592,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("call_back")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1" />
-              Call Back
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("call_back")} mr-1`}
+                style={getColorStyle("call_back")}
+              />
+              {customization?.statusLabels?.call_back || "Call Back"}
             </Button>
             
             <Button 
@@ -541,8 +605,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("appointment_scheduled")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-orange-500 mr-1" />
-              Appointment
+              <div 
+                className={`w-2 h-2 rounded-full ${getStatusColor("appointment_scheduled")} mr-1`}
+                style={getColorStyle("appointment_scheduled")}
+              />
+              {customization?.statusLabels?.appointment_scheduled || "Appointment"}
             </Button>
             
             <Button 
@@ -551,8 +618,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("converted")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-green-500 mr-1" />
-              Converted
+              <div className={`w-2 h-2 rounded-full ${getStatusColor("converted")} mr-1`} />
+              {customization?.statusLabels?.converted || "Converted"}
             </Button>
             
             <Button 
@@ -561,8 +628,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => setActiveStatus("no_soliciting")}
               className="rounded-full text-xs px-2 py-1 h-7"
             >
-              <div className="w-2 h-2 rounded-full bg-purple-500 mr-1" />
-              No Solicit
+              <div className={`w-2 h-2 rounded-full ${getStatusColor("no_soliciting")} mr-1`} />
+              {customization?.statusLabels?.no_soliciting || "No Solicit"}
             </Button>
           </>
         )}
