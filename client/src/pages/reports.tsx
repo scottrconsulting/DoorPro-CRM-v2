@@ -8,7 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { hasPlanAccess, UserRole } from "@/lib/auth";
 import { Link } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, getDay } from 'date-fns';
+import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, getDay, isToday } from 'date-fns';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 
 export default function Reports() {
   const { user } = useAuth();
@@ -300,31 +308,169 @@ export default function Reports() {
         </TabsContent>
         
         <TabsContent value="activity">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Visits by Day of Week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={visitsByDayOfWeek}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="visits" name="Visits" fill="#10B981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle>Today's Activity</CardTitle>
+                  <div className="text-sm bg-green-100 text-green-800 rounded-full px-3 py-1">
+                    {visits.filter(v => isToday(new Date(v.visitDate))).length} visits today
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80 overflow-auto">
+                  <div className="text-sm text-muted-foreground mb-2">
+                    {isToday(new Date()) ? "Tracking all door activity for today" : "No activity recorded today"}
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visits
+                        .filter(visit => isToday(new Date(visit.visitDate)))
+                        .sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime())
+                        .map(visit => {
+                          // Find the associated contact for this visit
+                          const contact = contacts.find(c => c.id === visit.contactId);
+                          
+                          return (
+                            <TableRow key={visit.id}>
+                              <TableCell className="whitespace-nowrap">
+                                {format(new Date(visit.visitDate), "h:mm a")}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {contact?.address || "Unknown Address"}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                                  contact?.status === "converted" ? "bg-green-100 text-green-800" :
+                                  contact?.status === "not_interested" ? "bg-red-100 text-red-800" :
+                                  contact?.status === "appointment_scheduled" ? "bg-blue-100 text-blue-800" :
+                                  "bg-gray-100 text-gray-800"
+                                }`}>
+                                  {contact?.status?.replace(/_/g, ' ') || "Unknown"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {visit.notes || "No notes"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      
+                      {visits.filter(visit => isToday(new Date(visit.visitDate))).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                            No door activity recorded today
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
           <Card>
             <CardHeader>
-              <CardTitle>Visits by Day of Week</CardTitle>
+              <CardTitle>Daily Activity Detail</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Complete record of all doors knocked and leads entered with timestamps
+              </p>
             </CardHeader>
             <CardContent>
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={visitsByDayOfWeek}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="visits" name="Visits" fill="#10B981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visits
+                    .sort((a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime())
+                    .slice(0, 50) // Limit to most recent 50 for performance
+                    .map(visit => {
+                      // Find the associated contact for this visit
+                      const contact = contacts.find(c => c.id === visit.contactId);
+                      const visitDate = new Date(visit.visitDate);
+                      
+                      return (
+                        <TableRow key={visit.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {format(visitDate, "MMM dd, yyyy")}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {format(visitDate, "h:mm a")}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {contact?.address || "Unknown Address"}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                              contact?.status === "converted" ? "bg-green-100 text-green-800" :
+                              contact?.status === "not_interested" ? "bg-red-100 text-red-800" :
+                              contact?.status === "appointment_scheduled" ? "bg-blue-100 text-blue-800" :
+                              "bg-gray-100 text-gray-800"
+                            }`}>
+                              {contact?.status?.replace(/_/g, ' ') || "Unknown"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {visit.notes || "No notes"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  
+                  {visits.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No activity recorded yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

@@ -446,16 +446,68 @@ export default function Customize() {
               <div className="space-y-4">
                 <Label>Appointment Types</Label>
                 <div className="space-y-2">
-                  {appointmentTypes.map(type => (
+                  {appointmentTypes.map((type, index) => (
                     <div key={type} className="flex items-center justify-between p-2 border rounded">
-                      <span>{type}</span>
-                      <Button
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => setAppointmentTypes(appointmentTypes.filter(t => t !== type))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {editingAppointmentType && editingAppointmentType.index === index ? (
+                        <Input 
+                          value={editingAppointmentType.value}
+                          onChange={(e) => setEditingAppointmentType({
+                            index,
+                            value: e.target.value
+                          })}
+                          autoFocus
+                          className="flex-1 mr-2"
+                        />
+                      ) : (
+                        <span>{type}</span>
+                      )}
+                      
+                      <div className="flex space-x-1">
+                        {editingAppointmentType && editingAppointmentType.index === index ? (
+                          <>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                const newTypes = [...appointmentTypes];
+                                newTypes[index] = editingAppointmentType.value;
+                                setAppointmentTypes(newTypes);
+                                setEditingAppointmentType(null);
+                              }}
+                            >
+                              <Check className="h-4 w-4 text-green-500" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => setEditingAppointmentType(null)}
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setEditingAppointmentType({index, value: type})}
+                              title="Edit"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                            </Button>
+                            <Button
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setAppointmentTypes(appointmentTypes.filter((_, i) => i !== index))}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

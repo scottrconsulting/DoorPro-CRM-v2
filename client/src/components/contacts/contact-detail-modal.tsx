@@ -990,7 +990,7 @@ export default function ContactDetailModal({
                         {tasks
                           .filter(task => !task.completed)
                           .sort((a, b) => 
-                            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+                            (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0)
                           )
                           .map((task) => (
                             <div key={task.id} className="border border-neutral-200 rounded-lg p-3">
@@ -1006,7 +1006,7 @@ export default function ContactDetailModal({
                                     {task.title}
                                   </div>
                                   <div className="text-xs text-neutral-500 mt-1">
-                                    Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
+                                    Due: {task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "No due date"}
                                   </div>
                                 </div>
                                 <Button 
