@@ -34,11 +34,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap");
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [isAddingHouse, setIsAddingHouse] = useState(false);
-  const [newHouseMarker, setNewHouseMarker] = useState<google.maps.Marker | null>(null);
+  const [newHouseMarker, setNewHouseMarker] = useState<any | null>(null);
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
-  const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
+  const [userMarker, setUserMarker] = useState<any | null>(null);
   // User avatar state removed as requested
   const [activeStatus, setActiveStatus] = useState<string>("not_visited");
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
