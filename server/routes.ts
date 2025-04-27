@@ -69,15 +69,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "doorprocrm-secret",
-      resave: false,
-      saveUninitialized: false,
+      resave: true,
+      saveUninitialized: true,
       store: storage.sessionStore,
       proxy: true,
       cookie: { 
-        secure: 'auto',
-        httpOnly: true,
+        secure: false,
+        httpOnly: false,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/'
       },
       rolling: true

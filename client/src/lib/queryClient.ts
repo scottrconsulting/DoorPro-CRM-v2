@@ -19,7 +19,7 @@ export async function apiRequest(
     // This helps avoid gateway errors on some mobile devices
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const hasGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
-    
+
     if (isMobile && hasGatewayError) {
       // Use the Replit preview URL directly
       fullUrl = `https://door-pro-crm.scottrconsult.repl.co${url}`;
@@ -28,7 +28,7 @@ export async function apiRequest(
       fullUrl = `${window.location.origin}${url}`;
     }
   }
-  
+
   try {
     const res = await fetch(fullUrl, {
       method,
@@ -50,7 +50,7 @@ export async function apiRequest(
     });
 
     await throwIfResNotOk(res);
-    
+
     // Return the original response without trying to read its body
     // This allows the caller to decide how to handle the response (as json, text, etc)
     return res;
@@ -66,14 +66,14 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
   return async ({ queryKey }) => {
     // Always use the current browser domain for API requests
     let url = queryKey[0] as string;
-    
+
     // On mobile browsers, we may need to use a specific domain
     // This helps avoid gateway errors on some mobile devices
     if (url.startsWith('/') && typeof window !== 'undefined') {
       // Force use of the Replit preview domain if we're on mobile and experiencing issues
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const hasGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
-      
+
       if (isMobile && hasGatewayError) {
         // Use the Replit preview URL directly
         url = `https://door-pro-crm.scottrconsult.repl.co${url}`;
@@ -82,7 +82,7 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
         url = `${window.location.origin}${url}`;
       }
     }
-    
+
     try {
       console.log(`Fetching from: ${url}`);
       const res = await fetch(url, {
