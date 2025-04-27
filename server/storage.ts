@@ -1192,28 +1192,13 @@ export class DatabaseStorage implements IStorage {
 
   async getCustomizationByUser(userId: number): Promise<Customization | undefined> {
     try {
-      // Since we're having issues with customizations table, let's implement a fallback
-      // that will work until we implement proper DB migration
-      return {
-        id: 0,
-        userId: userId,
-        teamId: null,
-        theme: "light",
-        primaryColor: "blue",
-        pinColors: Object.fromEntries(CONTACT_STATUSES.map((status, i) => [status, PIN_COLORS[i % PIN_COLORS.length]])),
-        quickActions: QUICK_ACTIONS,
-        customStatuses: [],
-        customFields: [],
-        appointmentTypes: ["Sales Presentation", "Product Demo", "Follow-up Meeting", "Installation"],
-        confirmationOptions: {
-          sms: true,
-          email: true,
-          reminderTime: 30
-        },
-        noteTemplates: {},
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as unknown as Customization;
+      const [customization] = await db
+        .select()
+        .from(customizations)
+        .where(eq(customizations.userId, userId))
+        .limit(1);
+      
+      return customization;
     } catch (error) {
       console.error("Error fetching customization by user:", error);
       return undefined;
@@ -1222,28 +1207,13 @@ export class DatabaseStorage implements IStorage {
 
   async getCustomizationByTeam(teamId: number): Promise<Customization | undefined> {
     try {
-      // Since we're having issues with customizations table, let's implement a fallback
-      // that will work until we implement proper DB migration
-      return {
-        id: 0,
-        userId: null,
-        teamId: teamId,
-        theme: "light",
-        primaryColor: "blue",
-        pinColors: Object.fromEntries(CONTACT_STATUSES.map((status, i) => [status, PIN_COLORS[i % PIN_COLORS.length]])),
-        quickActions: QUICK_ACTIONS,
-        customStatuses: [],
-        customFields: [],
-        appointmentTypes: ["Sales Presentation", "Product Demo", "Follow-up Meeting", "Installation"],
-        confirmationOptions: {
-          sms: true,
-          email: true,
-          reminderTime: 30
-        },
-        noteTemplates: {},
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as unknown as Customization;
+      const [customization] = await db
+        .select()
+        .from(customizations)
+        .where(eq(customizations.teamId, teamId))
+        .limit(1);
+      
+      return customization;
     } catch (error) {
       console.error("Error fetching customization by team:", error);
       return undefined;
@@ -1252,13 +1222,13 @@ export class DatabaseStorage implements IStorage {
 
   async createCustomization(insertCustomization: InsertCustomization): Promise<Customization> {
     try {
-      // Since we're having issues with customizations table, let's implement a fallback
-      return {
-        id: 1,
-        ...insertCustomization,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as unknown as Customization;
+      // Actually insert the customization into the database
+      const [customization] = await db
+        .insert(customizations)
+        .values(insertCustomization)
+        .returning();
+      
+      return customization;
     } catch (error) {
       console.error("Error creating customization:", error);
       throw new Error('Failed to create customization');
