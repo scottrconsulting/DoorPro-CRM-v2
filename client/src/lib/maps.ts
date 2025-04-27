@@ -157,33 +157,41 @@ export function getUserAvatarIcon(type: 'male' | 'female'): { url: string; scale
   }
 }
 
+// This function returns the icon for a given status, fixing color consistency issues
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
-  // Default colors - these must match the legend colors in the UI
-  // Valid Google Maps colors are: "red", "blue", "green", "yellow", "purple", "orange", "pink"
+  // Google Maps only supports these specific colors for its marker icons
+  const validGoogleColors = ["red", "blue", "green", "yellow", "purple", "orange", "pink"];
+  
+  // Fixed color mappings - These MUST match the legend colors in the UI (enhanced-map-viewer.tsx)
+  // Updated based on user feedback to fix color mismatches
   const defaultColors: Record<string, string> = {
-    converted: "green",
-    interested: "yellow", 
+    converted: "green",   // Green in legend
+    interested: "yellow", // Yellow in legend
     appointment_scheduled: "orange",
-    call_back: "blue",
+    call_back: "blue",    // Blue in legend
     considering: "purple",
-    not_interested: "red",
-    not_visited: "blue",
-    no_soliciting: "purple"
+    not_interested: "red", // Red in legend
+    not_visited: "blue",   // Blue in legend
+    no_soliciting: "purple" // Purple in legend
   };
-
-  // Map any custom colors from settings to the closest Google Maps colors
-  // This ensures colors in settings will work with Google Maps API
-  function mapToGoogleColor(color: string): string {
-    // Google Maps only supports these specific colors
-    const validGoogleColors = ["red", "blue", "green", "yellow", "purple", "orange", "pink"];
-    
-    // If the color is already a valid Google Maps color, use it
-    if (validGoogleColors.includes(color.toLowerCase())) {
-      return color.toLowerCase();
-    }
-    
-    // Otherwise map common color names to Google Maps colors
+  
+  // Get color from pin customization if available, otherwise use default
+  let colorName = "blue"; // Default fallback
+  
+  // First check for customized colors
+  if (pinColors && pinColors[status]) {
+    colorName = pinColors[status].toLowerCase();
+  } 
+  // Otherwise use our predetermined defaults
+  else if (defaultColors[status]) {
+    colorName = defaultColors[status];
+  }
+  
+  // Ensure we're using a valid Google Maps color
+  if (!validGoogleColors.includes(colorName)) {
+    // Map to closest available color if not a valid Google marker color
     const colorMap: Record<string, string> = {
+      // Common color names mapped to Google's limited palette
       "teal": "green",
       "lime": "green",
       "aqua": "blue",
@@ -198,19 +206,16 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
       "salmon": "red"
     };
     
-    return colorMap[color.toLowerCase()] || "blue"; // Default to blue if no match
+    colorName = colorMap[colorName] || "blue"; // Default to blue if no match
   }
-
-  // Use customization colors if available, otherwise fall back to defaults
-  let color = defaultColors[status] || "blue";
   
-  if (pinColors && pinColors[status]) {
-    // Map any custom color from settings to a valid Google Maps color
-    color = mapToGoogleColor(pinColors[status]);
+  // Ensure the color is one of the valid Google marker colors
+  if (!validGoogleColors.includes(colorName)) {
+    colorName = "blue"; // Final safety fallback
   }
   
   return {
-    url: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+    url: `https://maps.google.com/mapfiles/ms/icons/${colorName}-dot.png`,
     scaledSize: { width: 32, height: 32 },
   };
 }

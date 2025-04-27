@@ -707,8 +707,23 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   };
   
   // Set active status for next pin
+  // This function manages setting the active status for pin creation
+  // Fixed to be consistent across all status types, especially for call_back
   const handleSetActiveStatus = (status: string) => {
+    // Set the active status for new pins
     setActiveStatus(status);
+    
+    // Clear any existing form data or dialogs to ensure consistent behavior
+    // This prevents call_back from behaving differently than other statuses
+    if (showNewContactDialog) {
+      setShowNewContactDialog(false);
+    }
+    
+    if (newHouseMarker) {
+      newHouseMarker.setMap(null);
+      setNewHouseMarker(null);
+    }
+    
     toast({
       title: "Pin type selected",
       description: `Next pin will be marked as "${status.replace(/_/g, ' ')}"`,
