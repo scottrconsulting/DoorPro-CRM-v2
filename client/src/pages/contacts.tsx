@@ -392,6 +392,7 @@ export default function Contacts() {
                       )}
                     </div>
                   </th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-600">City/State</th>
                   <th className="px-4 py-2 text-left font-medium text-neutral-600">Contact Info</th>
                   <th className="px-4 py-2 text-left font-medium text-neutral-600">
                     <div 
@@ -435,6 +436,16 @@ export default function Contacts() {
                           <span className="text-xs text-orange-500">Not on map</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-2 text-neutral-600">
+                      {contact.city || contact.state ? (
+                        <div className="flex flex-col">
+                          {contact.city && <span className="text-sm">{contact.city}</span>}
+                          {contact.state && <span className="text-xs text-neutral-500">{contact.state}{contact.zipCode ? ` ${contact.zipCode}` : ''}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-neutral-400">No location data</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-neutral-600">
                       {contact.phone || contact.email ? (
@@ -503,14 +514,58 @@ export default function Contacts() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Street Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="123 Main St, City, State, Zip" {...field} />
+                      <Input placeholder="123 Main St" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input placeholder="State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zip Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Zip Code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
