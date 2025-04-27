@@ -700,7 +700,7 @@ export default function ContactDetailModal({
           <DialogTitle>Contact Details</DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 p-4 pb-20">
+        <div className="overflow-y-auto flex-1 p-4 pb-10">
           <div className="flex flex-col md:flex-row">
             <div className="md:w-1/3 mb-4 md:mb-0">
               <div className="bg-neutral-100 p-4 rounded-lg">
@@ -783,7 +783,7 @@ export default function ContactDetailModal({
                     </div>
                     <div className="border border-neutral-200 rounded-lg p-3">
                       <Textarea
-                        className="w-full"
+                        className="w-full min-h-[100px] resize-y"
                         rows={4}
                         placeholder="Add notes about this contact..."
                         value={note}
