@@ -145,7 +145,7 @@ useEffect(() => {
       // Initialize status labels for default statuses
       const initialStatusLabels: Record<string, string> = {};
       CONTACT_STATUSES.forEach(status => {
-        initialStatusLabels[status] = customization.statusLabels?.[status] || status.replace(/_/g, ' ');
+        initialStatusLabels[status] = customization.statusLabels?.[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
       });
       setStatusLabels(initialStatusLabels);
       
