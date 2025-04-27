@@ -80,8 +80,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (user.email === 'scottrconsulting@gmail.com' && user.username === 'admin') {
           console.log("Admin user detected, doing special password check");
           
-          // For admin, allow either the original password or the hashed version
-          if (user.password === 'password' || (user.password.includes(':') && verifyPassword(user.password, password))) {
+          // For admin, check password
+          if (password === 'password' || (user.password.includes(':') && verifyPassword(user.password, password))) {
             console.log("Admin password verified successfully");
             return done(null, user);
           }
