@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { geocodeAddress } from "@/lib/maps";
+import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { 
   Contact, 
   Visit, 
@@ -589,71 +590,71 @@ export default function ContactDetailModal({
 
   // Generate status badge
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { bg: string; text: string; label: string }> = {
-      interested: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        label: "Interested",
-      },
-      not_interested: {
-        bg: "bg-red-100",
-        text: "text-red-800",
-        label: "Not interested",
-      },
-      converted: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Converted",
-      },
-      considering: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Considering",
-      },
+    // Format status for display
+    const formatStatusLabel = (status: string) => {
+      return status.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
     };
-
-    const { bg, text, label } = config[status] || {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
-      label: status,
+    
+    // Status to color mapping
+    const getBadgeColors = (status: string) => {
+      const mapping: Record<string, { bg: string; text: string }> = {
+        interested: { bg: "bg-green-100", text: "text-green-800" },
+        not_interested: { bg: "bg-red-100", text: "text-red-800" },
+        converted: { bg: "bg-blue-100", text: "text-blue-800" },
+        considering: { bg: "bg-yellow-100", text: "text-yellow-800" },
+        call_back: { bg: "bg-purple-100", text: "text-purple-800" },
+        appointment_scheduled: { bg: "bg-orange-100", text: "text-orange-800" },
+        not_visited: { bg: "bg-blue-100", text: "text-blue-800" },
+        no_soliciting: { bg: "bg-gray-100", text: "text-gray-800" },
+      };
+      
+      return mapping[status] || { bg: "bg-gray-100", text: "text-gray-800" };
     };
-
+    
+    const { bg, text } = getBadgeColors(status);
+    const displayLabel = formatStatusLabel(status);
+    
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
-        {label}
+        {displayLabel}
       </span>
     );
   };
 
   // Get visit type badge
   const getVisitTypeBadge = (type: string) => {
-    const config: Record<string, { bg: string; text: string; label: string }> = {
-      initial: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Initial Visit",
-      },
-      follow_up: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        label: "Follow-up",
-      },
-      note: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Note",
-      },
+    // Format type for display
+    const formatTypeLabel = (type: string) => {
+      const customLabels: Record<string, string> = {
+        initial: "Initial Visit",
+        follow_up: "Follow-up",
+        note: "Note",
+      };
+      
+      return customLabels[type] || type.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
     };
-
-    const { bg, text, label } = config[type] || {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
-      label: type,
+    
+    // Type to color mapping
+    const getBadgeColors = (type: string) => {
+      const mapping: Record<string, { bg: string; text: string }> = {
+        initial: { bg: "bg-blue-100", text: "text-blue-800" },
+        follow_up: { bg: "bg-green-100", text: "text-green-800" },
+        note: { bg: "bg-yellow-100", text: "text-yellow-800" },
+      };
+      
+      return mapping[type] || { bg: "bg-gray-100", text: "text-gray-800" };
     };
+    
+    const { bg, text } = getBadgeColors(type);
+    const displayLabel = formatTypeLabel(type);
 
     return (
       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
-        {label}
+        {displayLabel}
       </span>
     );
   };

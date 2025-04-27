@@ -166,7 +166,7 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
   // The keys here are status values stored in the database, values are Google marker colors
   const defaultColors: Record<string, string> = {
     converted: "green",             // Green button in legend
-    interested: "green",            // Green button in legend (changed from yellow)
+    interested: "yellow",           // Yellow button in legend
     appointment_scheduled: "orange", // Orange button in legend
     call_back: "blue",              // Blue button in legend
     considering: "purple",          // Purple when needed
