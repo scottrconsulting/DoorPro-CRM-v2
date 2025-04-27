@@ -44,11 +44,7 @@ export default function Dashboard() {
     contact => contact.status === "interested" || contact.status === "considering"
   );
 
-  // Calculate territory coverage (this would be more complex in a real app)
-  const territoryCoverage = Math.min(
-    Math.round((contacts.length / (contacts.length + 10)) * 100),
-    100
-  );
+  // Removed territory coverage calculation as it wasn't reflecting real stats
 
   const handleContactSelect = (contactId: number) => {
     setSelectedContactId(contactId);
@@ -67,11 +63,6 @@ export default function Dashboard() {
           <Link href="/contacts">
             <Button variant="outline" className="flex items-center">
               <span className="material-icons text-sm mr-1">add</span> Add Contact
-            </Button>
-          </Link>
-          <Link href="/schedule">
-            <Button className="flex items-center">
-              <span className="material-icons text-sm mr-1">navigation</span> Start Route
             </Button>
           </Link>
         </div>
@@ -115,16 +106,7 @@ export default function Dashboard() {
           }}
         />
         
-        <StatCard
-          title="Territory"
-          value={`${territoryCoverage}%`}
-          icon="location_on"
-          iconBgColor="bg-red-100"
-          trend={{
-            value: "",
-            label: "Coverage to date"
-          }}
-        />
+        {/* Territory stat card removed as requested */}
       </div>
 
       {/* Map Section - Enhanced with ability to click on houses */}
