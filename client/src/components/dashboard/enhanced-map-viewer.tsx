@@ -579,7 +579,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("interested")} mr-1`}
                 style={getColorStyle("interested")}
               />
-              {customization?.statusLabels?.interested || "Interested"}
+              {getStatusLabel("interested")}
             </Button>
             
             <Button 
@@ -592,7 +592,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("not_interested")} mr-1`}
                 style={getColorStyle("not_interested")}
               />
-              {customization?.statusLabels?.not_interested || "Not Interested"}
+              {getStatusLabel("not_interested")}
             </Button>
             
             <Button 
@@ -605,7 +605,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("call_back")} mr-1`}
                 style={getColorStyle("call_back")}
               />
-              {customization?.statusLabels?.call_back || "Call Back"}
+              {getStatusLabel("call_back")}
             </Button>
             
             <Button 
@@ -618,7 +618,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("appointment_scheduled")} mr-1`}
                 style={getColorStyle("appointment_scheduled")}
               />
-              {customization?.statusLabels?.appointment_scheduled || "Appointment"}
+              {getStatusLabel("appointment_scheduled")}
             </Button>
             
             <Button 
@@ -631,7 +631,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("converted")} mr-1`}
                 style={getColorStyle("converted")}
               />
-              {customization?.statusLabels?.converted || "Converted"}
+              {getStatusLabel("converted")}
             </Button>
             
             <Button 
@@ -644,7 +644,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 className={`w-2 h-2 rounded-full ${getStatusColor("no_soliciting")} mr-1`}
                 style={getColorStyle("no_soliciting")}
               />
-              {customization?.statusLabels?.no_soliciting || "No Solicit"}
+              {getStatusLabel("no_soliciting")}
             </Button>
           </>
         )}
