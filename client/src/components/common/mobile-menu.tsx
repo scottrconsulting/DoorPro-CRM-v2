@@ -17,16 +17,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const [location] = useLocation();
   const queryClient = useQueryClient();
 
-  // Force pro access for admin users
-  useEffect(() => {
-    if (user?.role === "admin") {
-      queryClient.setQueryData(["/api/auth/user"], (old: any) => ({
-        ...old,
-        user: { ...old.user, role: "admin" }
-      }));
-    }
-  }, [user, queryClient]);
-
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       logout();
@@ -207,7 +197,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             >
               <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
               <span>Customize</span>
-              {user?.role === "free" && (
+              {user?.role === UserRole.FREE && (
                 <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
               )}
             </Link>
