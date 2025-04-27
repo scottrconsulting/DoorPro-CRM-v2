@@ -185,23 +185,45 @@ export default function Territories() {
   useEffect(() => {
     if (!createMapIsLoaded || !createMap || !window.google || !isCreateDialogOpen) return;
     
-    if (window.google.maps.drawing) {
-      const manager = new window.google.maps.drawing.DrawingManager({
-        drawingMode: null,
-        drawingControl: true,
-        drawingControlOptions: {
-          position: google.maps.ControlPosition.TOP_CENTER,
-          drawingModes: [google.maps.drawing.OverlayType.POLYGON],
-        },
-        polygonOptions: {
-          fillColor: "#3B82F6",
-          fillOpacity: 0.3,
-          strokeColor: "#2563EB",
-          strokeWeight: 2,
-          editable: true,
-          zIndex: 1,
-        },
-      });
+    // Load drawing library if not already loaded
+    if (!window.google.maps.drawing) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=drawing&callback=initDrawingManager`;
+      script.async = true;
+      script.defer = true;
+      
+      // Define callback to initialize drawing manager
+      window.initDrawingManager = () => {
+        setupDrawingManager();
+      };
+      
+      document.head.appendChild(script);
+      return;
+    }
+    
+    setupDrawingManager();
+  }, [createMap, createMapIsLoaded, isCreateDialogOpen]);
+  
+  // Setup drawing manager as a separate function
+  const setupDrawingManager = () => {
+    if (!createMap || !window.google || !window.google.maps.drawing) return;
+    
+    const manager = new window.google.maps.drawing.DrawingManager({
+      drawingMode: google.maps.drawing.OverlayType.POLYGON,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [google.maps.drawing.OverlayType.POLYGON],
+      },
+      polygonOptions: {
+        fillColor: "#3B82F6",
+        fillOpacity: 0.3,
+        strokeColor: "#2563EB",
+        strokeWeight: 2,
+        editable: true,
+        zIndex: 1,
+      },
+    });
 
       manager.setMap(createMap);
       setCreateDrawingManager(manager);
@@ -215,14 +237,7 @@ export default function Territories() {
         setDrawingPoints(points);
         manager.setDrawingMode(null);
       });
-      
-      return () => {
-        if (manager) {
-          manager.setMap(null);
-        }
-      };
-    }
-  }, [createMap, createMapIsLoaded, isCreateDialogOpen]);
+  };
 
   // Toggle drawing mode
   const toggleDrawingMode = () => {

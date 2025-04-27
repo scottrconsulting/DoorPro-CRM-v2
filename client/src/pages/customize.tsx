@@ -100,6 +100,8 @@ export default function Customize() {
   const [customStatuses, setCustomStatuses] = useState<string[]>([]);
   const [quickActions, setQuickActions] = useState<string[]>([]);
   const [appointmentTypes, setAppointmentTypes] = useState<string[]>([]);
+  const [statusLabels, setStatusLabels] = useState<Record<string, string>>({});
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
   
   // Set initial values when data is loaded
   useEffect(() => {
@@ -108,6 +110,13 @@ export default function Customize() {
       setCustomStatuses(customization.customStatuses || []);
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
+      
+      // Initialize status labels for default statuses
+      const initialStatusLabels: Record<string, string> = {};
+      CONTACT_STATUSES.forEach(status => {
+        initialStatusLabels[status] = customization.statusLabels?.[status] || status.replace(/_/g, ' ');
+      });
+      setStatusLabels(initialStatusLabels);
       
       if (customization.confirmationOptions) {
         setSmsEnabled(customization.confirmationOptions.sms);
