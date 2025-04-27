@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useForm } from "react-hook-form";
@@ -23,11 +23,12 @@ export default function DirectLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // If already authenticated, redirect to dashboard
-  if (isAuthenticated && !isLoading) {
-    navigate("/");
-    return null;
-  }
+  // Use useEffect for redirection to avoid React warnings
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

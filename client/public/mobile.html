@@ -1,112 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DoorPro CRM - Mobile Access</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      align-items: center;
-      justify-content: center;
-    }
-    .container {
-      max-width: 90%;
-      width: 480px;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .card {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-    h1 {
-      color: #0f766e;
-      margin-top: 0;
-      text-align: center;
-      font-size: 24px;
-    }
-    p {
-      color: #555;
-      line-height: 1.5;
-      margin-bottom: 20px;
-    }
-    .btn {
-      display: inline-block;
-      background-color: #0f766e;
-      color: white;
-      font-weight: 500;
-      padding: 12px 20px;
-      border-radius: 6px;
-      text-decoration: none;
-      text-align: center;
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-    .btn-outline {
-      background-color: transparent;
-      color: #0f766e;
-      border: 1px solid #0f766e;
-    }
-    .footer {
-      text-align: center;
-      color: #888;
-      font-size: 14px;
-      margin-top: 20px;
-    }
-    .credentials {
-      background-color: #f7f7f7;
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 16px;
-      font-family: monospace;
-      font-size: 14px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoorPro CRM - Mobile Access</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+            color: #374151;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-top: 40px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        .description {
+            color: #6b7280;
+            font-size: 16px;
+        }
+        .button {
+            display: block;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: none;
+            width: 100%;
+            margin-top: 24px;
+        }
+        .button:hover {
+            background-color: #1d4ed8;
+        }
+        .note {
+            margin-top: 24px;
+            padding: 16px;
+            background-color: #eff6ff;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+        .option {
+            margin-top: 16px;
+            text-align: center;
+        }
+        .link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>DoorPro CRM</h1>
-
-    <div class="card">
-      <h2>Mobile Access Portal</h2>
-      <p>Due to technical limitations with some mobile browsers, please use one of these options to access your DoorPro CRM account:</p>
-      
-      <div style="margin-bottom: 16px;">
-        <a href="https://door-pro-crm.scottrconsult.repl.co" class="btn">Open Full App in Preview Mode</a>
-        <p style="font-size: 14px; color: #666; margin-top: 4px;">Recommended option that works on all devices</p>
-      </div>
-      
-      <div>
-        <a href="https://replit.com/@ScottRConsult/door-pro-crm" class="btn btn-outline">View in Replit Directly</a>
-        <p style="font-size: 14px; color: #666; margin-top: 4px;">Alternative access through the Replit platform</p>
-      </div>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="title">DoorPro CRM</div>
+                <div class="description">Mobile Access Portal</div>
+            </div>
+            
+            <p>Welcome to the DoorPro CRM mobile access page. We've created special login options to ensure reliable access across all devices and browsers.</p>
+            
+            <a href="/direct-login" class="button">Login with Token Authentication</a>
+            
+            <div class="note">
+                <strong>Recommended for external browsers:</strong> Our token-based login bypasses cookies completely, 
+                giving you the most reliable cross-browser experience.
+            </div>
+            
+            <div class="option">
+                <p>Prefer the standard login?</p>
+                <a href="/login" class="link">Go to standard login</a>
+            </div>
+        </div>
     </div>
-
-    <div class="card">
-      <h2>Admin Login Credentials</h2>
-      <p>For testing and demonstration purposes, you can use these credentials:</p>
-      <div class="credentials">
-        <div><strong>Username:</strong> admin</div>
-        <div><strong>Password:</strong> password</div>
-        <div><strong>Email:</strong> scottrconsulting@gmail.com</div>
-      </div>
-    </div>
-
-    <div class="footer">
-      &copy; 2025 DoorPro CRM. All rights reserved.
-    </div>
-  </div>
 </body>
 </html>
