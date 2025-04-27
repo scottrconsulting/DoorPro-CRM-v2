@@ -135,6 +135,9 @@ export default function ChatPage() {
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
   const [isAddParticipantOpen, setIsAddParticipantOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
+  const [enableNotifications, setEnableNotifications] = useState(true);
+  const [notificationTarget, setNotificationTarget] = useState<"all" | "mentions" | "urgent" | "none">("all");
 
   // Form for creating a new conversation
   const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
@@ -189,10 +192,25 @@ export default function ChatPage() {
       const res = await apiRequest("POST", "/api/chat/conversations", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newConversation) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
       setIsNewConversationOpen(false);
       newConversationForm.reset();
+      
+      // Add selected participants if any
+      if (selectedParticipants.length > 0) {
+        selectedParticipants.forEach(userId => {
+          addParticipantMutation.mutate({
+            conversationId: newConversation.id,
+            userId,
+            isAdmin: false
+          });
+        });
+        
+        // Reset selected participants
+        setSelectedParticipants([]);
+      }
+      
       toast({
         title: "Conversation created",
         description: "Your new conversation has been created successfully.",
@@ -381,6 +399,15 @@ export default function ChatPage() {
     deleteMessageMutation.mutate(messageId);
   };
 
+  // Handle toggling a participant in the selection list
+  const toggleParticipant = (userId: number) => {
+    setSelectedParticipants(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    );
+  };
+
   // Filter conversations by search term
   const filteredConversations = conversations?.filter(
     (conversation) =>
@@ -392,15 +419,22 @@ export default function ChatPage() {
     (conversation) => conversation.id === selectedConversation
   );
 
-  // Get participants for the conversation sidebar
-  const participantsWithoutCurrentUser = participants?.filter(
-    (participant) => participant.userId !== user?.id
-  );
+  // Separate conversations into direct messages and group chats
+  const directMessages = filteredConversations?.filter(c => 
+    !c.isTeamChannel && participants?.filter(p => p.conversationId === c.id)?.length === 2
+  ) || [];
+  
+  const groupChats = filteredConversations?.filter(c => 
+    !c.isTeamChannel && (!participants?.filter(p => p.conversationId === c.id) || 
+    participants?.filter(p => p.conversationId === c.id)?.length > 2)
+  ) || [];
+  
+  const teamChannels = filteredConversations?.filter(c => c.isTeamChannel) || [];
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Conversations List */}
+        {/* Conversations Sidebar - Slack-like */}
         <div className="w-full md:w-80 border-r flex flex-col md:h-full h-auto">
           <div className="p-4 border-b">
             <div className="flex justify-between items-center mb-4">
@@ -418,9 +452,12 @@ export default function ChatPage() {
                       New
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Create New Conversation</DialogTitle>
+                      <DialogDescription>
+                        Create a new chat and add participants
+                      </DialogDescription>
                     </DialogHeader>
                     <Form {...newConversationForm}>
                       <form
@@ -440,6 +477,45 @@ export default function ChatPage() {
                             </FormItem>
                           )}
                         />
+                        
+                        <div className="space-y-2">
+                          <FormLabel>Select Participants</FormLabel>
+                          <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
+                            {teamMembers?.filter(m => m.id !== user?.id).map((member) => (
+                              <div key={member.id} className="flex items-center space-x-2 py-1">
+                                <Checkbox 
+                                  id={`member-${member.id}`} 
+                                  checked={selectedParticipants.includes(member.id)}
+                                  onCheckedChange={() => toggleParticipant(member.id)}
+                                />
+                                <label 
+                                  htmlFor={`member-${member.id}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {member.fullName}
+                                </label>
+                              </div>
+                            ))}
+                            {(!teamMembers || teamMembers.length <= 1) && (
+                              <p className="text-sm text-muted-foreground">No other team members available</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="enableNotifications" 
+                            checked={enableNotifications}
+                            onCheckedChange={(checked) => setEnableNotifications(!!checked)}
+                          />
+                          <label 
+                            htmlFor="enableNotifications"
+                            className="text-sm font-medium leading-none"
+                          >
+                            Enable notifications for this conversation
+                          </label>
+                        </div>
+                        
                         <DialogFooter>
                           <Button type="submit" disabled={createConversationMutation.isPending}>
                             {createConversationMutation.isPending && (
@@ -457,7 +533,7 @@ export default function ChatPage() {
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search conversations..."
+                placeholder="Search messages..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -465,58 +541,108 @@ export default function ChatPage() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto">
+          <ScrollArea className="flex-1">
             {conversationsLoading ? (
               <div className="flex justify-center items-center h-32">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : filteredConversations && filteredConversations.length > 0 ? (
-              <div className="divide-y">
-                {filteredConversations.map((conversation) => (
-                  <button
-                    key={conversation.id}
-                    className={`w-full text-left px-4 py-3 hover:bg-accent/50 transition-colors ${
-                      selectedConversation === conversation.id ? "bg-accent" : ""
-                    }`}
-                    onClick={() => setSelectedConversation(conversation.id)}
-                  >
-                    <div className="flex items-start">
-                      <Avatar className="h-10 w-10 mr-3">
-                        <AvatarFallback>
-                          {conversation.name
-                            ? conversation.name.substring(0, 2).toUpperCase()
-                            : "CH"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-semibold truncate">
-                            {conversation.name || "Unnamed Conversation"}
-                          </h3>
-                          {conversation.isTeamChannel && (
-                            <span className="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
-                              Team
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {conversation.updatedAt
-                            ? new Date(conversation.updatedAt).toLocaleDateString()
-                            : "No messages yet"}
-                        </p>
-                      </div>
+              <div className="py-2">
+                {/* Direct Messages Section */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Direct Messages
+                    </button>
+                  </div>
+                  {directMessages.length > 0 ? (
+                    <div>
+                      {directMessages.map((conversation) => (
+                        <button
+                          key={conversation.id}
+                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                          }`}
+                          onClick={() => setSelectedConversation(conversation.id)}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="truncate">{conversation.name || "Unnamed Conversation"}</span>
+                        </button>
+                      ))}
                     </div>
-                  </button>
-                ))}
+                  ) : (
+                    <p className="px-4 py-2 text-sm text-muted-foreground">No direct messages</p>
+                  )}
+                </div>
+                
+                {/* Group Chats Section */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Group Chats
+                    </button>
+                  </div>
+                  {groupChats.length > 0 ? (
+                    <div>
+                      {groupChats.map((conversation) => (
+                        <button
+                          key={conversation.id}
+                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                          }`}
+                          onClick={() => setSelectedConversation(conversation.id)}
+                        >
+                          <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="truncate">{conversation.name || "Unnamed Group"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-4 py-2 text-sm text-muted-foreground">No group chats</p>
+                  )}
+                </div>
+                
+                {/* Team Channels Section (if any) */}
+                {teamChannels.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between px-4 py-2">
+                      <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        Team Channels
+                      </button>
+                    </div>
+                    <div>
+                      {teamChannels.map((conversation) => (
+                        <button
+                          key={conversation.id}
+                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                            selectedConversation === conversation.id ? "bg-accent text-accent-foreground" : ""
+                          }`}
+                          onClick={() => setSelectedConversation(conversation.id)}
+                        >
+                          <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="text-center p-4 text-muted-foreground">
-                {searchTerm
-                  ? "No conversations match your search"
-                  : "No conversations yet. Create one to get started."}
+              <div className="p-4 text-center text-muted-foreground">
+                <p>No conversations found.</p>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto mt-2"
+                  onClick={() => setIsNewConversationOpen(true)}
+                >
+                  Create a new conversation
+                </Button>
               </div>
             )}
-          </div>
+          </ScrollArea>
         </div>
 
         {/* Messages Area */}
@@ -558,11 +684,47 @@ export default function ChatPage() {
                     </p>
                   </div>
                 </div>
-                <div>
+                <div className="flex items-center space-x-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Bell className="h-4 w-4 mr-1" />
+                        Notifications
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuCheckboxItem 
+                        checked={notificationTarget === "all"}
+                        onCheckedChange={() => setNotificationTarget("all")}
+                      >
+                        All messages
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem 
+                        checked={notificationTarget === "mentions"}
+                        onCheckedChange={() => setNotificationTarget("mentions")}
+                      >
+                        Mentions only
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem 
+                        checked={notificationTarget === "urgent"}
+                        onCheckedChange={() => setNotificationTarget("urgent")}
+                      >
+                        Urgent messages only
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem 
+                        checked={notificationTarget === "none"}
+                        onCheckedChange={() => setNotificationTarget("none")}
+                      >
+                        None
+                      </DropdownMenuCheckboxItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                
                   <Dialog open={isAddParticipantOpen} onOpenChange={setIsAddParticipantOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline">
-                        Add Participant
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add People
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -590,12 +752,16 @@ export default function ChatPage() {
                           </select>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             id="isAdmin"
-                            {...addParticipantForm.register("isAdmin")}
+                            checked={addParticipantForm.watch("isAdmin")}
+                            onCheckedChange={(checked) => 
+                              addParticipantForm.setValue("isAdmin", !!checked)
+                            }
                           />
-                          <label htmlFor="isAdmin">Make admin</label>
+                          <label htmlFor="isAdmin" className="text-sm font-medium leading-none">
+                            Make admin
+                          </label>
                         </div>
                         <DialogFooter>
                           <Button type="submit" disabled={addParticipantMutation.isPending}>
@@ -611,8 +777,8 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* Messages List */}
-              <div className="flex-1 overflow-auto p-4">
+              {/* Messages List with Scroll Area */}
+              <ScrollArea className="flex-1 p-4">
                 {messagesLoading ? (
                   <div className="flex justify-center items-center h-full">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -632,7 +798,7 @@ export default function ChatPage() {
                             }`}
                           >
                             {!isSelf && (
-                              <Avatar className={`h-8 w-8 ${isSelf ? "ml-2" : "mr-2"}`}>
+                              <Avatar className={`h-8 w-8 ${isSelf ? "ml-2" : "mr-2"} flex-shrink-0`}>
                                 <AvatarFallback>
                                   {message.sender?.fullName.substring(0, 2).toUpperCase() || "??"}
                                 </AvatarFallback>
@@ -658,14 +824,17 @@ export default function ChatPage() {
                                     />
                                   </span>
                                 )}
-                                {isSelf && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      Send Push Notification
+                                    </DropdownMenuItem>
+                                    {isSelf && (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -689,9 +858,9 @@ export default function ChatPage() {
                                           </AlertDialogFooter>
                                         </AlertDialogContent>
                                       </AlertDialog>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                               <div
                                 className={`py-2 px-3 rounded-lg ${
@@ -724,7 +893,7 @@ export default function ChatPage() {
                     <p>No messages yet. Be the first to send a message!</p>
                   </div>
                 )}
-              </div>
+              </ScrollArea>
 
               {/* Message Input */}
               <div className="border-t p-4">
@@ -732,7 +901,7 @@ export default function ChatPage() {
                   <div className="flex-1">
                     <Textarea
                       placeholder="Type your message here..."
-                      className="resize-none"
+                      className="resize-none min-h-[80px]"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={(e) => {
@@ -742,19 +911,31 @@ export default function ChatPage() {
                         }
                       }}
                     />
-                    <div className="flex items-center mt-2">
+                    <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           id="urgent"
                           checked={isUrgent}
-                          onChange={(e) => setIsUrgent(e.target.checked)}
-                          className="rounded border-gray-300"
+                          onCheckedChange={(checked) => setIsUrgent(!!checked)}
                         />
-                        <label htmlFor="urgent" className="text-sm">
+                        <label htmlFor="urgent" className="text-sm font-medium leading-none">
                           Mark as urgent
                         </label>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            Push Notifications
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuLabel>Notify</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>Everyone in this chat</DropdownMenuItem>
+                          <DropdownMenuItem>Specific people...</DropdownMenuItem>
+                          <DropdownMenuItem>No one</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <Button
@@ -777,7 +958,7 @@ export default function ChatPage() {
 
         {/* Participants Sidebar (only shown when a conversation is selected) */}
         {selectedConversation && (
-          <div className="w-64 border-l">
+          <div className="w-64 border-l hidden md:block">
             <div className="p-4 border-b">
               <h3 className="font-semibold mb-2">Participants</h3>
               {participantsLoading ? (
@@ -785,54 +966,56 @@ export default function ChatPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {participants?.map((participant) => (
-                    <div key={participant.id} className="flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Avatar className="h-6 w-6 mr-2">
-                          <AvatarFallback>
-                            {participant.user?.fullName.substring(0, 2).toUpperCase() || "??"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm truncate max-w-[120px]">
-                          {participant.user?.fullName}
-                          {participant.isAdmin && (
-                            <span className="text-xs ml-1 text-muted-foreground">(Admin)</span>
-                          )}
-                        </span>
+                <ScrollArea className="h-[calc(100vh-12rem)]">
+                  <div className="space-y-3 pr-3">
+                    {participants?.map((participant) => (
+                      <div key={participant.id} className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <Avatar className="h-6 w-6 mr-2">
+                            <AvatarFallback>
+                              {participant.user?.fullName.substring(0, 2).toUpperCase() || "??"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate max-w-[120px]">
+                            {participant.user?.fullName}
+                            {participant.isAdmin && (
+                              <span className="text-xs ml-1 text-muted-foreground">(Admin)</span>
+                            )}
+                          </span>
+                        </div>
+                        {/* Only admins or the current user (for themselves) can remove participants */}
+                        {(participants?.some(
+                          (p) => p.userId === user?.id && p.isAdmin
+                        ) ||
+                          user?.id === participant.userId) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remove Participant</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to remove this participant from the conversation?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleRemoveParticipant(participant.userId)}
+                                >
+                                  Remove
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
-                      {/* Only admins or the current user (for themselves) can remove participants */}
-                      {(participants?.some(
-                        (p) => p.userId === user?.id && p.isAdmin
-                      ) ||
-                        user?.id === participant.userId) && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove Participant</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to remove this participant from the conversation?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleRemoveParticipant(participant.userId)}
-                              >
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </div>
           </div>
