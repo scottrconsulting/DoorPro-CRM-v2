@@ -111,6 +111,9 @@ export function useDirectAuth() {
         title: 'Logged out',
         description: 'You have been successfully logged out.',
       });
+      
+      // Force hard redirect to login page to avoid caching issues
+      window.location.href = '/login';
     }
   };
 
