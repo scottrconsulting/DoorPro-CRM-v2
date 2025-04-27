@@ -25,11 +25,11 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-neutral-200 md:hidden z-10">
+      <header className="fixed top-0 left-0 right-0 bg-background shadow-sm border-b border-border md:hidden z-10">
         <div className="flex items-center justify-between px-4 py-2">
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-full hover:bg-neutral-100"
+            className="p-2 rounded-full hover:bg-muted text-foreground"
             aria-label="Menu"
           >
             <span className="material-icons">menu</span>
