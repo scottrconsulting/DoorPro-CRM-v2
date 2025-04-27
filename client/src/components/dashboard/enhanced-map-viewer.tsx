@@ -4,7 +4,7 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Contact, InsertContact } from "@shared/schema";
+import { Contact, InsertContact, InsertVisit } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -412,11 +412,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               c.types.includes('route'))?.short_name || '';
             const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
             
-            // Create the contact with minimal info
+            // Extract city, state and zip code for the contact data
+            const city = results[0].address_components.find((c: any) => 
+              c.types.includes('locality'))?.short_name || '';
+            const state = results[0].address_components.find((c: any) => 
+              c.types.includes('administrative_area_level_1'))?.short_name || '';
+            const zipCode = results[0].address_components.find((c: any) => 
+              c.types.includes('postal_code'))?.short_name || '';
+            
+            // Create the contact with enhanced info
             createContactMutation.mutate({
               userId: user?.id || 0,
               fullName: autoName,
               address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
               status: activeStatus,
               latitude: e.latLng.lat().toString(),
               longitude: e.latLng.lng().toString(),
