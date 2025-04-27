@@ -97,13 +97,38 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   });
 
   // Create contact mutation
+  // Create visit mutation
+  const createVisitMutation = useMutation({
+    mutationFn: async (visitData: InsertVisit) => {
+      const res = await apiRequest("POST", "/api/visits", visitData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/visits"] });
+    },
+    onError: (error) => {
+      console.error("Failed to create visit record", error);
+    }
+  });
+
   const createContactMutation = useMutation({
     mutationFn: async (contactData: InsertContact) => {
       const res = await apiRequest("POST", "/api/contacts", contactData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newContact) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      
+      // Create a visit record for the new contact
+      createVisitMutation.mutate({
+        contactId: newContact.id,
+        userId: newContact.userId,
+        visitType: "initial",
+        visitDate: new Date().toISOString(),
+        notes: `Initial contact created with status: ${newContact.status}`,
+        outcome: newContact.status
+      });
+      
       toast({
         title: "Contact added",
         description: "New contact has been successfully added",

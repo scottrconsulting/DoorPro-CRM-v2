@@ -335,15 +335,43 @@ export default function ContactDetailModal({
     },
   });
   
+  // Create visit mutation
+  const createVisitMutation = useMutation({
+    mutationFn: async (visitData: InsertVisit) => {
+      const res = await apiRequest("POST", "/api/visits", visitData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/visits"] });
+    },
+    onError: (error) => {
+      console.error("Failed to create visit record", error);
+    }
+  });
+
   // Update contact mutation
   const updateContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
       const res = await apiRequest("PUT", `/api/contacts/${contactId}`, contactData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedContact) => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      
+      // Create a visit record when a contact is updated
+      if (contact && updatedContact.status !== contact.status) {
+        // Status has changed, log a visit
+        createVisitMutation.mutate({
+          contactId: contactId,
+          userId: contact.userId,
+          visitType: "follow_up",
+          visitDate: new Date().toISOString(),
+          notes: `Status changed from ${contact.status} to ${updatedContact.status}`,
+          outcome: updatedContact.status
+        });
+      }
+      
       setIsEditMode(false);
       toast({
         title: "Contact updated",
