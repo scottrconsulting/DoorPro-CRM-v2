@@ -846,21 +846,32 @@ useEffect(() => {
                         </TableCell>
                         <TableCell>
                           {editingStatus === status ? (
-                            <Input 
-                              value={statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                              onChange={(e) => setStatusLabels({
-                                ...statusLabels,
-                                [status]: e.target.value
-                              })}
-                              autoFocus
-                              className="w-full"
-                            />
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                value={statusLabels[status] !== undefined ? statusLabels[status] : status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                onChange={(e) => setStatusLabels({
+                                  ...statusLabels,
+                                  [status]: e.target.value
+                                })}
+                                placeholder="Enter display label"
+                                autoFocus
+                                className="w-full"
+                              />
+                              <Button
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setEditingStatus(null)}
+                                className="px-2"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
                           ) : (
                             <div 
                               className="px-2 py-1 cursor-pointer hover:bg-slate-50 rounded-md w-fit font-medium"
                               onClick={() => setEditingStatus(status)}
                             >
-                              {statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              {statusLabels[status] !== undefined ? statusLabels[status] : status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                               <span className="ml-2 text-xs text-muted-foreground">(click to edit)</span>
                             </div>
                           )}
@@ -944,23 +955,6 @@ useEffect(() => {
                                 }}
                               >
                                 Custom Color
-                              </Button>
-                            )}
-                            {editingStatus === status ? (
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                onClick={() => setEditingStatus(null)}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                onClick={() => setEditingStatus(status)}
-                              >
-                                <Settings className="h-4 w-4" />
                               </Button>
                             )}
                           </div>

@@ -50,7 +50,7 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
       
       // Create the script element with the recommended loading pattern
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${options.apiKey}&libraries=places,drawing,geometry&callback=initGoogleMaps`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${options.apiKey}&libraries=places,drawing,geometry,marker&callback=initGoogleMaps`;
       script.async = true; // Make sure async is set to true
       
       script.onerror = () => {
@@ -112,15 +112,65 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
     map.panTo(position);
   }, [map]);
 
-  // Add a marker to the map
+  // Add a marker to the map - supports both traditional markers and advanced SVG markers
   const addMarker = useCallback((position: { lat: number; lng: number }, options?: any) => {
     if (!map) return null;
     
-    const marker = new google.maps.Marker({
-      position,
-      map,
-      ...options,
-    });
+    // Check if the icon URL is an SVG data URL (custom colored pin)
+    const useSvgMarker = options?.icon?.url && 
+                         typeof options.icon.url === 'string' && 
+                         options.icon.url.startsWith('data:image/svg+xml');
+    
+    let marker;
+    
+    // Use advanced marker element for SVG markers if available
+    if (useSvgMarker && window.google?.maps?.marker?.AdvancedMarkerElement) {
+      try {
+        // Create an advanced marker with the SVG content
+        const svgContent = decodeURIComponent(options.icon.url.split(',')[1]);
+        
+        // Create a div to hold the SVG content
+        const markerDiv = document.createElement('div');
+        markerDiv.innerHTML = svgContent;
+        markerDiv.style.cursor = 'pointer'; // Make it clickable
+        
+        // Set up the advanced marker
+        marker = new window.google.maps.marker.AdvancedMarkerElement({
+          position,
+          map,
+          content: markerDiv,
+          title: options.title || '',
+        });
+        
+        // Add custom properties for compatibility with standard markers
+        marker.addListener = (event: string, handler: Function) => {
+          markerDiv.addEventListener(event, handler);
+          return { remove: () => markerDiv.removeEventListener(event, handler) };
+        };
+        
+        marker.setMap = (newMap: any) => {
+          // @ts-ignore - property exists on AdvancedMarkerElement
+          marker.map = newMap;
+        };
+        
+        console.log('Created SVG Advanced Marker');
+      } catch (error) {
+        console.error('Failed to create advanced marker, falling back to standard marker', error);
+        // Fall back to standard marker if advanced marker creation fails
+        marker = new google.maps.Marker({
+          position,
+          map,
+          ...options,
+        });
+      }
+    } else {
+      // Use standard marker for non-SVG icons or if advanced markers aren't available
+      marker = new google.maps.Marker({
+        position,
+        map,
+        ...options,
+      });
+    }
     
     markersRef.current.push(marker);
     return marker;

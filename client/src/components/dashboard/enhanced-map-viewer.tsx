@@ -49,8 +49,12 @@ declare global {
         event: {
           removeListener: (listener: any) => void;
         };
+        marker?: {
+          AdvancedMarkerElement?: any;
+        };
       };
     };
+    initGoogleMaps?: () => void;
   }
 }
 
