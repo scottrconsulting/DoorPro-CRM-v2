@@ -745,7 +745,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {/* Display custom statuses from the image */}
-                    <SelectItem value="unknown">{getStatusLabel("unknown")}</SelectItem>
                     <SelectItem value="presented">{getStatusLabel("presented")}</SelectItem>
                     <SelectItem value="sold">{getStatusLabel("sold")}</SelectItem>
                     <SelectItem value="no_soliciting">{getStatusLabel("no_soliciting")}</SelectItem>

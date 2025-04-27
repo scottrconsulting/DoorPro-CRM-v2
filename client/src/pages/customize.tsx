@@ -488,6 +488,7 @@ useEffect(() => {
                   <Button 
                     onClick={handleAddCustomStatus}
                     disabled={!newStatus || (!isPro && customStatuses.length >= 3)}
+                    className="bg-blue-400 hover:bg-blue-500 text-white"
                   >
                     Add
                   </Button>
