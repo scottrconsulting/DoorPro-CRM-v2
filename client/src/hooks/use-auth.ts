@@ -77,7 +77,8 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries();
-      setLocation("/login");
+      // Force hard redirect to login page to avoid caching issues
+      window.location.href = '/direct-login';
     },
   });
 

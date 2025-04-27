@@ -48,7 +48,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     });
     
     if (!isLoading && !isAuthenticated) {
-      navigate("/login");
+      // Use direct navigation to login page to avoid history issues
+      window.location.href = "/login";
     }
   }, [isLoading, isAuthenticated, isAuthAuthenticated, isDirectAuthenticated, navigate]);
   

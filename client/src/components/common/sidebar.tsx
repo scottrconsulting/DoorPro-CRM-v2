@@ -29,6 +29,10 @@ export default function Sidebar() {
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       logout();
+      // Additional fallback redirect to ensure we always go to login page
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 500);
     }
   };
 

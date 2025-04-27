@@ -19,6 +19,10 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     if (window.confirm("Are you sure you want to logout?")) {
       logout();
       onClose();
+      // Additional fallback redirect to ensure we always go to login page
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 500);
     }
   };
 
