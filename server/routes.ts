@@ -44,19 +44,22 @@ import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 import directAuthRouter from './direct-auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add server-side redirect for /login to /direct-login
+  // Special static route for HTML login page outside of Vite/React
+  app.get('/static-login', (req, res) => {
+    console.log('Serving static HTML login page');
+    res.sendFile('login.html', { root: './client/public' });
+  });
+  
+  // Modified login route to use our static HTML page
   app.get('/login', (req, res) => {
-    console.log('Server-side redirect: /login -> /direct-login');
-    
-    // Check if this is a browser request (has Accept header with text/html)
-    const acceptHeader = req.headers.accept || '';
-    if (acceptHeader.includes('text/html')) {
-      // For browsers, serve the redirect HTML page which has meta refresh and JS redirect
-      res.sendFile('login-redirect.html', { root: './client/public' });
-    } else {
-      // For API calls or other requests, use standard redirect
-      res.redirect('/direct-login');
-    }
+    console.log('Login route accessed - serving static login page');
+    res.sendFile('login.html', { root: './client/public' });
+  });
+  
+  // Direct login also uses the static HTML page
+  app.get('/direct-login', (req, res) => {
+    console.log('Direct login route accessed - serving static login page');
+    res.sendFile('login.html', { root: './client/public' });
   });
 
   // Add a CORS header to all responses

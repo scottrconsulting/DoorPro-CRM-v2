@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoorPro CRM Login</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .title {
+      color: #0070f3;
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #666666;
+      font-size: 16px;
+      margin: 0;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333333;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #dddddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #0070f3;
+      box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+    }
+    .button {
+      background-color: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 12px 24px;
+      width: 100%;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .button:hover {
+      background-color: #0060df;
+    }
+    .button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .error {
+      color: #e53e3e;
+      background-color: #fed7d7;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .info-box {
+      background-color: #ebf5ff;
+      border-radius: 4px;
+      padding: 12px;
+      margin-top: 24px;
+    }
+    .info-title {
+      color: #2b6cb0;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      margin-bottom: 4px;
+    }
+    .info-text {
+      color: #3182ce;
+      font-size: 12px;
+      margin: 0;
+    }
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+    }
+    .footer a {
+      color: #0070f3;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    .demo-text {
+      color: #999999;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="header">
+      <h1 class="title">DoorPro CRM</h1>
+      <p class="subtitle">Log in to your account to continue</p>
+    </div>
+    
+    <div id="error-message" class="error" style="display: none;">
+      Authentication failed. Please check your credentials and try again.
+    </div>
+    
+    <form id="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="admin" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+      </div>
+      
+      <button type="submit" class="button" id="login-button">
+        Log in
+      </button>
+    </form>
+    
+    <div class="info-box">
+      <h4 class="info-title">Cross-Platform Access</h4>
+      <p class="info-text">
+        This secure login works across all devices including mobile apps, web browsers, 
+        and desktop applications - ensuring consistent access no matter how you connect.
+      </p>
+    </div>
+    
+    <div class="footer">
+      <a href="/register">Need an account? Register here</a>
+      <p class="demo-text">Demo credentials: admin / password</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginForm = document.getElementById('login-form');
+      const loginButton = document.getElementById('login-button');
+      const errorMessage = document.getElementById('error-message');
+      
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        loginButton.disabled = true;
+        loginButton.textContent = 'Logging in...';
+        errorMessage.style.display = 'none';
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+          // Try standard cookie-based authentication
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+            credentials: 'include'
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            // Success - redirect to dashboard
+            window.location.href = '/';
+          } else {
+            // Try token-based authentication next
+            try {
+              const tokenResponse = await fetch('/api/direct-auth/direct-login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+              });
+              
+              const tokenData = await tokenResponse.json();
+              
+              if (tokenResponse.ok && tokenData.success && tokenData.token) {
+                // Store token and redirect
+                localStorage.setItem('doorpro_auth_token', tokenData.token);
+                window.location.href = '/';
+              } else {
+                // Both authentication methods failed
+                errorMessage.textContent = data.message || 'Authentication failed';
+                errorMessage.style.display = 'block';
+                loginButton.disabled = false;
+                loginButton.textContent = 'Log in';
+              }
+            } catch (tokenError) {
+              console.error('Token auth error:', tokenError);
+              errorMessage.textContent = 'Login failed. Please try again.';
+              errorMessage.style.display = 'block';
+              loginButton.disabled = false;
+              loginButton.textContent = 'Log in';
+            }
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          errorMessage.textContent = 'Connection error. Please try again later.';
+          errorMessage.style.display = 'block';
+          loginButton.disabled = false;
+          loginButton.textContent = 'Log in';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
