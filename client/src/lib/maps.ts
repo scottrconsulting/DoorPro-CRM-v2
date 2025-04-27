@@ -184,7 +184,7 @@ export function createSvgMarker(color: string, label?: string): string {
     </svg>`;
 }
 
-// This function returns the icon for a given status using custom SVG markers for accurate colors
+// This function returns the icon for a given status using Google Maps markers
 export function getMarkerIcon(status: string, pinColors?: Record<string, string>, statusLabels?: Record<string, string>): { url: string; scaledSize: { width: number; height: number } } {
   // Default colors for statuses if no custom color is provided
   const defaultColors: Record<string, string> = {
@@ -215,17 +215,13 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
     color = "#2196f3"; // Default blue
   }
   
-  // Get the proper label for this status (for advanced markers with letters)
-  const label = statusLabels?.[status] || 
-    status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  // For most reliable display, we'll map colors to standard Google marker colors
+  const googleColor = mapHexToGoogleColor(color);
   
-  // Create an SVG marker for true color customization
-  // This ensures all colors including white, black, and any custom color are displayed correctly
-  const svgUrl = createSvgMarker(color, label.charAt(0));
-  
+  // Standard Google Maps markers with limited colors
   return {
-    url: svgUrl,
-    scaledSize: { width: 36, height: 48 },
+    url: `https://maps.google.com/mapfiles/ms/icons/${googleColor}-dot.png`,
+    scaledSize: { width: 32, height: 32 },
   };
 }
 

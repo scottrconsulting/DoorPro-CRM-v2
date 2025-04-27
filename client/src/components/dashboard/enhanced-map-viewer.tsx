@@ -107,6 +107,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const firstHouseRecordedRef = useRef<boolean>(false);
   const sessionsRef = useRef<{startTime: string; duration: number}[]>([]);
   
+  // Set up timer interval
+  useEffect(() => {
+    // Timer update interval - every second
+    const timerInterval = setInterval(() => {
+      if (timerActiveRef.current) {
+        workTimerRef.current += 1;
+        setTimerDisplay(workTimerRef.current);
+      }
+    }, 1000);
+    
+    return () => clearInterval(timerInterval);
+  }, []);
+  
   // For the time display in HH:MM:SS format
   const formattedTime = useMemo(() => {
     const hours = Math.floor(workTimerRef.current / 3600);
