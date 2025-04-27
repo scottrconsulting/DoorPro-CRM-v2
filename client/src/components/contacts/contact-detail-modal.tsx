@@ -358,6 +358,29 @@ export default function ContactDetailModal({
     },
   });
   
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/contacts/${contactId}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact deleted",
+        description: "Contact was successfully deleted",
+      });
+      onClose(); // Close the modal after deletion
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete contact",
+        description: "There was an error deleting the contact",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Initialize edit form when contact data is loaded
   useEffect(() => {
     if (contact) {
@@ -1343,9 +1366,19 @@ export default function ContactDetailModal({
                 <span className="material-icons text-sm mr-1">edit</span>
                 Edit Contact
               </Button>
-              <Button variant="outline" size="sm" className="flex items-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete ${contact.fullName}?`)) {
+                    deleteContactMutation.mutate();
+                  }
+                }}
+                disabled={deleteContactMutation.isPending}
+              >
                 <span className="material-icons text-sm mr-1">delete</span>
-                Delete
+                {deleteContactMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </div>
             <Button onClick={onClose}>Close</Button>

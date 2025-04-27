@@ -2,6 +2,9 @@ export interface IGeocodingResult {
   address: string;
   latitude: string;
   longitude: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 // Geocode an address to get coordinates
