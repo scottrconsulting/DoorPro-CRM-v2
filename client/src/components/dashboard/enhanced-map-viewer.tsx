@@ -407,58 +407,95 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           
           setNewContactForm(newFormData);
           
-          // For quick click, automatically add contact without showing form
+          // For quick click, we need special handling if it's a status that needs scheduling
           if (!isLongClick) {
-            // Auto generate a name based on address if it's a quick click
-            const streetNumber = results[0].address_components.find((c: any) => 
-              c.types.includes('street_number'))?.short_name || '';
-            const street = results[0].address_components.find((c: any) => 
-              c.types.includes('route'))?.short_name || '';
-            const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+            // Check if it's a status that needs scheduling (call_back, appointment_scheduled, interested)
+            const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
             
-            // Extract city, state and zip code for the contact data
-            const city = results[0].address_components.find((c: any) => 
-              c.types.includes('locality'))?.short_name || '';
-            const state = results[0].address_components.find((c: any) => 
-              c.types.includes('administrative_area_level_1'))?.short_name || '';
-            const zipCode = results[0].address_components.find((c: any) => 
-              c.types.includes('postal_code'))?.short_name || '';
-            
-            // Create the contact with enhanced info
-            createContactMutation.mutate({
-              userId: user?.id || 0,
-              fullName: autoName,
-              address: address,
-              city: city,
-              state: state,
-              zipCode: zipCode,
-              status: activeStatus,
-              latitude: e.latLng.lat().toString(),
-              longitude: e.latLng.lng().toString(),
-              notes: `Quick add: ${new Date().toLocaleString()}`
-            });
-            
-            // Start work timer when first contact is added
-            if (!firstHouseRecordedRef.current) {
-              firstHouseRecordedRef.current = true;
-              timerActiveRef.current = true;
+            if (needsScheduling) {
+              // For these statuses, we should always show the dialog instead of quick-adding
+              // Auto generate a name based on address
+              const streetNumber = results[0].address_components.find((c: any) => 
+                c.types.includes('street_number'))?.short_name || '';
+              const street = results[0].address_components.find((c: any) => 
+                c.types.includes('route'))?.short_name || '';
+              const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
               
-              // Add first session to the sessions list
-              sessionsRef.current.push({
-                startTime: new Date().toISOString(),
-                duration: 0
+              // Pre-fill the form with generated data
+              setNewContactForm({
+                ...newContactForm,
+                fullName: autoName,
+                status: activeStatus,
+                // Set default scheduling date to tomorrow
+                scheduleDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
+                // Set default scheduling time to noon
+                scheduleTime: '12:00',
               });
               
+              // Show scheduling fields and form dialog
+              setShowSchedulingFields(true);
+              setShowNewContactDialog(true);
+              
               toast({
-                title: "Work timer started",
-                description: "Timer has started tracking your work session"
+                title: "Schedule required",
+                description: `Please set scheduling details for ${activeStatus.replace(/_/g, ' ')}`,
+              });
+            } else {
+              // For other statuses, continue with quick add
+              // Auto generate a name based on address if it's a quick click
+              const streetNumber = results[0].address_components.find((c: any) => 
+                c.types.includes('street_number'))?.short_name || '';
+              const street = results[0].address_components.find((c: any) => 
+                c.types.includes('route'))?.short_name || '';
+              const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+              
+              // Extract city, state and zip code for the contact data
+              const city = results[0].address_components.find((c: any) => 
+                c.types.includes('locality'))?.short_name || '';
+              const state = results[0].address_components.find((c: any) => 
+                c.types.includes('administrative_area_level_1'))?.short_name || '';
+              const zipCode = results[0].address_components.find((c: any) => 
+                c.types.includes('postal_code'))?.short_name || '';
+              
+              // Create the contact with enhanced info
+              createContactMutation.mutate({
+                userId: user?.id || 0,
+                fullName: autoName,
+                address: address,
+                city: city,
+                state: state,
+                zipCode: zipCode,
+                status: activeStatus,
+                latitude: e.latLng.lat().toString(),
+                longitude: e.latLng.lng().toString(),
+                notes: `Quick add: ${new Date().toLocaleString()}`
+              });
+              
+              // Start work timer when first contact is added
+              if (!firstHouseRecordedRef.current) {
+                firstHouseRecordedRef.current = true;
+                timerActiveRef.current = true;
+                
+                // Add first session to the sessions list
+                sessionsRef.current.push({
+                  startTime: new Date().toISOString(),
+                  duration: 0
+                });
+                
+                toast({
+                  title: "Work timer started",
+                  description: "Timer has started tracking your work session"
+                });
+              }
+              
+              toast({
+                title: "Contact added",
+                description: `Quick-added pin at ${address}`,
               });
             }
             
-            toast({
-              title: "Contact added",
-              description: `Quick-added pin at ${address}`,
-            });
+            // Note: For scheduling statuses, we don't show the "Contact added" toast
+            // as we've already shown the "Schedule required" toast
           } else {
             // Show form dialog for long clicks
             setShowNewContactDialog(true);
