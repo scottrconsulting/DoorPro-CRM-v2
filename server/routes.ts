@@ -44,6 +44,21 @@ import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 import directAuthRouter from './direct-auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add server-side redirect for /login to /direct-login
+  app.get('/login', (req, res) => {
+    console.log('Server-side redirect: /login -> /direct-login');
+    
+    // Check if this is a browser request (has Accept header with text/html)
+    const acceptHeader = req.headers.accept || '';
+    if (acceptHeader.includes('text/html')) {
+      // For browsers, serve the redirect HTML page which has meta refresh and JS redirect
+      res.sendFile('login-redirect.html', { root: './client/public' });
+    } else {
+      // For API calls or other requests, use standard redirect
+      res.redirect('/direct-login');
+    }
+  });
+
   // Add a CORS header to all responses
   app.use((req, res, next) => {
     // Get the origin from the request headers
