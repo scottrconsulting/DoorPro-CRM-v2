@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
@@ -84,6 +84,14 @@ export default function ContactDetailModal({
   const [documentCategory, setDocumentCategory] = useState("general");
   const [documentDescription, setDocumentDescription] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  
+  // Edit contact state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editStatus, setEditStatus] = useState("");
 
   // Fetch contact details
   const { data: contact, isLoading: isLoadingContact } = useQuery<Contact>({
@@ -267,6 +275,41 @@ export default function ContactDetailModal({
       });
     },
   });
+  
+  // Update contact mutation
+  const updateContactMutation = useMutation({
+    mutationFn: async (contactData: Partial<Contact>) => {
+      const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, contactData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      setIsEditMode(false);
+      toast({
+        title: "Contact updated",
+        description: "Contact information was successfully updated",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update contact",
+        description: "There was an error updating the contact",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Initialize edit form when contact data is loaded
+  useEffect(() => {
+    if (contact) {
+      setEditName(contact.fullName);
+      setEditAddress(contact.address);
+      setEditPhone(contact.phone || "");
+      setEditEmail(contact.email || "");
+      setEditStatus(contact.status);
+    }
+  }, [contact]);
 
   // Format date
   const formatDate = (date: string | Date) => {
@@ -357,6 +400,40 @@ export default function ContactDetailModal({
       dueDate: new Date(taskDueDate),
       priority: taskPriority,
       status: "pending",
+    });
+  };
+  
+  // Handle edit contact
+  const handleEditButtonClick = () => {
+    setIsEditMode(true);
+  };
+  
+  // Handle save edited contact
+  const handleSaveEditedContact = () => {
+    if (!editName.trim()) {
+      toast({
+        title: "Name is required",
+        description: "Please enter a name for the contact",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!editAddress.trim()) {
+      toast({
+        title: "Address is required",
+        description: "Please enter an address for the contact",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateContactMutation.mutate({
+      fullName: editName,
+      address: editAddress,
+      phone: editPhone || null,
+      email: editEmail || null,
+      status: editStatus,
     });
   };
   
@@ -1063,19 +1140,110 @@ export default function ContactDetailModal({
           </div>
         </div>
 
-        <div className="border-t border-neutral-200 px-4 py-3 flex justify-between">
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm" className="flex items-center">
-              <span className="material-icons text-sm mr-1">edit</span>
-              Edit Contact
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center">
-              <span className="material-icons text-sm mr-1">delete</span>
-              Delete
-            </Button>
+        {isEditMode ? (
+          <div className="border-t border-neutral-200 p-4">
+            <h3 className="font-medium text-lg mb-4">Edit Contact</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="editName">Full Name</Label>
+                <Input 
+                  id="editName" 
+                  value={editName} 
+                  onChange={(e) => setEditName(e.target.value)} 
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="editAddress">Address</Label>
+                <Input 
+                  id="editAddress" 
+                  value={editAddress} 
+                  onChange={(e) => setEditAddress(e.target.value)} 
+                  className="mt-1"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editPhone">Phone</Label>
+                  <Input 
+                    id="editPhone" 
+                    value={editPhone} 
+                    onChange={(e) => setEditPhone(e.target.value)} 
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="editEmail">Email</Label>
+                  <Input 
+                    id="editEmail" 
+                    value={editEmail} 
+                    onChange={(e) => setEditEmail(e.target.value)} 
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="editStatus">Status</Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger id="editStatus" className="mt-1">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_visited">Not visited</SelectItem>
+                    <SelectItem value="interested">Interested</SelectItem>
+                    <SelectItem value="not_interested">Not interested</SelectItem>
+                    <SelectItem value="considering">Considering</SelectItem>
+                    <SelectItem value="converted">Converted</SelectItem>
+                    <SelectItem value="no_soliciting">No soliciting</SelectItem>
+                    <SelectItem value="call_back">Call back</SelectItem>
+                    <SelectItem value="appointment_scheduled">Appointment scheduled</SelectItem>
+                    <SelectItem value="no_answer">No answer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsEditMode(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSaveEditedContact}
+                  disabled={updateContactMutation.isPending}
+                >
+                  {updateContactMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
           </div>
-          <Button onClick={onClose}>Close</Button>
-        </div>
+        ) : (
+          <div className="border-t border-neutral-200 px-4 py-3 flex justify-between">
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center"
+                onClick={handleEditButtonClick}
+              >
+                <span className="material-icons text-sm mr-1">edit</span>
+                Edit Contact
+              </Button>
+              <Button variant="outline" size="sm" className="flex items-center">
+                <span className="material-icons text-sm mr-1">delete</span>
+                Delete
+              </Button>
+            </div>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
