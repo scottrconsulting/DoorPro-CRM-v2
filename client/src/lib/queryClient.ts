@@ -12,9 +12,11 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Handle relative URLs by prepending the origin
+  // Always use the current browser domain for API requests
   let fullUrl = url;
   if (url.startsWith('/') && typeof window !== 'undefined') {
+    // IMPORTANT: This ensures we always use the same domain as the browser window
+    // rather than any domain that might be embedded in relative URLs
     fullUrl = `${window.location.origin}${url}`;
   }
   
@@ -23,7 +25,7 @@ export async function apiRequest(
       method,
       headers: data ? { "Content-Type": "application/json" } : {},
       body: data ? JSON.stringify(data) : undefined,
-      credentials: "include",
+      credentials: "include", // This ensures cookies are sent with the request
     });
 
     await throwIfResNotOk(res);
@@ -41,16 +43,18 @@ type UnauthorizedBehavior = "returnNull" | "throw";
 
 export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: UnauthorizedBehavior }): QueryFunction<T> => {
   return async ({ queryKey }) => {
-    // Convert key to URL, handling relative paths by prepending with window.location.origin
+    // Always use the current browser domain for API requests
     let url = queryKey[0] as string;
     if (url.startsWith('/') && typeof window !== 'undefined') {
+      // IMPORTANT: This ensures we always use the current page domain for API requests
       url = `${window.location.origin}${url}`;
     }
     
     try {
       console.log(`Fetching from: ${url}`);
       const res = await fetch(url, {
-        credentials: "include",
+        credentials: "include", // Essential for sending cookies
+        mode: 'cors',  // Use CORS for cross-domain requests
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {

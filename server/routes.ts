@@ -41,6 +41,25 @@ import { verifyPassword, generateResetToken, hashPassword } from './utils/passwo
 import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add a CORS header to all responses
+  app.use((req, res, next) => {
+    // Get the origin from the request headers
+    const origin = req.headers.origin || "*";
+    
+    // Set CORS headers for all requests
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    
+    next();
+  });
+  
   // Session setup using PostgreSQL for persistent sessions
   app.use(
     session({
@@ -50,12 +69,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       proxy: true, // Trust the reverse proxy when setting secure cookies
       cookie: { 
-        secure: false, // Set to false to allow non-HTTPS connections
+        secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
         httpOnly: true, // Helps prevent XSS attacks
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'none', // Required for cross-origin/cross-site requests
-        path: '/',
-        domain: undefined // Don't specify domain to allow cross-domain access
+        sameSite: 'lax', // Balance between security and cross-site functionality
+        path: '/'
       },
       rolling: true // Reset expiration with every request
     })
