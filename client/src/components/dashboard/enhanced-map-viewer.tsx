@@ -563,96 +563,33 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         {/* Only show the status buttons if legend is visible */}
         {showLegend && (
           <>
-            <Button 
-              variant={activeStatus === "not_visited" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("not_visited")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("not_visited")} mr-1`} 
-                style={getColorStyle("not_visited")}
-              />
-              {getStatusLabel("not_visited")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "interested" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("interested")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("interested")} mr-1`}
-                style={getColorStyle("interested")}
-              />
-              {getStatusLabel("interested")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "not_interested" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("not_interested")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("not_interested")} mr-1`}
-                style={getColorStyle("not_interested")}
-              />
-              {getStatusLabel("not_interested")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "call_back" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("call_back")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("call_back")} mr-1`}
-                style={getColorStyle("call_back")}
-              />
-              {getStatusLabel("call_back")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "appointment_scheduled" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("appointment_scheduled")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("appointment_scheduled")} mr-1`}
-                style={getColorStyle("appointment_scheduled")}
-              />
-              {getStatusLabel("appointment_scheduled")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "converted" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("converted")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("converted")} mr-1`}
-                style={getColorStyle("converted")}
-              />
-              {getStatusLabel("converted")}
-            </Button>
-            
-            <Button 
-              variant={activeStatus === "no_soliciting" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveStatus("no_soliciting")}
-              className="rounded-full text-xs px-2 py-1 h-7"
-            >
-              <div 
-                className={`w-2 h-2 rounded-full ${getStatusColor("no_soliciting")} mr-1`}
-                style={getColorStyle("no_soliciting")}
-              />
-              {getStatusLabel("no_soliciting")}
-            </Button>
+            {/* Show status buttons based on customization */}
+            {[
+              // These statuses match the ones shown in your customization preview image
+              { id: "not_visited", defaultLabel: "Unknown" },
+              { id: "interested", defaultLabel: "Demoed" },
+              { id: "not_interested", defaultLabel: "Not Interested" },
+              { id: "appointment_scheduled", defaultLabel: "Booked" },
+              { id: "converted", defaultLabel: "Sold" },
+              { id: "no_soliciting", defaultLabel: "No Soliciting" }, 
+              { id: "call_back", defaultLabel: "Check Back" }
+            ].map(status => (
+              <Button
+                key={status.id}
+                variant={activeStatus === status.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveStatus(status.id)}
+                className="rounded-full text-xs px-2 py-1 h-7"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${getStatusColor(status.id)} mr-1`}
+                  style={getColorStyle(status.id)}
+                />
+                {customization?.statusLabels && customization.statusLabels[status.id] 
+                  ? customization.statusLabels[status.id] 
+                  : status.defaultLabel}
+              </Button>
+            ))}
           </>
         )}
       </div>

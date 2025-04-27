@@ -132,6 +132,15 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
     
     let marker;
     
+    // Using standard markers for now due to compatibility issues
+    // This simplifies our implementation and avoids potential call stack errors
+    marker = new google.maps.Marker({
+      position,
+      map,
+      ...options,
+    });
+    
+    /* Temporarily disabled advanced markers due to compatibility issues
     // Use advanced marker element for SVG markers if available
     if (useSvgMarker && window.google?.maps?.marker?.AdvancedMarkerElement) {
       try {
@@ -180,6 +189,7 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
         ...options,
       });
     }
+    */
     
     markersRef.current.push(marker);
     return marker;
