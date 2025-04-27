@@ -368,11 +368,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
       const isLongClick = clickDuration > 1000; // Threshold of 1 second for a long click/hold
       
-      // Only proceed if it's a long click
-      if (!isLongClick) return;
-      
       // Create a new marker where the user clicked
       const marker = addMarker(e.latLng.toJSON(), {
+        title: "New Contact",
+        draggable: true,
+        animation: window.google.maps.Animation.DROP,
+        icon: getMarkerIcon(activeStatus),
+      });
+      
+      setNewHouseMarker(marker);
+      
+      // Only show form dialog for long clicks
+      if (isLongClick) {
         title: "New Contact",
         draggable: true,
         animation: window.google.maps.Animation.DROP,
@@ -456,13 +463,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               description: `Quick-added pin at ${address}`,
             });
           } else {
-            // For long click/hold, show the form
+            // Show form dialog for long clicks
             setShowNewContactDialog(true);
             
             // Check if the selected status needs scheduling fields
             const needsScheduling = ["appointment_scheduled", "call_back", "interested"].includes(activeStatus);
             setShowSchedulingFields(needsScheduling);
           }
+        } else if (!isLongClick) {
+          // For quick clicks, just leave the marker without showing the form
+          toast({
+            title: "Pin added",
+            description: "Long press to add contact details",
+          });
+          return;
         } else {
           toast({
             title: "Could not find address",
