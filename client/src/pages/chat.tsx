@@ -116,6 +116,10 @@ const newConversationSchema = z.object({
   name: z.string().min(1, "Conversation name is required"),
   isTeamChannel: z.boolean().default(false),
   teamId: z.number().nullable().optional(),
+  isChannelType: z.boolean().default(false),
+  channelTag: z.string().optional(),
+  isPublic: z.boolean().default(false),
+  creatorId: z.number().optional(),
 });
 
 // Schema for sending a message
@@ -143,6 +147,9 @@ export default function ChatPage() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedConversations, setSelectedConversations] = useState<number[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isChannelType, setIsChannelType] = useState(false);
+  const [channelTag, setChannelTag] = useState("");
+  const [isPublicChannel, setIsPublicChannel] = useState(false);
 
   // Form for creating a new conversation
   const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
@@ -151,6 +158,10 @@ export default function ChatPage() {
       name: "",
       isTeamChannel: false,
       teamId: null,
+      isChannelType: false,
+      channelTag: "",
+      isPublic: false,
+      creatorId: user?.id,
     },
   });
 
@@ -407,6 +418,10 @@ export default function ChatPage() {
 
   // Handle creating a new conversation
   const onSubmitNewConversation = (data: z.infer<typeof newConversationSchema>) => {
+    // Ensure creatorId is set for channel permissions
+    if (data.isChannelType && user) {
+      data.creatorId = user.id;
+    }
     createConversationMutation.mutate(data);
   };
 
@@ -579,6 +594,67 @@ export default function ChatPage() {
                             </FormItem>
                           )}
                         />
+
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="isChannelType" 
+                              checked={isChannelType}
+                              onCheckedChange={(checked) => {
+                                setIsChannelType(!!checked);
+                                newConversationForm.setValue("isChannelType", !!checked);
+                              }}
+                            />
+                            <label 
+                              htmlFor="isChannelType"
+                              className="text-sm font-medium leading-none"
+                            >
+                              Create as Channel
+                            </label>
+                          </div>
+                            
+                          {isChannelType && (
+                            <div className="ml-6 space-y-3 mt-2">
+                              <FormField
+                                control={newConversationForm.control}
+                                name="channelTag"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Channel Tag</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="E.g. general, sales, support" 
+                                        {...field} 
+                                        onChange={(e) => {
+                                          field.onChange(e);
+                                          setChannelTag(e.target.value);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                                
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="isPublicChannel" 
+                                  checked={isPublicChannel}
+                                  onCheckedChange={(checked) => {
+                                    setIsPublicChannel(!!checked);
+                                    newConversationForm.setValue("isPublic", !!checked);
+                                  }}
+                                />
+                                <label 
+                                  htmlFor="isPublicChannel"
+                                  className="text-sm font-medium leading-none"
+                                >
+                                  Make channel public to team
+                                </label>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         
                         <div className="space-y-2">
                           <FormLabel>Select Participants</FormLabel>
@@ -623,7 +699,7 @@ export default function ChatPage() {
                             {createConversationMutation.isPending && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             )}
-                            Create Conversation
+                            {isChannelType ? "Create Channel" : "Create Conversation"}
                           </Button>
                         </DialogFooter>
                       </form>
@@ -717,12 +793,12 @@ export default function ChatPage() {
                   )}
                 </div>
                 
-                {/* Group Chats Section */}
+                {/* Channels Section */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between px-4 py-2">
                     <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
                       <ChevronDown className="h-4 w-4 mr-1" />
-                      Group Chats
+                      Channels
                     </button>
                   </div>
                   {groupChats.length > 0 ? (
@@ -774,13 +850,13 @@ export default function ChatPage() {
                               onClick={(e) => e.stopPropagation()}
                             />
                           )}
-                          <Users className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{conversation.name || "Unnamed Group"}</span>
+                          <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="px-4 py-2 text-sm text-muted-foreground">No group chats</p>
+                    <p className="px-4 py-2 text-sm text-muted-foreground">No channels</p>
                   )}
                 </div>
                 
