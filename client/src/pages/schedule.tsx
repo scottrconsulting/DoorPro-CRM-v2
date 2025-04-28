@@ -166,21 +166,32 @@ export default function SchedulePage() {
       milliseconds: 0,
     });
     
-    const endDateTime = set(selectedDate, {
-      hours: parseInt(endTime.split(":")[0]),
-      minutes: parseInt(endTime.split(":")[1]),
-      seconds: 0,
-      milliseconds: 0,
-    });
-    
-    // Validate time
-    if (endDateTime <= startDateTime) {
-      toast({
-        title: "Invalid time",
-        description: "End time must be after start time",
-        variant: "destructive",
+    // Create default end time 30 minutes after start if not provided
+    let endDateTime;
+    if (endTime) {
+      endDateTime = set(selectedDate, {
+        hours: parseInt(endTime.split(":")[0]),
+        minutes: parseInt(endTime.split(":")[1]),
+        seconds: 0,
+        milliseconds: 0,
       });
-      return;
+      
+      // Validate time if end time is provided
+      if (endDateTime <= startDateTime) {
+        // Just set end time to 30 minutes after start
+        endDateTime = new Date(startDateTime);
+        endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+      }
+    } else {
+      // Default to 30 minutes after start
+      endDateTime = new Date(startDateTime);
+      endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+    }
+    
+    // Calculate reminder time (if enabled)
+    let reminderTimeValue = undefined;
+    if (sendReminder) {
+      reminderTimeValue = calculateReminderTime(startDateTime);
     }
     
     const scheduleData: InsertSchedule = {
@@ -193,7 +204,7 @@ export default function SchedulePage() {
       location,
       contactIds: selectedContacts.length > 0 ? selectedContacts : undefined,
       reminderSent: false,
-      reminderTime: sendReminder ? calculateReminderTime(startDateTime) : undefined,
+      reminderTime: reminderTimeValue,
       confirmationMethod: scheduleType === "appointment" ? confirmationMethod : undefined,
       confirmationStatus: scheduleType === "appointment" ? "pending" : undefined,
     };
@@ -271,19 +282,19 @@ export default function SchedulePage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Task & Appointment Schedule</h1>
         <Button 
           onClick={() => setShowAddForm(!showAddForm)}
           className="flex items-center"
         >
           <span className="material-icons text-sm mr-1">{showAddForm ? "close" : "add"}</span>
-          {showAddForm ? "Cancel" : "Add Schedule"}
+          {showAddForm ? "Cancel" : "Add Task/Appointment"}
         </Button>
       </div>
       
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-medium mb-4">New Schedule</h2>
+          <h2 className="text-lg font-medium mb-4">Add New Task or Appointment</h2>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -361,14 +372,16 @@ export default function SchedulePage() {
               </div>
               
               <div>
-                <Label htmlFor="endTime">End Time</Label>
+                <Label htmlFor="endTime">End Time <span className="text-xs text-gray-500">(optional)</span></Label>
                 <Input
                   id="endTime"
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  required
                 />
+                <div className="text-xs text-gray-500 mt-1">
+                  If not provided, a 30-minute duration will be assumed
+                </div>
               </div>
               
               <div className="md:col-span-2">
@@ -560,7 +573,7 @@ export default function SchedulePage() {
                 type="submit"
                 disabled={createScheduleMutation.isPending}
               >
-                {createScheduleMutation.isPending ? "Creating..." : "Create Schedule"}
+                {createScheduleMutation.isPending ? "Creating..." : "Add Task/Appointment"}
               </Button>
             </div>
           </form>
@@ -575,9 +588,9 @@ export default function SchedulePage() {
         ) : sortedDates.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow-md">
             <div className="material-icons text-neutral-400 text-5xl mb-2">event_busy</div>
-            <h3 className="text-lg font-medium text-neutral-800">No schedules yet</h3>
-            <p className="text-neutral-500 mb-4">Click the 'Add Schedule' button to create your first schedule</p>
-            <Button onClick={() => setShowAddForm(true)}>Add Schedule</Button>
+            <h3 className="text-lg font-medium text-neutral-800">No tasks or appointments yet</h3>
+            <p className="text-neutral-500 mb-4">Click the button below to add your first task or appointment</p>
+            <Button onClick={() => setShowAddForm(true)}>Add Task/Appointment</Button>
           </div>
         ) : (
           sortedDates.map((date) => (
