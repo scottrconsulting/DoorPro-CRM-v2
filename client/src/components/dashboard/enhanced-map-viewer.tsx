@@ -821,6 +821,56 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               </div>
             </div>
             
+            {/* Appointment Section - Only shown when status is "booked" */}
+            {newContactForm.status === "booked" && (
+              <div className="border rounded-md p-4 bg-blue-50">
+                <h4 className="font-semibold text-blue-900 mb-3">Appointment Details</h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="appointmentDate" className="text-blue-900">Date</Label>
+                    <Input 
+                      id="appointmentDate" 
+                      type="date"
+                      value={newContactForm.appointmentDate}
+                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
+                      className="border-blue-200 focus:border-blue-400"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="appointmentTime" className="text-blue-900">Time</Label>
+                    <Input 
+                      id="appointmentTime" 
+                      type="time"
+                      value={newContactForm.appointmentTime}
+                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
+                      className="border-blue-200 focus:border-blue-400"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="sendSMS" />
+                    <Label htmlFor="sendSMS" className="text-sm font-medium text-blue-900">
+                      Send Text Reminder
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="sendEmail" />
+                    <Label htmlFor="sendEmail" className="text-sm font-medium text-blue-900">
+                      Send Email Reminder
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-blue-700 mt-2">
+                  Appointment reminder will be sent 24 hours before the scheduled time.
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea 
@@ -840,7 +890,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={() => {
                 // Create the contact with all form data
                 if (newContactCoords) {
-                  createContactMutation.mutate({
+                  // Prepare contact data for submission
+                  const contactData: any = {
                     userId: user?.id || 0,
                     fullName: newContactForm.fullName,
                     address: newContactForm.address,
@@ -853,7 +904,26 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     latitude: newContactCoords.lat.toString(),
                     longitude: newContactCoords.lng.toString(),
                     notes: newContactForm.notes
-                  });
+                  };
+                  
+                  // If this is a booked appointment, include the appointment details
+                  if (newContactForm.status === "booked" && newContactForm.appointmentDate) {
+                    contactData.appointmentDate = newContactForm.appointmentDate;
+                    contactData.appointmentTime = newContactForm.appointmentTime;
+                    
+                    // Add appointment details to notes for backward compatibility
+                    const appointmentNotes = `Appointment scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
+                    contactData.notes = contactData.notes 
+                      ? `${contactData.notes}\n\n${appointmentNotes}`
+                      : appointmentNotes;
+                      
+                    toast({
+                      title: "Appointment Scheduled",
+                      description: `Successfully scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
+                    });
+                  }
+                  
+                  createContactMutation.mutate(contactData);
                   
                   setShowNewContactDialog(false);
                 }
