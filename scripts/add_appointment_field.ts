@@ -1,4 +1,5 @@
 import { db } from '../server/db';
+import { pool } from '../server/db';
 
 async function main() {
   try {
@@ -11,11 +12,12 @@ async function main() {
       WHERE table_name = 'contacts' AND column_name = 'appointment'
     `;
     
-    const columnExists = await db.execute(checkColumnQuery);
+    // Use direct pool query to get raw results
+    const { rows } = await pool.query(checkColumnQuery);
     
-    if (columnExists.length === 0) {
+    if (rows.length === 0) {
       // Add the column if it doesn't exist
-      await db.execute(`
+      await pool.query(`
         ALTER TABLE contacts
         ADD COLUMN appointment TEXT
       `);

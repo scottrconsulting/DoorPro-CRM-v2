@@ -269,7 +269,9 @@ export default function SidebarImproved() {
             </div>
             
             <SidebarLink href="/" icon="dashboard" label="Overview" isActive={isActive("/")} />
+            {/* Temporarily hidden until core features are stable 
             <SidebarLink href="/territories" icon="map" label="Territories" isActive={isActive("/territories")} />
+            */}
             <SidebarLink href="/contacts" icon="people" label="Contacts" isActive={isActive("/contacts")} />
             <SidebarLink href="/schedule" icon="calendar_today" label="Schedule" isActive={isActive("/schedule")} />
             <SidebarLink 
