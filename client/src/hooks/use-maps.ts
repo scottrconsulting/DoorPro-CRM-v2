@@ -22,15 +22,21 @@ interface UseMapResult {
   panTo: (position: { lat: number; lng: number }) => void;
   addMarker: (position: { lat: number; lng: number }, options?: any) => any | null;
   clearMarkers: () => void;
+  isInStreetView: () => boolean;
+  exitStreetView: () => void;
 }
 
-export function useGoogleMaps(options: MapOptions): UseMapResult {
+export function useGoogleMaps(options: MapOptions): UseMapResult & {
+  isInStreetView: () => boolean;
+  exitStreetView: () => void;
+} {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const streetViewRef = useRef<any>(null);
 
   // Initialize Google Maps API
   useEffect(() => {
@@ -86,6 +92,17 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
       }
       
       const newMap = new window.google.maps.Map(mapRef.current, mapOptions);
+      
+      // Store a reference to the StreetViewPanorama for easier access
+      streetViewRef.current = newMap.getStreetView();
+      
+      // Listen for street view status changes
+      if (streetViewRef.current) {
+        google.maps.event.addListener(streetViewRef.current, 'visible_changed', () => {
+          // When street view visibility changes, we can update UI elements if needed
+          console.log("Street view visible:", streetViewRef.current.getVisible());
+        });
+      }
 
       setMap(newMap);
     } catch (err) {
@@ -200,6 +217,20 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
   }, []);
+  
+  // Check if the map is currently in street view mode
+  const isInStreetView = useCallback(() => {
+    if (!map || !streetViewRef.current) return false;
+    return streetViewRef.current.getVisible();
+  }, [map]);
+  
+  // Exit street view and return to the map
+  const exitStreetView = useCallback(() => {
+    if (!map || !streetViewRef.current) return;
+    if (streetViewRef.current.getVisible()) {
+      streetViewRef.current.setVisible(false);
+    }
+  }, [map]);
 
   return {
     mapRef,
@@ -211,5 +242,7 @@ export function useGoogleMaps(options: MapOptions): UseMapResult {
     panTo,
     addMarker,
     clearMarkers,
+    isInStreetView,
+    exitStreetView,
   };
 }
