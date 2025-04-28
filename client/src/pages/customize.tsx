@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
-import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
+import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS, STATISTICS_METRICS, STATISTICS_METRIC_LABELS } from "@shared/schema";
 
 import {
   Card,
@@ -78,6 +78,11 @@ useEffect(() => {
   const [widgetOrder, setWidgetOrder] = useState<string[]>(DASHBOARD_WIDGETS);
   const [customWidgetLabels, setCustomWidgetLabels] = useState<Record<string, string>>({});
   const [editingWidgetLabel, setEditingWidgetLabel] = useState<string | null>(null);
+  
+  // Statistics metrics state
+  const [enabledStatisticsMetrics, setEnabledStatisticsMetrics] = useState<string[]>(STATISTICS_METRICS.slice(0, 4));
+  const [statisticsMetricLabels, setStatisticsMetricLabels] = useState<Record<string, string>>({});
+  const [editingStatisticsMetricLabel, setEditingStatisticsMetricLabel] = useState<string | null>(null);
   
   // Fetch user's customization settings
   const { data: customization, isLoading } = useQuery<Customization>({
@@ -199,6 +204,16 @@ useEffect(() => {
       if (customization.dashboardWidgetLabels) {
         setCustomWidgetLabels(customization.dashboardWidgetLabels || {});
       }
+      
+      // Initialize statistics metrics if present
+      if (customization.statisticsMetrics) {
+        setEnabledStatisticsMetrics(customization.statisticsMetrics);
+      }
+      
+      // Initialize custom statistics metric labels if present
+      if (customization.statisticsMetricLabels) {
+        setStatisticsMetricLabels(customization.statisticsMetricLabels || {});
+      }
     }
   }, [customization]);
   
@@ -257,7 +272,9 @@ useEffect(() => {
         reminderTime
       },
       dashboardWidgets: enabledWidgets,
-      dashboardWidgetLabels: customWidgetLabels
+      dashboardWidgetLabels: customWidgetLabels,
+      statisticsMetrics: enabledStatisticsMetrics,
+      statisticsMetricLabels
     });
   };
   
@@ -352,6 +369,10 @@ useEffect(() => {
           <TabsTrigger value="map-pins" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             Map Pins
+          </TabsTrigger>
+          <TabsTrigger value="statistics" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+            Statistics Metrics
           </TabsTrigger>
 
         </TabsList>
@@ -841,6 +862,122 @@ useEffect(() => {
                         </div>
                       ))
                     )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Statistics Metrics Tab */}
+        <TabsContent value="statistics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Statistics Metrics</CardTitle>
+              <CardDescription>
+                Choose which metrics to display in the Statistics section on your dashboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Enable/Disable Metrics</Label>
+                  <p className="text-sm text-muted-foreground">Select which statistics metrics to display on your dashboard.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {STATISTICS_METRICS.map(metric => (
+                      <div key={metric} className="flex items-center space-x-2 p-2 border rounded">
+                        <Checkbox 
+                          id={`metric-${metric}`} 
+                          checked={enabledStatisticsMetrics.includes(metric)}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setEnabledStatisticsMetrics([...enabledStatisticsMetrics, metric]);
+                            } else {
+                              setEnabledStatisticsMetrics(enabledStatisticsMetrics.filter(m => m !== metric));
+                            }
+                          }}
+                        />
+                        <div className="flex-1">
+                          <Label 
+                            htmlFor={`metric-${metric}`} 
+                            className="font-medium cursor-pointer flex items-center justify-between"
+                          >
+                            <span>{STATISTICS_METRIC_LABELS[metric] || metric.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
+                            
+                            {editingStatisticsMetricLabel === metric ? (
+                              <Input 
+                                value={statisticsMetricLabels[metric] || STATISTICS_METRIC_LABELS[metric] || metric.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                onChange={(e) => setStatisticsMetricLabels({
+                                  ...statisticsMetricLabels,
+                                  [metric]: e.target.value
+                                })}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-40 ml-2 text-sm"
+                                size={20}
+                              />
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setEditingStatisticsMetricLabel(metric);
+                                }}
+                                className="text-xs"
+                              >
+                                Edit Label
+                              </Button>
+                            )}
+                          </Label>
+                          
+                          {editingStatisticsMetricLabel === metric && (
+                            <div className="flex space-x-1 mt-1 justify-end">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => setEditingStatisticsMetricLabel(null)}
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => {
+                                  const updatedLabels = {...statisticsMetricLabels};
+                                  delete updatedLabels[metric];
+                                  setStatisticsMetricLabels(updatedLabels);
+                                  setEditingStatisticsMetricLabel(null);
+                                }}
+                              >
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-5">
+                  <div className="flex flex-col items-center justify-center p-6 border border-dashed rounded-md bg-muted/30">
+                    <div className="max-w-lg w-full">
+                      <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
+                        <h3 className="text-lg font-semibold mb-3">Statistics</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          {enabledStatisticsMetrics.slice(0, 4).map((metric) => (
+                            <div key={metric} className="p-3 bg-slate-50 rounded border">
+                              <div className="text-sm text-muted-foreground">
+                                {statisticsMetricLabels[metric] || STATISTICS_METRIC_LABELS[metric] || metric.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              </div>
+                              <div className="text-2xl font-bold">0</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-center text-sm text-muted-foreground">Preview of Statistics widget with your selected metrics</p>
+                    </div>
                   </div>
                 </div>
               </div>
