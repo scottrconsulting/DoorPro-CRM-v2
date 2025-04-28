@@ -669,25 +669,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Change map type when mapType state changes
   useEffect(() => {
     if (isLoaded && map) {
-      if (inStreetView) {
-        // First exit street view if we're in it
-        exitStreetView();
-      }
+      // Only exit street view when the button is clicked, not on initial render
       setGoogleMapType(mapType);
     }
-  }, [mapType, isLoaded, map, setGoogleMapType, inStreetView, exitStreetView]);
+  }, [mapType, isLoaded, map, setGoogleMapType]);
   
   // Monitor street view status changes
   useEffect(() => {
     if (!isLoaded || !map) return;
     
-    // Check every 500ms if we're in street view
+    // Check every 750ms if we're in street view
     const streetViewCheckInterval = setInterval(() => {
       const streetViewActive = isInStreetView();
       if (streetViewActive !== inStreetView) {
         setInStreetView(streetViewActive);
       }
-    }, 500);
+    }, 750);
     
     return () => clearInterval(streetViewCheckInterval);
   }, [isLoaded, map, isInStreetView, inStreetView]);
@@ -704,25 +701,55 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
         <button
           className={`py-1 px-2 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("roadmap")}
+          onClick={() => {
+            // Only exit Street View if we're in it and clicked a different map type
+            if (inStreetView) {
+              exitStreetView();
+              // Wait a bit for Street View to exit before changing map type
+              setTimeout(() => setMapType("roadmap"), 100);
+            } else {
+              setMapType("roadmap");
+            }
+          }}
         >
           Road
         </button>
         <button
           className={`py-1 px-2 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("satellite")}
+          onClick={() => {
+            if (inStreetView) {
+              exitStreetView();
+              setTimeout(() => setMapType("satellite"), 100);
+            } else {
+              setMapType("satellite");
+            }
+          }}
         >
           Satellite
         </button>
         <button
           className={`py-1 px-2 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("hybrid")}
+          onClick={() => {
+            if (inStreetView) {
+              exitStreetView();
+              setTimeout(() => setMapType("hybrid"), 100);
+            } else {
+              setMapType("hybrid");
+            }
+          }}
         >
           Hybrid
         </button>
         <button
           className={`py-1 px-2 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("terrain")}
+          onClick={() => {
+            if (inStreetView) {
+              exitStreetView();
+              setTimeout(() => setMapType("terrain"), 100);
+            } else {
+              setMapType("terrain");
+            }
+          }}
         >
           Terrain
         </button>
