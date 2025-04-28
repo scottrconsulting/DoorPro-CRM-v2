@@ -57,6 +57,13 @@ export default function DirectLogin() {
       <div className="w-full max-w-md p-4">
         <Card className="shadow-lg">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              <img 
+                src="/images/doorpro-logo-large.svg" 
+                alt="DoorPro CRM" 
+                className="h-20 w-auto" 
+              />
+            </div>
             <CardTitle className="text-2xl font-bold text-center text-primary">
               DoorPro CRM
             </CardTitle>
