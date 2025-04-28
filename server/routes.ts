@@ -870,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description: visitData.notes || `Check back with ${contact.fullName}`,
             startTime: followUpDate,
             endTime: endDateTime,
-            type: 'follow-up',
+            type: 'follow_up',
             location: contact.address,
             contactIds: [contact.id],
             reminderTime: new Date(followUpDate.getTime() - (60 * 60 * 1000)), // 1 hour reminder
