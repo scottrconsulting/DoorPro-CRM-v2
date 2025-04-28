@@ -52,7 +52,7 @@ export default function SidebarImproved() {
   }, [collapsed]);
 
   // Calculate sidebar width based on collapsed state
-  const sidebarWidth = collapsed ? 'md:w-16' : 'md:w-52';
+  const sidebarWidth = collapsed ? 'md:w-16' : 'md:w-64';
 
   return (
     <nav 
@@ -69,22 +69,22 @@ export default function SidebarImproved() {
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
-      <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} border-b border-border`}>
+      <div className={`px-4 py-3 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} border-b border-border`}>
         {!collapsed && (
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center font-sans text-xl font-semibold">
-              <DoorProLogo className="mr-2" />
-              <span className="text-primary">DoorPro</span>
+          <div className="flex items-center overflow-hidden">
+            <Link href="/" className="flex items-center font-sans text-xl font-semibold whitespace-nowrap">
+              <DoorProLogo className="mr-2 flex-shrink-0" />
+              <span className="text-primary">DoorPro CRM</span>
             </Link>
-            <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
+            <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
               {getPlanName(user?.role)}
             </span>
           </div>
         )}
         
         {collapsed && (
-          <Link href="/" aria-label="Home">
-            <DoorProLogo />
+          <Link href="/" aria-label="Home" className="flex justify-center">
+            <DoorProLogo className="h-6 w-6" />
           </Link>
         )}
         
@@ -246,14 +246,14 @@ export default function SidebarImproved() {
       
       {/* Expanded sidebar on hover when collapsed */}
       {collapsed && hovered && (
-        <div className="absolute top-0 left-16 w-52 h-full bg-background border-r border-border shadow-lg z-20 overflow-y-auto">
-          <div className="p-4 flex items-center justify-between border-b border-border">
-            <div className="flex items-center">
-              <Link href="/" className="flex items-center font-sans text-xl font-semibold">
-                <DoorProLogo className="mr-2" />
+        <div className="absolute top-0 left-16 w-64 h-full bg-background border-r border-border shadow-lg z-20 overflow-y-auto">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-border">
+            <div className="flex items-center overflow-hidden">
+              <Link href="/" className="flex items-center font-sans text-xl font-semibold whitespace-nowrap">
+                <DoorProLogo className="mr-2 flex-shrink-0" />
                 <span className="text-primary">DoorPro CRM</span>
               </Link>
-              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
                 {getPlanName(user?.role)}
               </span>
             </div>
@@ -357,12 +357,12 @@ function NavItem({ href, icon, label, isActive, collapsed, badge }: NavItemProps
         ? "text-foreground bg-muted border-l-4 border-primary" 
         : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
     >
-      <span className={`material-icons mr-3 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+      <span className={`material-icons mr-3 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
         {icon}
       </span>
       <span className="truncate">{label}</span>
       {badge && (
-        <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">
+        <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded flex-shrink-0">
           {badge}
         </span>
       )}
@@ -386,12 +386,12 @@ function SidebarLink({ href, icon, label, isActive, badge }: SidebarLinkProps) {
         ? "text-foreground bg-muted border-l-4 border-primary" 
         : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
     >
-      <span className={`material-icons mr-3 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+      <span className={`material-icons mr-3 flex-shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
         {icon}
       </span>
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
       {badge && (
-        <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">
+        <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded flex-shrink-0">
           {badge}
         </span>
       )}
