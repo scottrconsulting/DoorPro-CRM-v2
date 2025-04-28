@@ -983,7 +983,7 @@ export default function ChatPage() {
                             />
                           )}
                           <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">#{conversation.channelTag || conversation.name || "general"}</span>
+                          <span className="truncate">{conversation.channelTag || conversation.name || "general"}</span>
                         </div>
                       ))}
                     </div>
