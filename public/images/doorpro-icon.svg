@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Map pin shape -->
+  <path d="M256 0C169.6 0 99 70.6 99 157C99 200.6 115.3 244.1 146.4 275.2L240.9 485.5C245.8 496.2 265.5 496.2 270.4 485.5L365.7 275.2C396 243.3 413 199.1 413 157C413 70.6 342.4 0 256 0Z" fill="#1a8cff"/>
+
+  <!-- Door icon -->
+  <path d="M323 150H189C181.3 150 175 156.3 175 164V338C175 345.7 181.3 352 189 352H323C330.7 352 337 345.7 337 338V164C337 156.3 330.7 150 323 150Z" fill="#1a8cff" stroke="white" stroke-width="12"/>
+  <path d="M175 210H337" stroke="white" stroke-width="8"/>
+  <circle cx="277" cy="276" r="15" fill="white"/>
+</svg>
