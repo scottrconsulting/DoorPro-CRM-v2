@@ -83,7 +83,6 @@ const preferencesSchema = z.object({
   notificationPush: z.boolean(),
   defaultScheduleView: z.enum(["day", "week", "month"]),
   autoCheckIn: z.boolean(),
-  statisticsMetrics: z.array(z.string()).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -138,7 +137,6 @@ export default function Settings() {
       notificationPush: true,
       defaultScheduleView: "week",
       autoCheckIn: false,
-      statisticsMetrics: customization?.statisticsMetrics || ["today_visits", "conversions", "follow_ups", "sales_count"],
     },
   });
   
@@ -195,8 +193,7 @@ export default function Settings() {
     
     // Update customization in the database
     updateCustomizationMutation.mutate({
-      mapDefaultView: data.defaultMapType,
-      statisticsMetrics: data.statisticsMetrics || []
+      mapDefaultView: data.defaultMapType
     }, {
       onSuccess: () => {
         toast({
@@ -586,68 +583,21 @@ export default function Settings() {
         
         {/* Customize Tab */}
         <TabsContent value="customize">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dashboard Customization</CardTitle>
-              <CardDescription>
-                Customize what information is displayed on your dashboard
-              </CardDescription>
-            </CardHeader>
+          <Card className="pt-6 pb-4">
             <CardContent>
-              <Form {...preferencesForm}>
-                <form onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)} className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Statistics Metrics</h3>
-                    <p className="text-sm text-neutral-500">
-                      Select the metrics you want to display in your dashboard statistics widget
-                    </p>
-                    
-                    <FormField
-                      control={preferencesForm.control}
-                      name="statisticsMetrics"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                            {STATISTICS_METRICS.map((metric) => (
-                              <FormItem
-                                key={metric}
-                                className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(metric)}
-                                    onCheckedChange={(checked) => {
-                                      const currentValue = field.value || [];
-                                      if (checked) {
-                                        field.onChange([...currentValue, metric]);
-                                      } else {
-                                        field.onChange(
-                                          currentValue.filter((value) => value !== metric)
-                                        );
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer">
-                                  {STATISTICS_METRIC_LABELS[metric] || metric}
-                                </FormLabel>
-                              </FormItem>
-                            ))}
-                          </div>
-                          <FormDescription className="mt-3">
-                            You can select up to 8 metrics to display. The metrics will appear in the order selected.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <Button type="submit" disabled={isUpdating}>
-                    {isUpdating ? "Saving..." : "Save Customization"}
+              <div className="text-center pb-6">
+                <h3 className="text-xl font-medium mb-2">Dashboard Settings Moved</h3>
+                <p className="text-muted-foreground mb-6">
+                  Dashboard customization options, including statistics metrics, widgets, and layout preferences,
+                  are now available in the dedicated Customize page for a better experience.
+                </p>
+                
+                <Link href="/customize">
+                  <Button>
+                    Go to Customize
                   </Button>
-                </form>
-              </Form>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
