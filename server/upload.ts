@@ -2,6 +2,11 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create uploads directory if it doesn't exist
 const uploadDir = path.join(__dirname, '../uploads');

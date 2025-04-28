@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { 
+  Avatar, 
+  AvatarImage, 
+  AvatarFallback 
+} from "@/components/ui/avatar";
 import { 
   Card, 
   CardContent, 
@@ -57,6 +62,7 @@ import {
   STATISTICS_METRIC_LABELS 
 } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Camera, Loader2 } from "lucide-react";
 
 // Profile schema
 const profileSchema = z.object({
@@ -95,10 +101,18 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [isUpdating, setIsUpdating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch customization settings
   const { data: customization } = useQuery<Customization>({
     queryKey: ["/api/customizations/current"],
+    enabled: !!user
+  });
+  
+  // User data including profile picture
+  const { data: userData, refetch: refetchUserData } = useQuery({
+    queryKey: ['/api/auth/user'],
     enabled: !!user
   });
 

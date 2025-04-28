@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -42,9 +42,21 @@ import { verifyPassword, generateResetToken, hashPassword } from './utils/passwo
 import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// Get directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import direct auth router and token verification function
 import directAuthRouter, { verifyToken } from './direct-auth';
+
+// Import upload helpers
+import { upload, getFileUrl } from './upload';
+// Import profile methods
+import { updateProfilePicture, updateUserOnlineStatus, updateUserLastActive } from './profile-methods';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Special static route for HTML login page outside of Vite/React
@@ -2390,6 +2402,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Return a 200 response to acknowledge receipt of the event
     res.json({ received: true });
+  });
+
+  // Serve uploaded files
+  const uploadsPath = path.join(__dirname, '../uploads');
+  app.use('/uploads', express.static(uploadsPath));
+
+  // User profile picture upload route
+  app.post('/api/profile/upload-picture', ensureAuthenticated, upload.single('profilePicture'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const user = req.user as any;
+      const fileUrl = getFileUrl(req.file.filename);
+      
+      // Update user's profile picture URL in database
+      const updatedUser = await updateProfilePicture(user.id, fileUrl);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update profile picture' });
+      }
+      
+      // Remove old profile picture if it exists
+      if (updatedUser.profilePictureUrl && updatedUser.profilePictureUrl !== fileUrl) {
+        try {
+          // Extract just the filename from the URL (e.g., /uploads/abc123.jpg -> abc123.jpg)
+          const filename = path.basename(updatedUser.profilePictureUrl);
+          const oldFilePath = path.join(uploadsPath, filename);
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        } catch (error) {
+          console.error('Error removing old profile picture:', error);
+          // Continue even if deletion fails
+        }
+      }
+      
+      return res.status(200).json({ 
+        message: 'Profile picture updated successfully',
+        profilePictureUrl: fileUrl
+      });
+    } catch (error: any) {
+      return res.status(500).json({ 
+        message: 'Error uploading profile picture', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Update user online status
+  app.post('/api/profile/online-status', ensureAuthenticated, async (req, res) => {
+    try {
+      const { isOnline } = req.body;
+      const user = req.user as any;
+      
+      if (typeof isOnline !== 'boolean') {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+      
+      const updatedUser = await updateUserOnlineStatus(user.id, isOnline);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update online status' });
+      }
+      
+      return res.status(200).json({ 
+        message: 'Online status updated successfully',
+        isOnline
+      });
+    } catch (error: any) {
+      return res.status(500).json({ 
+        message: 'Error updating online status', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Update user last active timestamp
+  app.post('/api/profile/last-active', ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const lastActive = new Date();
+      
+      const updatedUser = await updateUserLastActive(user.id, lastActive);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update last active time' });
+      }
+      
+      return res.status(200).json({ 
+        message: 'Last active time updated successfully',
+        lastActive
+      });
+    } catch (error: any) {
+      return res.status(500).json({ 
+        message: 'Error updating last active time', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Get team members with online status
+  app.get('/api/teams/members/status', ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      // If user is part of a team, get team members with online status
+      if (user.teamId) {
+        const teamMembers = await storage.getTeamMembers(user.teamId);
+        return res.json(teamMembers);
+      } 
+      
+      // If user is not part of a team but is a manager, return an empty array
+      return res.json([]);
+    } catch (error: any) {
+      return res.status(500).json({ 
+        message: 'Error fetching team members status', 
+        error: error.message 
+      });
+    }
   });
 
   const httpServer = createServer(app);
