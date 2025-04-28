@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertContactSchema, Contact, InsertContact, CONTACT_STATUSES } from "@shared/schema";
+import { insertContactSchema, Contact, InsertContact, InsertSchedule, CONTACT_STATUSES } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
@@ -112,6 +112,11 @@ export default function UniversalContactForm({
       return res.json();
     },
     onSuccess: (data: Contact) => {
+      // If contact was created and has booked or check_back status, create a schedule entry
+      if (data && (data.status === 'booked' || data.status === 'check_back')) {
+        createScheduleEntry(data);
+      }
+      
       form.reset();
       onClose();
       
@@ -127,6 +132,66 @@ export default function UniversalContactForm({
       });
     },
   });
+  
+  // Create schedule mutation
+  const createScheduleMutation = useMutation({
+    mutationFn: async (scheduleData: InsertSchedule) => {
+      const res = await apiRequest("POST", "/api/schedules", scheduleData);
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Schedule created",
+        description: variables.type === 'appointment' 
+          ? "Appointment has been added to your schedule" 
+          : "Follow-up has been added to your schedule",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Schedule creation error:", error);
+      toast({
+        title: "Schedule error",
+        description: "There was an error adding this to your schedule",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Helper function to create a schedule entry based on contact status
+  const createScheduleEntry = (contact: Contact) => {
+    if (!contact.appointment || !user) return;
+    
+    try {
+      // Parse the appointment string
+      const [datePart, timePart] = contact.appointment.split(' ');
+      if (!datePart || !timePart) return;
+      
+      // Create Date objects for start and end times (default 30min appointment)
+      const startTime = new Date(`${datePart}T${timePart}`);
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + 30);
+      
+      // Create schedule data based on contact status
+      const scheduleData: InsertSchedule = {
+        userId: user.id,
+        title: contact.status === 'booked' 
+          ? `Appointment with ${contact.fullName}`
+          : `Follow-up with ${contact.fullName}`,
+        description: `${contact.status === 'booked' ? 'Appointment' : 'Follow-up'} at ${contact.address}`,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        type: contact.status === 'booked' ? 'appointment' : 'follow_up',
+        location: contact.address,
+        contactIds: [contact.id],
+        reminderSent: false,
+      };
+      
+      createScheduleMutation.mutate(scheduleData);
+    } catch (error) {
+      console.error("Error creating schedule entry:", error);
+    }
+  };
 
   // Watch status to show scheduling fields
   const currentStatus = form.watch("status");
