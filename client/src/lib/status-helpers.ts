@@ -73,45 +73,72 @@ export function getColorStyle(status: string, pinColors?: Record<string, string>
  */
 export function getStatusBadgeConfig(status: string): { bg: string; text: string; label: string } {
   const config: Record<string, { bg: string; text: string; label: string }> = {
-    interested: {
+    // Consistent with DEFAULT_PIN_COLORS mapping from schema.ts
+    no_answer: {
+      bg: "bg-pink-100",
+      text: "text-pink-800",
+      label: getStatusLabel("no_answer"),
+    },
+    not_visited: {  // For backward compatibility
+      bg: "bg-pink-100",
+      text: "text-pink-800",
+      label: getStatusLabel("not_visited"),
+    },
+    presented: {
+      bg: "bg-orange-100",
+      text: "text-orange-800",
+      label: getStatusLabel("presented"),
+    },
+    booked: {
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      label: getStatusLabel("booked"),
+    },
+    sold: {
       bg: "bg-green-100",
       text: "text-green-800",
-      label: getStatusLabel("interested"),
+      label: getStatusLabel("sold"),
     },
     not_interested: {
       bg: "bg-red-100",
       text: "text-red-800",
       label: getStatusLabel("not_interested"),
     },
+    no_soliciting: {
+      bg: "bg-purple-100",
+      text: "text-purple-800",
+      label: getStatusLabel("no_soliciting"),
+    },
+    check_back: {
+      bg: "bg-yellow-100",
+      text: "text-yellow-800",
+      label: getStatusLabel("check_back"),
+    },
+    // Other statuses for backward compatibility
+    interested: {
+      bg: "bg-yellow-100",
+      text: "text-yellow-800",
+      label: getStatusLabel("interested"),
+    },
     converted: {
-      bg: "bg-blue-100",
-      text: "text-blue-800",
+      bg: "bg-green-100",
+      text: "text-green-800",
       label: getStatusLabel("converted"),
     },
     considering: {
-      bg: "bg-yellow-100",
-      text: "text-yellow-800",
+      bg: "bg-purple-100",
+      text: "text-purple-800",
       label: getStatusLabel("considering"),
     },
     call_back: {
-      bg: "bg-purple-100",
-      text: "text-purple-800",
+      bg: "bg-yellow-100",
+      text: "text-yellow-800",
       label: getStatusLabel("call_back"),
     },
     appointment_scheduled: {
-      bg: "bg-orange-100",
-      text: "text-orange-800",
-      label: getStatusLabel("appointment_scheduled"),
-    },
-    not_visited: {
       bg: "bg-blue-100",
-      text: "text-blue-800", 
-      label: getStatusLabel("not_visited"),
-    },
-    no_soliciting: {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
-      label: getStatusLabel("no_soliciting"),
+      text: "text-blue-800",
+      label: getStatusLabel("appointment_scheduled"),
     },
   };
 

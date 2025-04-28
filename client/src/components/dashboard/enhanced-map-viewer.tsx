@@ -869,15 +869,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         {/* Only show the status buttons if legend is expanded */}
         {showLegend && (
           <>
-            {/* Status buttons with updated colors */}
+            {/* Status buttons matching colors in customize page */}
             {[
               { status: "no_answer", defaultLabel: "No Answer" },
-              { status: "interested", defaultLabel: "Interested" },
-              { status: "not_interested", defaultLabel: "Not Interested" },
-              { status: "check_back", defaultLabel: "Check Back" },
+              { status: "presented", defaultLabel: "Demoed" },
               { status: "booked", defaultLabel: "Booked" },
-              { status: "converted", defaultLabel: "Converted" },
+              { status: "sold", defaultLabel: "Sold" },
+              { status: "not_interested", defaultLabel: "Not Interested" },
               { status: "no_soliciting", defaultLabel: "No Soliciting" },
+              { status: "check_back", defaultLabel: "Check Back" },
             ].map(status => (
               <Button
                 key={status.status}

@@ -78,7 +78,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
   const [userMarker, setUserMarker] = useState<any | null>(null);
-  const [activeStatus, setActiveStatus] = useState<string>("not_visited");
+  const [activeStatus, setActiveStatus] = useState<string>("no_answer");
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
   const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
