@@ -262,13 +262,14 @@ export default function SidebarImproved() {
             */}
             <SidebarLink href="/contacts" icon="people" label="Contacts" isActive={isActive("/contacts")} />
             <SidebarLink href="/schedule" icon="calendar_today" label="Schedule" isActive={isActive("/schedule")} />
-            <SidebarLink 
+            {/* Temporarily hidden until core features are stable */}
+            {/* <SidebarLink 
               href="/teams" 
               icon="groups" 
               label="Teams" 
               isActive={isActive("/teams")} 
               badge={user?.role === UserRole.FREE ? "Pro" : undefined}
-            />
+            /> */}
             {/* Temporarily hidden until core features are stable 
             <SidebarLink href="/chat" icon="chat" label="Chat" isActive={isActive("/chat")} />
             */}
