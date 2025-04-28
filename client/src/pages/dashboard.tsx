@@ -293,18 +293,8 @@ export default function Dashboard() {
             </div>
           );
         case "map":
-          return (
-            <div key="map" className="mb-6">
-              <h2 className="font-semibold text-xl mb-3">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
-              <div className="bg-muted-foreground/10 rounded-lg h-64 flex items-center justify-center border">
-                <div className="text-center p-6">
-                  <span className="material-icons text-4xl mb-2 text-muted-foreground">map</span>
-                  <h3 className="text-lg font-medium mb-1">Territory Map</h3>
-                  <p className="text-muted-foreground text-sm mb-3">Your territory map will display here.</p>
-                </div>
-              </div>
-            </div>
-          );
+          // Map widget is temporarily hidden until core functionality is stable
+          return null;
         case "contacts":
           return (
             <div key="contacts" className="mb-6">
