@@ -86,6 +86,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLegend, setShowLegend] = useState(true); // For legend toggle
+  const [inStreetView, setInStreetView] = useState(false); // Track street view state
   
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
@@ -155,6 +156,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     panTo,
     addMarker,
     clearMarkers,
+    isInStreetView,
+    exitStreetView
   } = useGoogleMaps({
     apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
@@ -666,9 +669,28 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Change map type when mapType state changes
   useEffect(() => {
     if (isLoaded && map) {
+      if (inStreetView) {
+        // First exit street view if we're in it
+        exitStreetView();
+      }
       setGoogleMapType(mapType);
     }
-  }, [mapType, isLoaded, map, setGoogleMapType]);
+  }, [mapType, isLoaded, map, setGoogleMapType, inStreetView, exitStreetView]);
+  
+  // Monitor street view status changes
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+    
+    // Check every 500ms if we're in street view
+    const streetViewCheckInterval = setInterval(() => {
+      const streetViewActive = isInStreetView();
+      if (streetViewActive !== inStreetView) {
+        setInStreetView(streetViewActive);
+      }
+    }, 500);
+    
+    return () => clearInterval(streetViewCheckInterval);
+  }, [isLoaded, map, isInStreetView, inStreetView]);
 
   return (
     <div className="relative h-full w-full">
@@ -744,6 +766,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           >
             My Location
           </Button>
+          
+          {/* Street View Exit Button - Only shown when in street view */}
+          {inStreetView && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                exitStreetView();
+                setInStreetView(false);
+              }}
+              className="mt-2"
+            >
+              Exit Street View
+            </Button>
+          )}
         </div>
       </div>
       
