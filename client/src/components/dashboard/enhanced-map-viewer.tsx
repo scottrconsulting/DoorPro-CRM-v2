@@ -36,27 +36,7 @@ interface Customization {
 // Add Google Maps types
 declare global {
   interface Window {
-    google: {
-      maps: {
-        Map: any;
-        Marker: any;
-        Animation: any;
-        InfoWindow: any;
-        Geocoder: any;
-        GeocoderStatus: {
-          OK: string;
-        };
-        SymbolPath: {
-          CIRCLE: number;
-        };
-        event: {
-          removeListener: (listener: any) => void;
-        };
-        marker?: {
-          AdvancedMarkerElement?: any;
-        };
-      };
-    };
+    google: any;
     initGoogleMaps?: () => void;
   }
 }
@@ -88,7 +68,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showLegend, setShowLegend] = useState(true); // For legend toggle
   const [inStreetView, setInStreetView] = useState(false); // Track street view state
   
-
+  // Function to handle contact deletion
+  const handleContactDelete = useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setShowDeleteDialog(true);
+  }, []);
   
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
@@ -313,8 +297,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const createScheduleEntry = (scheduleData: InsertSchedule) => {
     createScheduleMutation.mutate(scheduleData);
   };
-  
-
   
   // Handle address search
   const handleAddressSearch = async () => {
@@ -563,13 +545,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
   // Function to get the CSS color for a status based on customization
   const getStatusColor = (status: string): string => {
-    // Default color mapping
+    // Default color mapping - updated to match pin colors
     const defaultColorMap: Record<string, string> = {
       not_visited: 'bg-blue-500',
       interested: 'bg-yellow-500',
       not_interested: 'bg-red-500',
-      call_back: 'bg-blue-500',
-      appointment_scheduled: 'bg-orange-500',
+      check_back: 'bg-yellow-500',  // Changed from blue to yellow to match requirement
+      booked: 'bg-blue-500',  // Changed from orange to blue to match requirement
       converted: 'bg-green-500',
       no_soliciting: 'bg-purple-500',
       considering: 'bg-purple-500',
@@ -722,7 +704,23 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           }
         });
         
-        // Right-click handler to show delete option
+        // Long-press handler to show delete option
+        marker.addListener("mousedown", () => {
+          const startTime = Date.now();
+          const longPressTimeout = setTimeout(() => {
+            handleContactDelete(contact);
+          }, 800); // 800ms long-press
+          
+          // Clear timeout if mouse is released before threshold
+          marker.addListener("mouseup", () => {
+            const duration = Date.now() - startTime;
+            if (duration < 800) {
+              clearTimeout(longPressTimeout);
+            }
+          });
+        });
+        
+        // Right-click handler to show delete option (for desktop)
         marker.addListener("rightclick", () => {
           handleContactDelete(contact);
         });
@@ -746,108 +744,83 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     if (!isLoaded || !map) return;
     
     // Check every 750ms if we're in street view
-    const streetViewCheckInterval = setInterval(() => {
-      const streetViewActive = isInStreetView();
-      if (streetViewActive !== inStreetView) {
-        setInStreetView(streetViewActive);
+    const streetViewInterval = setInterval(() => {
+      const newInStreetViewState = isInStreetView();
+      if (newInStreetViewState !== inStreetView) {
+        setInStreetView(newInStreetViewState);
       }
     }, 750);
     
-    return () => clearInterval(streetViewCheckInterval);
+    return () => clearInterval(streetViewInterval);
   }, [isLoaded, map, isInStreetView, inStreetView]);
 
+  // Monitor status changes in the form
+  useEffect(() => {
+    // Show/hide appointment scheduling fields based on status
+    const needsScheduling = 
+      newContactForm.status === "booked" || 
+      newContactForm.status === "check_back";
+    
+    setShowSchedulingFields(needsScheduling);
+    
+    // Clear scheduling fields if not needed
+    if (!needsScheduling) {
+      setNewContactForm(prev => ({
+        ...prev,
+        appointmentDate: "",
+        appointmentTime: ""
+      }));
+    }
+  }, [newContactForm.status]);
+
+  // Update the form status when the active status changes
+  useEffect(() => {
+    setNewContactForm(prev => ({
+      ...prev,
+      status: activeStatus
+    }));
+  }, [activeStatus]);
+
   return (
-    <div className="relative h-full w-full">
-      {/* Google Map Container */}
-      <div
-        ref={mapRef}
-        className="w-full h-full rounded-lg overflow-hidden shadow-lg"
+    <div className="relative w-full h-full">
+      {/* Map container */}
+      <div 
+        ref={mapRef} 
+        className="w-full h-full"
       />
       
-      {/* Map Type Controls - Top Right */}
-      <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => {
-            // Only exit Street View if we're in it and clicked a different map type
-            if (inStreetView) {
-              exitStreetView();
-              // Wait a bit for Street View to exit before changing map type
-              setTimeout(() => setMapType("roadmap"), 100);
-            } else {
-              setMapType("roadmap");
-            }
-          }}
-        >
-          Road
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => {
-            if (inStreetView) {
-              exitStreetView();
-              setTimeout(() => setMapType("satellite"), 100);
-            } else {
-              setMapType("satellite");
-            }
-          }}
-        >
-          Satellite
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => {
-            if (inStreetView) {
-              exitStreetView();
-              setTimeout(() => setMapType("hybrid"), 100);
-            } else {
-              setMapType("hybrid");
-            }
-          }}
-        >
-          Hybrid
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => {
-            if (inStreetView) {
-              exitStreetView();
-              setTimeout(() => setMapType("terrain"), 100);
-            } else {
-              setMapType("terrain");
-            }
-          }}
-        >
-          Terrain
-        </button>
-      </div>
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Loading map...</p>
+          </div>
+        </div>
+      )}
       
-      {/* Address Search Bar - Top Center */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 w-64 md:w-80">
-        <div className="relative">
+      {/* Search Controls - Top */}
+      <div className="absolute top-4 left-4 right-4 md:left-1/2 md:right-auto md:transform md:-translate-x-1/2 flex flex-col gap-2 z-10">
+        <div className="bg-white p-2 rounded-lg shadow-lg flex items-stretch gap-2">
           <Input
             type="text"
-            placeholder="Search address..."
+            placeholder="Search for an address..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8 h-9 shadow-lg rounded-md"
+            className="min-w-[200px] flex-1"
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleAddressSearch();
-              }
+              if (e.key === 'Enter') handleAddressSearch();
             }}
           />
           <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-0 top-0 h-9 w-9"
             onClick={handleAddressSearch}
+            variant="secondary"
+            size="sm"
           >
-            <span className="material-icons text-base">search</span>
+            Search
           </Button>
         </div>
       </div>
-
+      
       {/* Other Controls - Right side */}
       <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
         
@@ -893,185 +866,115 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </span>
         </Button>
         
-        {/* Only show the status buttons if legend is visible */}
+        {/* Only show the status buttons if legend is expanded */}
         {showLegend && (
           <>
-            {/* Show status buttons based on customization */}
+            {/* Status buttons with updated colors */}
             {[
-              // Core statuses with the right display labels as shown in customization page
-              { id: "no_answer", defaultLabel: "No Answer" },
-              { id: "presented", defaultLabel: "Demoed" }, // Changed to match customization page
-              { id: "booked", defaultLabel: "Booked" },
-              { id: "sold", defaultLabel: "Sold" },
-              { id: "not_interested", defaultLabel: "Not Interested" },
-              { id: "no_soliciting", defaultLabel: "No Soliciting" },
-              { id: "check_back", defaultLabel: "Check Back" },
-              // Include other standard statuses for backward compatibility
-              { id: "not_visited", defaultLabel: "Unknown" },
-              { id: "interested", defaultLabel: "Interested" },
-              { id: "appointment_scheduled", defaultLabel: "Appointment" },
-              { id: "converted", defaultLabel: "Converted" },
-              { id: "call_back", defaultLabel: "Call Back" }
-            ].filter(status => {
-              // Only show the core statuses that we specifically want (matching the customization page)
-              const coreStatuses = [
-                "no_answer", "presented", "booked", "sold", 
-                "not_interested", "no_soliciting", "check_back"
-              ];
-              
-              return coreStatuses.includes(status.id);
-            }).map(status => (
+              { status: "not_visited", defaultLabel: "Not Visited" },
+              { status: "interested", defaultLabel: "Interested" },
+              { status: "not_interested", defaultLabel: "Not Interested" },
+              { status: "check_back", defaultLabel: "Check Back" },
+              { status: "booked", defaultLabel: "Booked" },
+              { status: "converted", defaultLabel: "Converted" },
+              { status: "no_soliciting", defaultLabel: "No Soliciting" },
+            ].map(status => (
               <Button
-                key={status.id}
-                variant={activeStatus === status.id ? "default" : "outline"}
+                key={status.status}
+                variant="outline"
                 size="sm"
-                onClick={() => setActiveStatus(status.id)}
-                className="rounded-full text-xs px-2 py-1 h-7"
+                className={`h-8 px-2 py-1 text-xs ${activeStatus === status.status ? 'ring-2 ring-primary' : ''}`}
+                onClick={() => setActiveStatus(status.status)}
               >
-                <div
-                  className="w-2 h-2 rounded-full mr-1 border border-gray-200"
-                  style={{
-                    backgroundColor: customization?.pinColors?.[status.id] || 
-                      // Default colors for standard statuses
-                      (status.id === "not_visited" || status.id === "unknown" ? "#ffffff" :
-                      status.id === "no_soliciting" ? "#000000" :
-                      status.id === "converted" || status.id === "sold" ? "#00c853" :
-                      status.id === "interested" || status.id === "presented" ? "#ffd600" :
-                      status.id === "appointment_scheduled" || status.id === "booked" ? "#ff9800" :
-                      status.id === "not_interested" ? "#f44336" :
-                      status.id === "call_back" || status.id === "check_back" ? "#2196f3" :
-                      status.id === "no_answer" ? "#9c27b0" : "#cccccc")
-                  }}
-                />
-                {customization?.statusLabels && customization.statusLabels[status.id] 
-                  ? customization.statusLabels[status.id] 
-                  : status.defaultLabel}
+                <span 
+                  className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status)}`} 
+                  style={getColorStyle(status.status)}
+                ></span>
+                {customization?.statusLabels?.[status.status] || status.defaultLabel}
               </Button>
             ))}
           </>
         )}
       </div>
       
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this contact? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (selectedContact) {
-                deleteContactMutation.mutate(selectedContact.id);
-              }
-              setShowDeleteDialog(false);
-            }}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Temporarily hidden until core features are stable 
-      <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-lg z-10">
-        <div className="text-sm font-bold">{formattedTime}</div>
-        <div className="flex gap-2 mt-1">
+      {/* Map Type Controls */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <div className="bg-white rounded-lg shadow-lg flex flex-col p-1 gap-1">
           <Button
-            variant={timerActiveRef.current ? "outline" : "default"}
+            variant="ghost"
             size="sm"
+            className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
             onClick={() => {
-              // If first time starting, initialize the session
-              if (!firstHouseRecordedRef.current && !timerActiveRef.current) {
-                firstHouseRecordedRef.current = true;
-                sessionsRef.current.push({
-                  startTime: new Date().toISOString(),
-                  duration: 0
-                });
+              // Only exit Street View if we're in it and clicked a different map type
+              if (inStreetView) {
+                exitStreetView();
+                setInStreetView(false);
               }
-              
-              // Toggle timer state
-              timerActiveRef.current = !timerActiveRef.current;
-              
-              // Save current session duration when pausing
-              if (!timerActiveRef.current) {
-                const currentSession = sessionsRef.current[sessionsRef.current.length - 1];
-                if (currentSession) {
-                  currentSession.duration = workTimerRef.current;
-                }
-              } else {
-                // Create a new session if resuming after pause
-                if (firstHouseRecordedRef.current) {
-                  sessionsRef.current.push({
-                    startTime: new Date().toISOString(),
-                    duration: 0
-                  });
-                }
-              }
-              
-              // Force UI update
-              setTimerDisplay(workTimerRef.current);
-              
-              // Show feedback toast
-              toast({
-                title: timerActiveRef.current ? "Timer Started" : "Timer Paused",
-                description: timerActiveRef.current ? 
-                  "Recording your work time" : 
-                  `Session duration: ${formattedTime}`,
-              });
+              setMapType('roadmap');
             }}
-            className="px-2 py-1 h-auto"
           >
-            {timerActiveRef.current ? "Pause" : "Start/Resume"}
+            Map
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
+            onClick={() => {
+              if (inStreetView) {
+                exitStreetView();
+                setInStreetView(false);
+              }
+              setMapType('satellite');
+            }}
+          >
+            Satellite
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
+            onClick={() => {
+              if (inStreetView) {
+                exitStreetView();
+                setInStreetView(false);
+              }
+              setMapType('hybrid');
+            }}
+          >
+            Hybrid
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
+            onClick={() => {
+              if (inStreetView) {
+                exitStreetView();
+                setInStreetView(false);
+              }
+              setMapType('terrain');
+            }}
+          >
+            Terrain
           </Button>
         </div>
       </div>
-      */}
       
-      {/* New Contact Dialog - appears on long press */}
+      {/* New Contact Dialog */}
       <Dialog open={showNewContactDialog} onOpenChange={setShowNewContactDialog}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Contact</DialogTitle>
-            <DialogDescription>
-              Enter the details for this new contact.
-            </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name / Address</Label>
-                <Input 
-                  id="fullName" 
-                  value={newContactForm.fullName}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, fullName: e.target.value}))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  value={newContactForm.status}
-                  onValueChange={(value) => setNewContactForm(prev => ({...prev, status: value}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Only display the 7 statuses used for map pins */}
-                    <SelectItem value="not_interested">{getStatusLabel("not_interested")}</SelectItem>
-                    <SelectItem value="booked">{getStatusLabel("booked")}</SelectItem>
-                    <SelectItem value="presented">{getStatusLabel("presented")}</SelectItem>
-                    <SelectItem value="no_answer">{getStatusLabel("no_answer")}</SelectItem>
-                    <SelectItem value="check_back">{getStatusLabel("check_back")}</SelectItem>
-                    <SelectItem value="no_soliciting">{getStatusLabel("no_soliciting")}</SelectItem>
-                    <SelectItem value="sold">{getStatusLabel("sold")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Name</Label>
+              <Input 
+                id="fullName" 
+                value={newContactForm.fullName}
+                onChange={(e) => setNewContactForm(prev => ({...prev, fullName: e.target.value}))}
+              />
             </div>
             
             <div className="space-y-2">
@@ -1083,7 +986,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               />
             </div>
             
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
                 <Input 
@@ -1092,7 +995,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   onChange={(e) => setNewContactForm(prev => ({...prev, city: e.target.value}))}
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="state">State</Label>
                 <Input 
@@ -1101,98 +1003,83 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   onChange={(e) => setNewContactForm(prev => ({...prev, state: e.target.value}))}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="zipCode">Zip Code</Label>
-                <Input 
-                  id="zipCode" 
-                  value={newContactForm.zipCode}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, zipCode: e.target.value}))}
-                />
-              </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="zipCode">Zip Code</Label>
+              <Input 
+                id="zipCode" 
+                value={newContactForm.zipCode}
+                onChange={(e) => setNewContactForm(prev => ({...prev, zipCode: e.target.value}))}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input 
                   id="phone" 
+                  type="tel"
                   value={newContactForm.phone}
                   onChange={(e) => setNewContactForm(prev => ({...prev, phone: e.target.value}))}
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input 
                   id="email" 
+                  type="email"
                   value={newContactForm.email}
                   onChange={(e) => setNewContactForm(prev => ({...prev, email: e.target.value}))}
                 />
               </div>
             </div>
             
-            {/* Appointment Section - Only shown when status is "booked" */}
-            {newContactForm.status === "booked" && (
-              <div className="border rounded-md p-4 bg-blue-50">
-                <h4 className="font-semibold text-blue-900 mb-3">Appointment Details</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="appointmentDate" className="text-blue-900">Date</Label>
-                    <Input 
-                      id="appointmentDate" 
-                      type="date"
-                      value={newContactForm.appointmentDate}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
-                      className="border-blue-200 focus:border-blue-400"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="appointmentTime" className="text-blue-900">Time</Label>
-                    <Input 
-                      id="appointmentTime" 
-                      type="time"
-                      value={newContactForm.appointmentTime}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
-                      className="border-blue-200 focus:border-blue-400"
-                    />
-                  </div>
-                </div>
-                
-                {/* Text/Email reminder options temporarily hidden until these features are ready */}
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={newContactForm.status}
+                onValueChange={(value) => setNewContactForm(prev => ({...prev, status: value}))}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_visited">Not Visited</SelectItem>
+                  <SelectItem value="interested">Interested</SelectItem>
+                  <SelectItem value="not_interested">Not Interested</SelectItem>
+                  <SelectItem value="check_back">Check Back</SelectItem>
+                  <SelectItem value="booked">Appointment Booked</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
+                  <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
-            {/* Check Back Section - Only shown when status is "check_back" */}
-            {newContactForm.status === "check_back" && (
-              <div className="border rounded-md p-4 bg-yellow-50">
-                <h4 className="font-semibold text-yellow-900 mb-3">Schedule Check Back</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkBackDate" className="text-yellow-900">Date</Label>
-                    <Input 
-                      id="checkBackDate" 
-                      type="date"
-                      value={newContactForm.appointmentDate}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
-                      className="border-yellow-200 focus:border-yellow-400"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="checkBackTime" className="text-yellow-900">Time</Label>
-                    <Input 
-                      id="checkBackTime" 
-                      type="time"
-                      value={newContactForm.appointmentTime}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
-                      className="border-yellow-200 focus:border-yellow-400"
-                    />
-                  </div>
+            {showSchedulingFields && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="appointmentDate">
+                    {newContactForm.status === "booked" ? "Appointment Date" : "Follow-up Date"}
+                  </Label>
+                  <Input 
+                    id="appointmentDate" 
+                    type="date"
+                    value={newContactForm.appointmentDate}
+                    onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
+                  />
                 </div>
-                
-                {/* Add to Calendar and reminder options temporarily hidden until these features are ready */}
+                <div className="space-y-2">
+                  <Label htmlFor="appointmentTime">
+                    {newContactForm.status === "booked" ? "Appointment Time" : "Follow-up Time"}
+                  </Label>
+                  <Input 
+                    id="appointmentTime" 
+                    type="time"
+                    value={newContactForm.appointmentTime}
+                    onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
+                  />
+                </div>
               </div>
             )}
             
