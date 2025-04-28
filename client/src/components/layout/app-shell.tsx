@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getPlanName } from "@/lib/auth";
 import { Link } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DoorProIcon } from "@/components/ui/logo";
+import { DoorProLogo } from "@/components/ui/door-pro-logo";
 
 interface AppShellProps {
   children: ReactNode;
