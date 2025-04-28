@@ -32,7 +32,8 @@ import {
 
 export default function SchedulePage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [debugVisible, setDebugVisible] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
@@ -48,6 +49,16 @@ export default function SchedulePage() {
   const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [contactSortField, setContactSortField] = useState<string>("fullName");
   const [contactSortDirection, setContactSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Debug info - log auth status and user object
+  useEffect(() => {
+    console.log("Auth Debug - Schedule Page:", {
+      isAuthenticated,
+      authLoading,
+      user,
+      hasToken: !!localStorage.getItem('doorpro_auth_token')
+    });
+  }, [isAuthenticated, authLoading, user]);
   
   // Added for contact details and navigation
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
@@ -179,6 +190,33 @@ export default function SchedulePage() {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user is authenticated
+    if (!isAuthenticated || !user || !user.id) {
+      console.error("User authentication issue:", {
+        isAuthenticated,
+        user,
+        tokenExists: !!localStorage.getItem('doorpro_auth_token')
+      });
+      
+      toast({
+        title: "Authentication Required",
+        description: "Please make sure you're logged in before creating a schedule",
+        variant: "destructive",
+      });
+      
+      // Try to refresh authentication if token exists but user data is missing
+      if (!!localStorage.getItem('doorpro_auth_token') && (!user || !isAuthenticated)) {
+        toast({
+          title: "Refreshing authentication",
+          description: "Trying to reconnect your session...",
+        });
+        
+        // Force page reload to reestablish auth
+        window.location.reload();
+      }
+      return;
+    }
     
     if (!selectedDate) {
       toast({
@@ -366,6 +404,64 @@ export default function SchedulePage() {
 
   return (
     <div className="container mx-auto py-6">
+      {/* Debug panel for auth troubleshooting */}
+      {debugVisible && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-medium text-yellow-800">Authentication Debug Panel</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setDebugVisible(false)}
+              className="h-6 text-yellow-600 hover:text-yellow-800"
+            >
+              Close
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <p className="text-yellow-800">
+                <strong>Auth State:</strong> {authLoading ? "Loading..." : isAuthenticated ? "Authenticated" : "Not Authenticated"}
+              </p>
+              <p className="text-yellow-800">
+                <strong>Token Present:</strong> {!!localStorage.getItem('doorpro_auth_token') ? "Yes" : "No"}
+              </p>
+              
+              {!isAuthenticated && !!localStorage.getItem('doorpro_auth_token') && (
+                <Button 
+                  size="sm" 
+                  className="mt-2 h-7 text-xs bg-yellow-600 hover:bg-yellow-700"
+                  onClick={() => {
+                    toast({
+                      title: "Refreshing authentication",
+                      description: "Attempting to reconnect your session...",
+                    });
+                    window.location.reload();
+                  }}
+                >
+                  Refresh Authentication
+                </Button>
+              )}
+            </div>
+            <div>
+              <p className="text-yellow-800">
+                <strong>User ID:</strong> {user?.id || "Not available"}
+              </p>
+              <p className="text-yellow-800">
+                <strong>Username:</strong> {user?.username || "Not available"}
+              </p>
+              <p className="text-yellow-800">
+                <strong>Token Value:</strong> {
+                  localStorage.getItem('doorpro_auth_token')
+                    ? localStorage.getItem('doorpro_auth_token')!.substring(0, 10) + '...'
+                    : "None"
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Task & Appointment Schedule</h1>
         <Button 
