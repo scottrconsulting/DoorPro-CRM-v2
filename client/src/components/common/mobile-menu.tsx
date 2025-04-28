@@ -178,15 +178,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
               <span className={`material-icons mr-3 ${isActive("/settings") ? "text-primary" : "text-muted-foreground"}`}>settings</span>
-              <span>Preferences</span>
-            </Link>
-            <Link
-              href="/settings"
-              onClick={onClose}
-              className="flex items-center px-4 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <span className="material-icons mr-3 text-muted-foreground">account_circle</span>
-              <span>Account</span>
+              <span>Settings</span>
             </Link>
             <Link
               href="/customize"

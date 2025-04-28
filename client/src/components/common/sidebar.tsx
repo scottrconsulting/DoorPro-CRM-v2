@@ -142,7 +142,7 @@ export default function Sidebar() {
               : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
           >
             <span className={`material-icons mr-3 ${isActive("/settings") ? "text-primary" : "text-muted-foreground"}`}>settings</span>
-            <span>Preferences</span>
+            <span>Settings</span>
           </Link>
           <Link 
             href="/customize"
@@ -152,13 +152,6 @@ export default function Sidebar() {
           >
             <span className={`material-icons mr-3 ${isActive("/customize") ? "text-primary" : "text-muted-foreground"}`}>palette</span>
             <span>Customize</span>
-          </Link>
-          <Link 
-            href="/settings"
-            className="flex items-center px-4 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <span className="material-icons mr-3 text-muted-foreground">account_circle</span>
-            <span>Account</span>
           </Link>
           <Link 
             href="/upgrade"

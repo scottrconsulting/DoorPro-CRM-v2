@@ -223,11 +223,12 @@ export default function Settings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs defaultValue="account" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="account">Account Settings</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
         
@@ -375,11 +376,103 @@ export default function Settings() {
           </Card>
         </TabsContent>
         
-        {/* Preferences Tab */}
-        <TabsContent value="preferences">
+        {/* Account Settings Tab */}
+        <TabsContent value="account">
           <Card>
             <CardHeader>
-              <CardTitle>App Preferences</CardTitle>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>
+                Manage your account details and authentication
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="h-16 w-16 bg-primary text-white rounded-full flex items-center justify-center">
+                    <span className="material-icons text-2xl">person</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{user?.fullName || user?.username}</h3>
+                    <p className="text-sm text-neutral-500">{user?.email || "No email specified"}</p>
+                    <div className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded-md text-neutral-700 inline-block mt-1">
+                      {getPlanName(user?.role)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Account Information</h3>
+                  <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Username</p>
+                      <p className="font-medium">{user?.username}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{user?.email || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Type</p>
+                      <p className="font-medium">{getPlanName(user?.role)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Member Since</p>
+                      <p className="font-medium">April 2025</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Security</h3>
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="font-medium">Password</p>
+                      <p className="text-sm text-muted-foreground">Last changed: April 2025</p>
+                    </div>
+                    <Link href="/settings?tab=password">
+                      <Button variant="outline" size="sm">Change Password</Button>
+                    </Link>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="font-medium">Two-Factor Authentication</p>
+                      <p className="text-sm text-muted-foreground">Not enabled</p>
+                    </div>
+                    <Button variant="outline" size="sm">Enable</Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Linked Accounts</h3>
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="font-medium">Google</p>
+                      <p className="text-sm text-muted-foreground">Not linked</p>
+                    </div>
+                    <Button variant="outline" size="sm">Link Account</Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Account Management</h3>
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <p className="font-medium">Delete Account</p>
+                      <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+                    </div>
+                    <Button variant="destructive" size="sm">Delete Account</Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* General Tab */}
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
               <CardDescription>
                 Customize how the application works for you
               </CardDescription>
