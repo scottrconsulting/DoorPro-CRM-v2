@@ -75,8 +75,9 @@ function App() {
                         <Route path="/">
                           <Dashboard />
                         </Route>
+                        {/* Temporarily hidden until core features are stable */}
                         <Route path="/territories">
-                          <Territories />
+                          <NotFound />
                         </Route>
                         <Route path="/contacts/:id">
                           <ContactDetail />
@@ -87,8 +88,9 @@ function App() {
                         <Route path="/schedule">
                           <Schedule />
                         </Route>
+                        {/* Temporarily hidden until core features are stable */}
                         <Route path="/teams">
-                          <Teams />
+                          <NotFound />
                         </Route>
                         <Route path="/reports">
                           <Reports />
@@ -105,8 +107,9 @@ function App() {
                         <Route path="/customize-message-templates">
                           <CustomizeMessageTemplates />
                         </Route>
+                        {/* Temporarily hidden until core features are stable */}
                         <Route path="/chat">
-                          <Chat />
+                          <NotFound />
                         </Route>
                         <Route path="/routes">
                           <Routes />
