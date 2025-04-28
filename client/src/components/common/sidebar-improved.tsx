@@ -108,13 +108,7 @@ export default function SidebarImproved() {
             collapsed={collapsed} 
           />
           
-          <NavItem 
-            href="/territories" 
-            icon="map" 
-            label="Territories" 
-            isActive={isActive("/territories")} 
-            collapsed={collapsed} 
-          />
+          {/* Territories temporarily hidden until core features are stable */}
           
           <NavItem 
             href="/contacts" 
@@ -141,13 +135,7 @@ export default function SidebarImproved() {
             badge={user?.role === UserRole.FREE ? "Pro" : undefined}
           />
           
-          <NavItem 
-            href="/chat" 
-            icon="chat" 
-            label="Chat" 
-            isActive={isActive("/chat")} 
-            collapsed={collapsed} 
-          />
+          {/* Chat temporarily hidden until core features are stable */}
           
           <NavItem 
             href="/routes" 
