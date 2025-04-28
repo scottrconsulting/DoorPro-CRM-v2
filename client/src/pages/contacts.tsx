@@ -118,7 +118,7 @@ export default function Contacts() {
         (contact.phone && contact.phone.toLowerCase().includes(searchQuery.toLowerCase()));
       
       // Apply status filter
-      const matchesStatus = !filterStatus || contact.status === filterStatus;
+      const matchesStatus = !filterStatus || filterStatus === "all" || contact.status === filterStatus;
       
       return matchesSearch && matchesStatus;
     })

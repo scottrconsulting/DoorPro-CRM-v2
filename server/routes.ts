@@ -625,17 +625,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Import the notifications utility here to avoid circular dependencies
-      const { sendAppointmentConfirmation } = await import('./utils/notifications');
+      const { sendAppointmentConfirmations } = await import('./utils/notifications');
       
       // Send the confirmation
-      const result = await sendAppointmentConfirmation(
-        contact,
-        emailTemplate,
-        smsTemplate,
-        appointmentDate,
-        appointmentTime,
-        method as 'email' | 'sms' | 'both'
-      );
+      const result = await sendAppointmentConfirmations({
+        contactName: contact.fullName,
+        contactEmail: contact.email || undefined,
+        contactPhone: contact.phone || undefined,
+        date: appointmentDate,
+        time: appointmentTime,
+        address: contact.address,
+        notes: '',
+        userId: req.user.id
+      }, {
+        email: method === 'email' || method === 'both',
+        text: method === 'sms' || method === 'both'
+      });
       
       return res.json(result);
     } catch (error) {
