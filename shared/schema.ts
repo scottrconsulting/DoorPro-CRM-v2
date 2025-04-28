@@ -248,7 +248,7 @@ export const customizations = pgTable("customizations", {
   teamId: integer("team_id").references(() => teams.id),
   // App-wide customizations
   theme: text("theme").default("light"), // light, dark, system
-  primaryColor: text("primary_color").default("blue"),
+
   colorScheme: text("color_scheme"),
   secondaryColor: text("secondary_color"),
   accentColor: text("accent_color"),

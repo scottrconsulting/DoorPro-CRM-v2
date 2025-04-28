@@ -96,7 +96,7 @@ useEffect(() => {
           userId: user?.id,
           teamId: null,
           theme: "light",
-          primaryColor: "blue",
+
           pinColors: DEFAULT_PIN_COLORS,
           quickActions: QUICK_ACTIONS,
           customStatuses: [],
