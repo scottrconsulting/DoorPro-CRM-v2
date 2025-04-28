@@ -102,22 +102,13 @@ export default function Sidebar() {
             )}
           </Link>
           <Link 
-            href="/chat?type=messages"
-            className={`flex items-center px-4 py-2 ${isActive("/chat") && location.includes("type=messages")
+            href="/chat"
+            className={`flex items-center px-4 py-2 ${isActive("/chat")
               ? "text-foreground bg-muted border-l-4 border-primary" 
               : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
           >
-            <span className={`material-icons mr-3 ${isActive("/chat") && location.includes("type=messages") ? "text-primary" : "text-muted-foreground"}`}>chat</span>
-            <span>Messages</span>
-          </Link>
-          <Link 
-            href="/chat?type=channels"
-            className={`flex items-center px-4 py-2 ${isActive("/chat") && location.includes("type=channels")
-              ? "text-foreground bg-muted border-l-4 border-primary" 
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-          >
-            <span className={`material-icons mr-3 ${isActive("/chat") && location.includes("type=channels") ? "text-primary" : "text-muted-foreground"}`}>tag</span>
-            <span>Channels</span>
+            <span className={`material-icons mr-3 ${isActive("/chat") ? "text-primary" : "text-muted-foreground"}`}>chat</span>
+            <span>Chat</span>
           </Link>
           <Link 
             href="/routes"

@@ -555,33 +555,17 @@ export default function ChatPage() {
   
   const teamChannels = filteredConversations?.filter(c => c.isTeamChannel || c.isChannelType) || [];
   
-  // Display only relevant conversations based on selected tab
-  const displayedConversations = chatType === 'messages' 
-    ? [...directMessages, ...groupChats] 
-    : teamChannels;
+  // Display all conversation types in one view
+  const displayedConversations = [...directMessages, ...groupChats, ...teamChannels];
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Messages/Channels Tab Navigation */}
+      {/* Unified Chat Header */}
       <div className="px-4 pt-4 mb-2 flex space-x-4 border-b">
-        <a 
-          href="/chat?type=messages" 
-          className={`px-4 py-2 flex items-center ${chatType === 'messages' 
-            ? 'border-b-2 border-primary font-semibold text-primary' 
-            : 'text-muted-foreground hover:text-foreground transition-colors'}`}
-        >
+        <div className="px-4 py-2 flex items-center border-b-2 border-primary font-semibold text-primary">
           <MessageCircle className="h-4 w-4 mr-2" />
-          Messages
-        </a>
-        <a
-          href="/chat?type=channels" 
-          className={`px-4 py-2 flex items-center ${chatType === 'channels' 
-            ? 'border-b-2 border-primary font-semibold text-primary' 
-            : 'text-muted-foreground hover:text-foreground transition-colors'}`}
-        >
-          <Hash className="h-4 w-4 mr-2" />
-          Channels
-        </a>
+          Chat
+        </div>
       </div>
       
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
