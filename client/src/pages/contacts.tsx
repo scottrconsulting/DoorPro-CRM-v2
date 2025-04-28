@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
@@ -24,6 +34,26 @@ export default function Contacts() {
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [navigationAddress, setNavigationAddress] = useState<string | null>(null);
+  const [isNavigationDialogOpen, setIsNavigationDialogOpen] = useState(false);
+
+  // Handle address click for navigation
+  const handleAddressClick = (e: React.MouseEvent, address: string) => {
+    e.stopPropagation();
+    setNavigationAddress(address);
+    setIsNavigationDialogOpen(true);
+  };
+
+  // Handle navigation to address using maps
+  const handleNavigateToAddress = () => {
+    if (navigationAddress) {
+      // Create a Google Maps URL with the address
+      const encodedAddress = encodeURIComponent(navigationAddress);
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      window.open(mapsUrl, '_blank');
+      setIsNavigationDialogOpen(false);
+    }
+  };
 
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
@@ -387,12 +417,18 @@ export default function Contacts() {
                       />
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <div className="font-medium text-neutral-900">
+                      <div 
+                        className="font-medium text-neutral-900 hover:text-primary cursor-pointer"
+                        onClick={() => setSelectedContactId(contact.id)}
+                      >
                         {contact.fullName}
                       </div>
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <div className="text-neutral-600">
+                      <div 
+                        className="text-neutral-600 hover:text-primary cursor-pointer hover:underline"
+                        onClick={(e) => handleAddressClick(e, contact.address)}
+                      >
                         {contact.address}
                       </div>
                       {contact.city && contact.state && (
@@ -418,14 +454,6 @@ export default function Contacts() {
                     </td>
                     <td className="p-3 whitespace-nowrap">
                       <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedContactId(contact.id)}
-                          title="View Details"
-                        >
-                          <span className="material-icons text-sm">visibility</span>
-                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -469,6 +497,30 @@ export default function Contacts() {
           onClose={() => setSelectedContactId(null)}
         />
       )}
+
+      {/* Navigation Dialog */}
+      <AlertDialog open={isNavigationDialogOpen} onOpenChange={setIsNavigationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Navigate to Address</AlertDialogTitle>
+            <AlertDialogDescription>
+              Would you like to navigate to this address?
+              <div className="mt-2 p-2 bg-neutral-100 rounded-md">
+                {navigationAddress}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNavigateToAddress}>
+              <span className="flex items-center">
+                <span className="material-icons text-sm mr-1">map</span>
+                Navigate
+              </span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
