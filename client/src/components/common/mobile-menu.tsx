@@ -109,21 +109,16 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span className={`material-icons mr-3 ${isActive("/schedule") ? "text-primary" : "text-muted-foreground"}`}>calendar_today</span>
               <span>Schedule</span>
             </Link>
-            {/* Temporarily hidden until core features are stable 
             <Link 
-              href="/teams" 
+              href="/routes" 
               onClick={onClose}
-              className={`flex items-center px-4 py-2 ${isActive("/teams") 
+              className={`flex items-center px-4 py-2 ${isActive("/routes") 
                 ? "text-foreground bg-muted border-l-4 border-primary" 
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
-              <span className={`material-icons mr-3 ${isActive("/teams") ? "text-primary" : "text-muted-foreground"}`}>groups</span>
-              <span>Teams</span>
-              {user?.role === UserRole.FREE && (
-                <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
-              )}
+              <span className={`material-icons mr-3 ${isActive("/routes") ? "text-primary" : "text-muted-foreground"}`}>directions</span>
+              <span>Routes</span>
             </Link>
-            */}
             <Link 
               href="/reports" 
               onClick={onClose}
@@ -136,16 +131,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               {user?.role === UserRole.FREE && (
                 <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
               )}
-            </Link>
-            <Link 
-              href="/routes" 
-              onClick={onClose}
-              className={`flex items-center px-4 py-2 ${isActive("/routes") 
-                ? "text-foreground bg-muted border-l-4 border-primary" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-            >
-              <span className={`material-icons mr-3 ${isActive("/routes") ? "text-primary" : "text-muted-foreground"}`}>directions</span>
-              <span>Route Planner</span>
             </Link>
           </div>
 

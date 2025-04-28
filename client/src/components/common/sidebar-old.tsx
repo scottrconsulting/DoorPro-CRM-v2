@@ -80,7 +80,8 @@ export default function Sidebar() {
             <span className={`material-icons mr-3 ${isActive("/schedule") ? "text-primary" : "text-muted-foreground"}`}>calendar_today</span>
             <span>Schedule</span>
           </Link>
-          <Link 
+          {/* Temporarily hidden until core features are stable */}
+          {/* <Link 
             href="/teams"
             className={`flex items-center px-4 py-2 ${isActive("/teams") 
               ? "text-foreground bg-muted border-l-4 border-primary" 
@@ -91,7 +92,7 @@ export default function Sidebar() {
             {user?.role === UserRole.FREE && (
               <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
             )}
-          </Link>
+          </Link> */}
           <Link 
             href="/routes"
             className={`flex items-center px-4 py-2 ${isActive("/routes") 
