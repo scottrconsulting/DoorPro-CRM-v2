@@ -82,9 +82,16 @@ export default function SchedulePage() {
     setShowAddForm(false);
   };
 
-  // Fetch schedules
-  const { data: schedules = [], isLoading } = useQuery<Schedule[]>({
+  // Fetch schedules with advanced options for better refresh
+  const { 
+    data: schedules = [], 
+    isLoading,
+    refetch: refetchSchedules
+  } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
+    staleTime: 10000, // Consider data stale after 10 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
   
   // Fetch contacts
@@ -206,14 +213,26 @@ export default function SchedulePage() {
         throw err;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("Schedule created successfully:", data);
+      
+      // Force an immediate refetch to ensure the UI is up to date
+      await refetchSchedules();
+      
+      // Also invalidate the query cache to ensure future fetches are fresh
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      
       toast({
         title: "Schedule created",
         description: "Your schedule has been created successfully",
       });
+      
       clearForm();
+      
+      // After a brief delay, refetch again to make absolutely sure we have the latest data
+      setTimeout(() => {
+        refetchSchedules();
+      }, 1000);
     },
     onError: (error) => {
       console.error("Schedule creation error:", error);
@@ -360,14 +379,25 @@ export default function SchedulePage() {
       const res = await apiRequest("DELETE", `/api/schedules/${scheduleId}`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Force an immediate refetch
+      await refetchSchedules();
+      
+      // Also invalidate the query cache
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      
       toast({
         title: "Schedule deleted",
         description: "The schedule item has been deleted",
       });
+      
       setShowDeleteDialog(false);
       setScheduleToDelete(null);
+      
+      // Double-check with another refetch after a small delay
+      setTimeout(() => {
+        refetchSchedules();
+      }, 1000);
     },
     onError: (error) => {
       toast({
@@ -524,33 +554,50 @@ export default function SchedulePage() {
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
           {/* View mode selector */}
-          <div className="flex bg-gray-100 rounded-md p-1">
-            <button 
-              type="button"
-              onClick={() => setViewMode('today')} 
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'today' 
-                ? 'bg-white shadow-sm text-primary-700' 
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              Today
-            </button>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-gray-100 rounded-md p-1">
+              <button 
+                type="button"
+                onClick={() => setViewMode('today')} 
+                className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'today' 
+                  ? 'bg-white shadow-sm text-primary-700' 
+                  : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('upcoming')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'upcoming' 
+                  ? 'bg-white shadow-sm text-primary-700' 
+                  : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                Upcoming
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('all')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'all' 
+                  ? 'bg-white shadow-sm text-primary-700' 
+                  : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                All
+              </button>
+            </div>
+            
             <button
               type="button"
-              onClick={() => setViewMode('upcoming')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'upcoming' 
-                ? 'bg-white shadow-sm text-primary-700' 
-                : 'text-gray-600 hover:text-gray-900'}`}
+              onClick={() => {
+                refetchSchedules();
+                toast({
+                  title: "Refreshed",
+                  description: "Schedule data has been refreshed",
+                });
+              }}
+              className="p-1.5 rounded-md text-gray-500 hover:text-primary-600 hover:bg-gray-100 transition-colors"
+              title="Refresh schedule data"
             >
-              Upcoming
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('all')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'all' 
-                ? 'bg-white shadow-sm text-primary-700' 
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              All
+              <span className="material-icons text-xl">refresh</span>
             </button>
           </div>
           
