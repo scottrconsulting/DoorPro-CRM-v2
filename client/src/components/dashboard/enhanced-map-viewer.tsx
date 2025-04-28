@@ -1093,25 +1093,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendSMS" />
-                    <Label htmlFor="sendSMS" className="text-sm font-medium text-blue-900">
-                      Send Text Reminder
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendEmail" />
-                    <Label htmlFor="sendEmail" className="text-sm font-medium text-blue-900">
-                      Send Email Reminder
-                    </Label>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-blue-700 mt-2">
-                  Appointment reminder will be sent 24 hours before the scheduled time.
-                </div>
+                {/* Text/Email reminder options temporarily hidden until these features are ready */}
               </div>
             )}
             
@@ -1143,25 +1125,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendCheckBackSMS" />
-                    <Label htmlFor="sendCheckBackSMS" className="text-sm font-medium text-yellow-900">
-                      Add to Calendar
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendCheckBackEmail" />
-                    <Label htmlFor="sendCheckBackEmail" className="text-sm font-medium text-yellow-900">
-                      Set Reminder
-                    </Label>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-yellow-700 mt-2">
-                  You will be reminded to check back with this contact at the scheduled time.
-                </div>
+                {/* Add to Calendar and reminder options temporarily hidden until these features are ready */}
               </div>
             )}
             
