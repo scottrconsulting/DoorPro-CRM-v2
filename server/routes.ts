@@ -2159,6 +2159,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete conversation" });
       }
       
+      // Also delete all participants from chat_participants table for this user
+      // This is necessary because getChatConversationsByUser first queries participants
+      try {
+        await db.delete(chatParticipants)
+          .where(eq(chatParticipants.conversationId, conversationId));
+      } catch (participantError) {
+        console.error("Error ensuring participants are deleted:", participantError);
+        // Continue even if this fails as the main deletion was successful
+      }
+      
       res.status(200).json({ message: "Conversation deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting conversation:", error);
