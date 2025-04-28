@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 // US States for dropdown
 const US_STATES = [
@@ -100,7 +101,6 @@ const US_STATES = [
   { value: "WY", label: "Wyoming" },
   { value: "DC", label: "District of Columbia" },
 ];
-import { useToast } from "@/hooks/use-toast";
 
 interface ContactDetailModalProps {
   contactId: number;
@@ -513,30 +513,70 @@ export default function ContactDetailModal({
       description: taskDescription,
       dueDate: new Date(taskDueDate),
       priority: taskPriority,
-      status: "pending",
+      status: "open",
     });
   };
   
-  // Handle edit contact
-  const handleEditButtonClick = () => {
-    setIsEditMode(true);
+  // Handle file selection for document upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setDocumentFile(e.target.files[0]);
+    }
   };
   
-  // Handle save edited contact
-  const handleSaveEditedContact = () => {
-    if (!editName.trim()) {
+  // Handle document upload
+  const handleUploadDocument = () => {
+    if (!documentName.trim() || !documentFile) {
       toast({
-        title: "Name is required",
-        description: "Please enter a name for the contact",
+        title: "Required fields missing",
+        description: "Please enter a document name and select a file",
         variant: "destructive",
       });
       return;
     }
     
-    if (!editAddress.trim()) {
+    const formData = new FormData();
+    formData.append("file", documentFile);
+    formData.append("name", documentName);
+    formData.append("category", documentCategory);
+    formData.append("description", documentDescription);
+    formData.append("userId", contact?.userId.toString() || "0");
+    formData.append("contactId", contactId.toString());
+    
+    uploadDocumentMutation.mutate(formData);
+  };
+  
+  // Handle edit button click
+  const handleEditButtonClick = () => {
+    setIsEditMode(true);
+  };
+  
+  // Handle address change and auto-fill city, state, zip
+  const handleAddressChange = (address: string) => {
+    setEditAddress(address);
+    
+    // Auto-fill city, state, zip using geocoding (simplified)
+    if (address.trim().length > 10) {
+      geocodeAddress(address)
+        .then((result) => {
+          if (result) {
+            setEditCity(result.city || editCity);
+            setEditState(result.state || editState);
+            setEditZipCode(result.zipCode || editZipCode);
+          }
+        })
+        .catch((error) => {
+          console.error("Geocoding error:", error);
+        });
+    }
+  };
+  
+  // Handle save contact changes
+  const handleSaveEditedContact = () => {
+    if (!editName.trim() || !editAddress.trim()) {
       toast({
-        title: "Address is required",
-        description: "Please enter an address for the contact",
+        title: "Required fields missing",
+        description: "Please enter a name and address",
         variant: "destructive",
       });
       return;
@@ -545,131 +585,58 @@ export default function ContactDetailModal({
     updateContactMutation.mutate({
       fullName: editName,
       address: editAddress,
-      city: editCity || null,
-      state: editState || null,
-      zipCode: editZipCode || null,
-      phone: editPhone || null,
-      email: editEmail || null,
+      city: editCity,
+      state: editState,
+      zipCode: editZipCode,
+      phone: editPhone,
+      email: editEmail,
       status: editStatus,
     });
   };
   
-  // Helper to auto-populate address components when address changes
-  const handleAddressChange = async (newAddress: string) => {
-    setEditAddress(newAddress);
-    
-    try {
-      // Only attempt geocoding if the address has enough content
-      if (newAddress.trim().length > 5) {
-        const geocoded = await geocodeAddress(newAddress);
-        if (geocoded) {
-          // Auto-populate city, state, and zip code fields
-          if (geocoded.city) {
-            setEditCity(geocoded.city);
-          }
-          if (geocoded.state) {
-            setEditState(geocoded.state);
-          }
-          if (geocoded.zipCode) {
-            setEditZipCode(geocoded.zipCode);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error geocoding address:", error);
-    }
+  // Status badge with color
+  const getStatusBadge = (status: string) => {
+    const config = getStatusBadgeConfig(status);
+    return (
+      <Badge 
+        className="text-xs"
+        variant="outline"
+      >
+        {config.label}
+      </Badge>
+    );
   };
   
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
-  // Generate status badge
-  const getStatusBadge = (status: string) => {
-    // Format status for display
-    const formatStatusLabel = (status: string) => {
-      return status.split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-    };
-    
-    // Status to color mapping
-    const getBadgeColors = (status: string) => {
-      const mapping: Record<string, { bg: string; text: string }> = {
-        interested: { bg: "bg-green-100", text: "text-green-800" },
-        not_interested: { bg: "bg-red-100", text: "text-red-800" },
-        converted: { bg: "bg-blue-100", text: "text-blue-800" },
-        considering: { bg: "bg-yellow-100", text: "text-yellow-800" },
-        call_back: { bg: "bg-purple-100", text: "text-purple-800" },
-        appointment_scheduled: { bg: "bg-orange-100", text: "text-orange-800" },
-        not_visited: { bg: "bg-blue-100", text: "text-blue-800" },
-        no_soliciting: { bg: "bg-gray-100", text: "text-gray-800" },
-      };
-      
-      return mapping[status] || { bg: "bg-gray-100", text: "text-gray-800" };
-    };
-    
-    const { bg, text } = getBadgeColors(status);
-    const displayLabel = formatStatusLabel(status);
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
-        {displayLabel}
-      </span>
-    );
-  };
-
-  // Get visit type badge
+  // Visit type badge
   const getVisitTypeBadge = (type: string) => {
-    // Format type for display
-    const formatTypeLabel = (type: string) => {
-      const customLabels: Record<string, string> = {
-        initial: "Initial Visit",
-        follow_up: "Follow-up",
-        note: "Note",
-      };
-      
-      return customLabels[type] || type.split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+    const badgeMap: Record<string, { label: string, variant: "default" | "outline" | "secondary" }> = {
+      "initial": { label: "First Contact", variant: "secondary" },
+      "follow_up": { label: "Follow-up", variant: "default" },
+      "note": { label: "Note", variant: "outline" },
     };
     
-    // Type to color mapping
-    const getBadgeColors = (type: string) => {
-      const mapping: Record<string, { bg: string; text: string }> = {
-        initial: { bg: "bg-blue-100", text: "text-blue-800" },
-        follow_up: { bg: "bg-green-100", text: "text-green-800" },
-        note: { bg: "bg-yellow-100", text: "text-yellow-800" },
-      };
-      
-      return mapping[type] || { bg: "bg-gray-100", text: "text-gray-800" };
-    };
+    const config = badgeMap[type] || { label: "Note", variant: "outline" };
     
-    const { bg, text } = getBadgeColors(type);
-    const displayLabel = formatTypeLabel(type);
-
     return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
-        {displayLabel}
-      </span>
+      <Badge variant={config.variant} className="text-xs">
+        {config.label}
+      </Badge>
     );
   };
 
-  // Loading state
   if (isLoadingContact) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] h-[90vh] flex flex-col">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
             <DialogTitle>Loading contact details...</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 flex justify-center items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
+          <DialogFooter>
+            <Button onClick={onClose}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     );
@@ -678,13 +645,11 @@ export default function ContactDetailModal({
   if (!contact) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
             <DialogTitle>Contact not found</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p>The requested contact could not be found.</p>
-          </div>
+          <p className="py-6 text-center">The requested contact could not be found.</p>
           <DialogFooter>
             <Button onClick={onClose}>Close</Button>
           </DialogFooter>
@@ -695,617 +660,456 @@ export default function ContactDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-4 py-3 border-b shrink-0">
-          <DialogTitle>Contact Details</DialogTitle>
+      <DialogContent className="max-w-6xl max-h-[90vh] h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <DialogTitle className="text-xl">Contact Details</DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 p-4 pb-10">
-          <div className="flex flex-col md:flex-row mb-6">
-            <div className="md:w-2/5 mb-6 md:mb-0">
-              <div className="bg-neutral-100 p-6 rounded-lg">
-                <div className="flex items-center">
-                  <div className="h-20 w-20 bg-primary text-white rounded-full flex items-center justify-center">
-                    <span className="material-icons text-3xl">person</span>
-                  </div>
-                  <div className="ml-5">
-                    <h3 className="font-bold text-xl text-neutral-800">{contact.fullName}</h3>
-                    <p className="text-sm text-neutral-600 mt-1">
-                      Added {timeFromNow(contact.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <div>
-                    <div className="text-base font-medium text-neutral-600 mb-2">Contact Info</div>
-                    <div className="text-base mb-3 flex items-start">
-                      <span className="material-icons text-sm mr-2 mt-1 text-neutral-500">home</span>
-                      <div>
-                        <div>{contact.address}</div>
-                        {contact.city || contact.state ? (
-                          <div className="text-neutral-600">
-                            {contact.city ? `${contact.city}, ` : ''}
-                            {contact.state || ''} 
-                            {contact.zipCode ? ` ${contact.zipCode}` : ''}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                    {contact.phone && (
-                      <div className="text-base mb-3 flex items-center">
-                        <span className="material-icons text-sm mr-2 text-neutral-500">phone</span>
-                        {contact.phone}
-                      </div>
-                    )}
-                    {contact.email && (
-                      <div className="text-base flex items-center">
-                        <span className="material-icons text-sm mr-2 text-neutral-500">email</span>
-                        {contact.email}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="text-base font-medium text-neutral-600 mb-2">Status</div>
-                    {getStatusBadge(contact.status)}
-                  </div>
+        <div className="overflow-y-auto flex-1 p-0">
+          {/* Contact Info Header Section - Full Width */}
+          <div className="bg-neutral-100 p-8 border-b">
+            <div className="flex items-center">
+              <div className="h-24 w-24 bg-primary text-white rounded-full flex items-center justify-center">
+                <span className="material-icons text-4xl">person</span>
+              </div>
+              <div className="ml-6">
+                <h2 className="font-bold text-2xl text-neutral-800">{contact.fullName}</h2>
+                <div className="flex items-center mt-2">
+                  <span className="text-neutral-600">Added {timeFromNow(contact.createdAt)}</span>
+                  <div className="mx-4">•</div>
+                  <div>{getStatusBadge(contact.status)}</div>
                 </div>
               </div>
             </div>
-
-            <div className="md:w-2/3 md:pl-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="mb-4 grid grid-cols-5 w-full">
-                  <TabsTrigger value="notes" className="flex items-center">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Notes
-                  </TabsTrigger>
-                  <TabsTrigger value="schedule" className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Schedule
-                  </TabsTrigger>
-                  <TabsTrigger value="sales" className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Sales
-                  </TabsTrigger>
-                  <TabsTrigger value="tasks" className="flex items-center">
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Tasks
-                  </TabsTrigger>
-                  <TabsTrigger value="documents" className="flex items-center">
-                    <File className="h-4 w-4 mr-2" />
-                    Documents
-                  </TabsTrigger>
-                </TabsList>
-                
-                {/* Notes Tab */}
-                <TabsContent value="notes" className="space-y-4">
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-neutral-800">Add Note</h3>
-                    </div>
-                    <div className="border border-neutral-200 rounded-lg p-3">
-                      <Textarea
-                        className="w-full min-h-[100px] resize-y"
-                        rows={4}
-                        placeholder="Add notes about this contact..."
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                      />
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          onClick={handleSaveNote}
-                          disabled={addVisitMutation.isPending}
-                          size="sm"
-                        >
-                          {addVisitMutation.isPending ? "Saving..." : "Save Note"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+              <div>
+                <div className="text-base font-medium text-neutral-600 mb-2">Address</div>
+                <div className="flex items-start">
+                  <span className="material-icons mt-1 mr-2 text-neutral-500">home</span>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-neutral-800">Visit History</h3>
+                    <div className="text-base font-medium">{contact.address}</div>
+                    {contact.city || contact.state ? (
+                      <div className="text-base text-neutral-700">
+                        {contact.city ? `${contact.city}, ` : ''}
+                        {contact.state || ''} 
+                        {contact.zipCode ? ` ${contact.zipCode}` : ''}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              
+              {contact.phone && (
+                <div>
+                  <div className="text-base font-medium text-neutral-600 mb-2">Phone</div>
+                  <div className="flex items-center">
+                    <span className="material-icons mr-2 text-neutral-500">phone</span>
+                    <span className="text-base">{contact.phone}</span>
+                  </div>
+                </div>
+              )}
+              
+              {contact.email && (
+                <div>
+                  <div className="text-base font-medium text-neutral-600 mb-2">Email</div>
+                  <div className="flex items-center">
+                    <span className="material-icons mr-2 text-neutral-500">email</span>
+                    <span className="text-base">{contact.email}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Tabs Section */}
+          <div className="p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="mb-6 grid grid-cols-5 w-full">
+                <TabsTrigger value="notes" className="flex items-center">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Notes
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Schedule
+                </TabsTrigger>
+                <TabsTrigger value="sales" className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Sales
+                </TabsTrigger>
+                <TabsTrigger value="tasks" className="flex items-center">
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center">
+                  <File className="h-4 w-4 mr-2" />
+                  Documents
+                </TabsTrigger>
+              </TabsList>
+                
+              {/* Notes Tab */}
+              <TabsContent value="notes" className="space-y-4">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-neutral-800">Add Note</h3>
+                  </div>
+                  <div className="border border-neutral-200 rounded-lg p-3">
+                    <Textarea
+                      className="w-full min-h-[100px] resize-y"
+                      rows={4}
+                      placeholder="Add notes about this contact..."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        onClick={handleSaveNote}
+                        disabled={addVisitMutation.isPending}
+                        size="sm"
+                      >
+                        {addVisitMutation.isPending ? "Saving..." : "Save Note"}
+                      </Button>
                     </div>
-                    {isLoadingVisits ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : visits.length === 0 ? (
-                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
-                        <p className="text-neutral-500">No visit history yet</p>
-                      </div>
-                    ) : (
-                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
-                        {visits
-                          .sort((a, b) => 
-                            new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
-                          )
-                          .map((visit) => (
-                            <div key={visit.id} className="p-4 hover:bg-neutral-50">
-                              <div className="flex justify-between items-start mb-2">
-                                <div>
-                                  <div className="text-sm font-medium">
-                                    {visit.visitType === "initial" ? "First Contact" : 
-                                     visit.visitType === "follow_up" ? "Follow-up Visit" : 
-                                     "Note"}
-                                  </div>
-                                  <div className="text-xs text-neutral-500">
-                                    {formatDate(visit.visitDate)}
-                                  </div>
-                                </div>
-                                {getVisitTypeBadge(visit.visitType)}
-                              </div>
-                              <p className="text-sm text-neutral-600 mt-1 whitespace-pre-wrap">{visit.notes}</p>
-                            </div>
-                          ))}
-                      </div>
-                    )}
                   </div>
-                </TabsContent>
-                
-                {/* Schedule Tab */}
-                <TabsContent value="schedule" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Schedule Follow-up</CardTitle>
-                      <CardDescription>Arrange a meeting or call with this contact</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="scheduleDate">Date</Label>
-                          <Input
-                            id="scheduleDate"
-                            type="date"
-                            value={followUpDate}
-                            onChange={(e) => setFollowUpDate(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="scheduleTime">Time</Label>
-                          <Input
-                            id="scheduleTime"
-                            type="time"
-                            value={followUpTime}
-                            onChange={(e) => setFollowUpTime(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="scheduleType">Type</Label>
-                        <Select value={followUpReason} onValueChange={setFollowUpReason}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select meeting type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="product_presentation">Product Presentation</SelectItem>
-                            <SelectItem value="follow_up">Follow-up Call</SelectItem>
-                            <SelectItem value="video_call">Video Call</SelectItem>
-                            <SelectItem value="contract_signing">Contract Signing</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button 
-                        onClick={handleScheduleFollowUp}
-                        disabled={scheduleFollowUpMutation.isPending}
-                      >
-                        {scheduleFollowUpMutation.isPending ? "Scheduling..." : "Schedule Follow-up"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                {/* Sales Tab */}
-                <TabsContent value="sales" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Record a Sale</CardTitle>
-                      <CardDescription>Track purchases and sales information</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="saleProduct">Product/Service</Label>
-                          <Input
-                            id="saleProduct"
-                            placeholder="Product or service name"
-                            value={saleProduct}
-                            onChange={(e) => setSaleProduct(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="saleAmount">Amount</Label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-2.5">$</span>
-                            <Input
-                              id="saleAmount"
-                              type="number"
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0"
-                              className="pl-8"
-                              value={saleAmount}
-                              onChange={(e) => setSaleAmount(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="saleDate">Sale Date</Label>
-                          <Input
-                            id="saleDate"
-                            type="date"
-                            value={saleDate}
-                            onChange={(e) => setSaleDate(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="saleStatus">Status</Label>
-                          <Select value={saleStatus} onValueChange={setSaleStatus}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                              <SelectItem value="refunded">Refunded</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="salePaymentMethod">Payment Method</Label>
-                        <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="credit_card">Credit Card</SelectItem>
-                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                            <SelectItem value="check">Check</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="saleNotes">Notes</Label>
-                        <Textarea
-                          id="saleNotes"
-                          placeholder="Additional notes about this sale"
-                          value={saleNotes}
-                          onChange={(e) => setSaleNotes(e.target.value)}
-                          className="min-h-[100px] resize-y"
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button 
-                        onClick={handleSaveSale}
-                        disabled={addSaleMutation.isPending}
-                      >
-                        {addSaleMutation.isPending ? "Recording..." : "Record Sale"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-neutral-800">Sales History</h3>
-                    {isLoadingSales ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : sales.length === 0 ? (
-                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
-                        <p className="text-neutral-500">No sales recorded yet</p>
-                      </div>
-                    ) : (
-                      <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                        <table className="min-w-full divide-y divide-neutral-200">
-                          <thead className="bg-neutral-50">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Date</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Product</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Amount</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-neutral-200">
-                            {sales.map((sale) => (
-                              <tr key={sale.id}>
-                                <td className="px-4 py-2 whitespace-nowrap text-sm text-neutral-700">
-                                  {format(new Date(sale.saleDate), "MMM d, yyyy")}
-                                </td>
-                                <td className="px-4 py-2 text-sm text-neutral-700">{sale.product}</td>
-                                <td className="px-4 py-2 text-sm text-neutral-700 font-medium">{formatCurrency(sale.amount)}</td>
-                                <td className="px-4 py-2 whitespace-nowrap">
-                                  <Badge
-                                    variant={
-                                      sale.status === "completed" ? "default" :
-                                      sale.status === "pending" ? "outline" :
-                                      "destructive"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {sale.status}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-neutral-800">Visit History</h3>
                   </div>
-                </TabsContent>
-                
-                {/* Tasks Tab */}
-                <TabsContent value="tasks" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Add Task</CardTitle>
-                      <CardDescription>Schedule follow-up tasks related to this contact</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="taskTitle">Task Title</Label>
-                        <Input
-                          id="taskTitle"
-                          placeholder="What needs to be done?"
-                          value={taskTitle}
-                          onChange={(e) => setTaskTitle(e.target.value)}
-                        />
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="taskDescription">Description</Label>
-                        <Textarea
-                          id="taskDescription"
-                          placeholder="Add task details"
-                          value={taskDescription}
-                          onChange={(e) => setTaskDescription(e.target.value)}
-                          className="min-h-[100px] resize-y"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="taskDueDate">Due Date</Label>
-                          <Input
-                            id="taskDueDate"
-                            type="date"
-                            value={taskDueDate}
-                            onChange={(e) => setTaskDueDate(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="taskPriority">Priority</Label>
-                          <Select value={taskPriority} onValueChange={setTaskPriority}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button 
-                        onClick={handleSaveTask}
-                        disabled={addTaskMutation.isPending}
-                      >
-                        {addTaskMutation.isPending ? "Creating..." : "Create Task"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-neutral-800">Open Tasks</h3>
-                    {isLoadingTasks ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : tasks.filter(task => !task.completed).length === 0 ? (
-                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
-                        <p className="text-neutral-500">No open tasks</p>
-                      </div>
-                    ) : (
-                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
-                        {tasks
-                          .filter(task => !task.completed)
-                          .sort((a, b) => 
-                            (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0)
-                          )
-                          .map((task) => (
-                            <div key={task.id} className="p-4 hover:bg-neutral-50">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="text-base font-medium flex items-center">
-                                    <span 
-                                      className={`h-2 w-2 rounded-full mr-2 ${
-                                        task.priority === 'high' ? 'bg-red-500' :
-                                        task.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                                      }`}
-                                    ></span>
-                                    {task.title}
-                                  </div>
-                                  <div className="text-xs text-neutral-500 mt-1">
-                                    Due: {task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "No due date"}
-                                  </div>
-                                </div>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => completeTaskMutation.mutate(task.id)}
-                                  disabled={completeTaskMutation.isPending}
-                                >
-                                  Complete
-                                </Button>
-                              </div>
-                              {task.description && (
-                                <p className="text-sm text-neutral-600 mt-2 whitespace-pre-wrap">{task.description}</p>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-                
-                {/* Documents Tab */}
-                <TabsContent value="documents" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Upload Document</CardTitle>
-                      <CardDescription>Store important files related to this contact</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="documentName">Document Name</Label>
-                          <Input
-                            id="documentName"
-                            placeholder="Contract.pdf"
-                            value={documentName}
-                            onChange={(e) => setDocumentName(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="documentCategory">Category</Label>
-                          <Select value={documentCategory} onValueChange={setDocumentCategory}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="contract">Contract</SelectItem>
-                              <SelectItem value="invoice">Invoice</SelectItem>
-                              <SelectItem value="proposal">Proposal</SelectItem>
-                              <SelectItem value="id">ID Document</SelectItem>
-                              <SelectItem value="general">General</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="documentDescription">Description</Label>
-                        <Textarea
-                          id="documentDescription"
-                          placeholder="Brief description of this document"
-                          value={documentDescription}
-                          onChange={(e) => setDocumentDescription(e.target.value)}
-                          className="min-h-[100px] resize-y"
-                        />
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="documentFile">File</Label>
-                        <div className="border-2 border-dashed border-neutral-200 rounded-lg p-6 text-center hover:bg-neutral-50 transition-colors">
-                          <Upload className="mx-auto h-8 w-8 text-neutral-400" />
-                          <p className="mt-2 text-sm text-neutral-600">
-                            Drag and drop a file, or click to browse
-                          </p>
-                          <p className="mt-1 text-xs text-neutral-500">
-                            PDF, DOCX, XLSX, JPG, PNG up to 10MB
-                          </p>
-                          <Input
-                            id="documentFile"
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                setDocumentFile(e.target.files[0]);
-                                setDocumentName(e.target.files[0].name);
-                              }
-                            }}
-                          />
-                          <Button 
-                            variant="outline" 
-                            className="mt-2" 
-                            onClick={() => document.getElementById('documentFile')?.click()}
-                          >
-                            Select File
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button disabled>
-                        Upload Document
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-neutral-800">Documents</h3>
-                    {isLoadingDocuments ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                      </div>
-                    ) : documents.length === 0 ? (
-                      <div className="border border-neutral-200 rounded-lg p-4 text-center">
-                        <p className="text-neutral-500">No documents uploaded yet</p>
-                      </div>
-                    ) : (
-                      <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
-                        {documents.map((doc) => (
-                          <div key={doc.id} className="p-4 hover:bg-neutral-50 flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="mr-3 text-neutral-500">
-                                {doc.fileType?.includes('pdf') ? (
-                                  <FileText className="h-8 w-8" />
-                                ) : doc.fileType?.includes('image') ? (
-                                  <FileText className="h-8 w-8" />
-                                ) : (
-                                  <File className="h-8 w-8" />
-                                )}
-                              </div>
+                  {isLoadingVisits ? (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    </div>
+                  ) : visits.length === 0 ? (
+                    <div className="border border-neutral-200 rounded-lg p-4 text-center">
+                      <p className="text-neutral-500">No visit history yet</p>
+                    </div>
+                  ) : (
+                    <div className="border border-neutral-200 rounded-lg divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
+                      {visits
+                        .sort((a, b) => 
+                          new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
+                        )
+                        .map((visit) => (
+                          <div key={visit.id} className="p-4 hover:bg-neutral-50">
+                            <div className="flex justify-between items-start mb-2">
                               <div>
-                                <p className="font-medium text-sm">{doc.fileName}</p>
-                                <p className="text-xs text-neutral-500">
-                                  {format(new Date(doc.uploadDate), "MMM d, yyyy")} • {doc.category}
-                                </p>
-                                {doc.description && (
-                                  <p className="text-xs text-neutral-600 mt-1 max-w-md">{doc.description}</p>
-                                )}
+                                <div className="text-sm font-medium">
+                                  {visit.visitType === "initial" ? "First Contact" : 
+                                   visit.visitType === "follow_up" ? "Follow-up Visit" : 
+                                   "Note"}
+                                </div>
+                                <div className="text-xs text-neutral-500">
+                                  {formatDate(visit.visitDate)}
+                                </div>
                               </div>
+                              {getVisitTypeBadge(visit.visitType)}
                             </div>
-                            <Button variant="ghost" size="sm">
-                              <span className="material-icons text-neutral-500 text-sm">download</span>
-                            </Button>
+                            <p className="text-sm text-neutral-600 mt-1 whitespace-pre-wrap">{visit.notes}</p>
                           </div>
                         ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              {/* Schedule Tab */}
+              <TabsContent value="schedule" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Schedule Follow-up</CardTitle>
+                    <CardDescription>Arrange a meeting or call with this contact</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="scheduleDate">Date</Label>
+                        <Input
+                          id="scheduleDate"
+                          type="date"
+                          value={followUpDate}
+                          onChange={(e) => setFollowUpDate(e.target.value)}
+                        />
                       </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="scheduleTime">Time</Label>
+                        <Input
+                          id="scheduleTime"
+                          type="time"
+                          value={followUpTime}
+                          onChange={(e) => setFollowUpTime(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="scheduleType">Type</Label>
+                      <Select value={followUpReason} onValueChange={setFollowUpReason}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select meeting type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="product_presentation">Product Presentation</SelectItem>
+                          <SelectItem value="follow_up">Follow-up Call</SelectItem>
+                          <SelectItem value="video_call">Video Call</SelectItem>
+                          <SelectItem value="contract_signing">Contract Signing</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={handleScheduleFollowUp}
+                      disabled={scheduleFollowUpMutation.isPending}
+                    >
+                      {scheduleFollowUpMutation.isPending ? "Scheduling..." : "Schedule Follow-up"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              {/* Sales Tab */}
+              <TabsContent value="sales" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Record a Sale</CardTitle>
+                    <CardDescription>Track purchases and sales information</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="saleProduct">Product/Service</Label>
+                        <Input
+                          id="saleProduct"
+                          placeholder="Product or service name"
+                          value={saleProduct}
+                          onChange={(e) => setSaleProduct(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="saleAmount">Amount</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5">$</span>
+                          <Input
+                            id="saleAmount"
+                            type="number"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            className="pl-8"
+                            value={saleAmount}
+                            onChange={(e) => setSaleAmount(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="saleDate">Sale Date</Label>
+                        <Input
+                          id="saleDate"
+                          type="date"
+                          value={saleDate}
+                          onChange={(e) => setSaleDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="saleStatus">Status</Label>
+                        <Select value={saleStatus} onValueChange={setSaleStatus}>
+                          <SelectTrigger id="saleStatus">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="canceled">Canceled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="salePaymentMethod">Payment Method</Label>
+                      <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
+                        <SelectTrigger id="salePaymentMethod">
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="credit_card">Credit Card</SelectItem>
+                          <SelectItem value="check">Check</SelectItem>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="saleNotes">Notes</Label>
+                      <Textarea
+                        id="saleNotes"
+                        placeholder="Additional notes about this sale"
+                        value={saleNotes}
+                        onChange={(e) => setSaleNotes(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={handleSaveSale}
+                      disabled={addSaleMutation.isPending}
+                    >
+                      {addSaleMutation.isPending ? "Saving..." : "Record Sale"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              {/* Tasks Tab */}
+              <TabsContent value="tasks" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Create Task</CardTitle>
+                    <CardDescription>Add a task related to this contact</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="taskTitle">Title</Label>
+                      <Input
+                        id="taskTitle"
+                        placeholder="Task title"
+                        value={taskTitle}
+                        onChange={(e) => setTaskTitle(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="taskDescription">Description</Label>
+                      <Textarea
+                        id="taskDescription"
+                        placeholder="Task description"
+                        value={taskDescription}
+                        onChange={(e) => setTaskDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="taskDueDate">Due Date</Label>
+                        <Input
+                          id="taskDueDate"
+                          type="date"
+                          value={taskDueDate}
+                          onChange={(e) => setTaskDueDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="taskPriority">Priority</Label>
+                        <Select value={taskPriority} onValueChange={setTaskPriority}>
+                          <SelectTrigger id="taskPriority">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={handleSaveTask}
+                      disabled={addTaskMutation.isPending}
+                    >
+                      {addTaskMutation.isPending ? "Creating..." : "Create Task"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              {/* Documents Tab */}
+              <TabsContent value="documents" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upload Document</CardTitle>
+                    <CardDescription>Attach documents related to this contact</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="documentName">Document Name</Label>
+                      <Input
+                        id="documentName"
+                        placeholder="Document name"
+                        value={documentName}
+                        onChange={(e) => setDocumentName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="documentCategory">Category</Label>
+                      <Select value={documentCategory} onValueChange={setDocumentCategory}>
+                        <SelectTrigger id="documentCategory">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General</SelectItem>
+                          <SelectItem value="contract">Contract</SelectItem>
+                          <SelectItem value="invoice">Invoice</SelectItem>
+                          <SelectItem value="proposal">Proposal</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="documentDescription">Description</Label>
+                      <Textarea
+                        id="documentDescription"
+                        placeholder="Document description"
+                        value={documentDescription}
+                        onChange={(e) => setDocumentDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <Label htmlFor="documentFile">File</Label>
+                      <Input
+                        id="documentFile"
+                        type="file"
+                        onChange={handleFileSelect}
+                        className="pt-1.5"
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={handleUploadDocument}
+                      disabled={uploadDocumentMutation.isPending}
+                    >
+                      {uploadDocumentMutation.isPending ? "Uploading..." : "Upload Document"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
         {isEditMode ? (
-          <div className="border-t border-neutral-200 p-6">
+          <div className="p-6 border-t">
             <h3 className="font-semibold text-xl mb-6">Edit Contact</h3>
             <div className="space-y-6">
               <div>
-                <Label htmlFor="editName" className="text-base">Full Name</Label>
+                <Label htmlFor="editName" className="text-base font-medium">Full Name</Label>
                 <Input 
                   id="editName" 
                   value={editName} 
@@ -1315,7 +1119,7 @@ export default function ContactDetailModal({
               </div>
               
               <div>
-                <Label htmlFor="editAddress" className="text-base">Street Address</Label>
+                <Label htmlFor="editAddress" className="text-base font-medium">Street Address</Label>
                 <Input 
                   id="editAddress" 
                   value={editAddress} 
@@ -1326,7 +1130,7 @@ export default function ContactDetailModal({
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <Label htmlFor="editCity" className="text-base">City</Label>
+                  <Label htmlFor="editCity" className="text-base font-medium">City</Label>
                   <Input 
                     id="editCity" 
                     value={editCity} 
@@ -1335,7 +1139,7 @@ export default function ContactDetailModal({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="editState" className="text-base">State</Label>
+                  <Label htmlFor="editState" className="text-base font-medium">State</Label>
                   <Select value={editState} onValueChange={setEditState}>
                     <SelectTrigger id="editState" className="mt-2 h-11 text-base">
                       <SelectValue placeholder="Select state" />
@@ -1350,7 +1154,7 @@ export default function ContactDetailModal({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="editZipCode" className="text-base">Zip Code</Label>
+                  <Label htmlFor="editZipCode" className="text-base font-medium">Zip Code</Label>
                   <Input 
                     id="editZipCode" 
                     value={editZipCode} 
@@ -1362,7 +1166,7 @@ export default function ContactDetailModal({
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="editPhone" className="text-base">Phone</Label>
+                  <Label htmlFor="editPhone" className="text-base font-medium">Phone</Label>
                   <Input 
                     id="editPhone" 
                     value={editPhone} 
@@ -1372,7 +1176,7 @@ export default function ContactDetailModal({
                 </div>
                 
                 <div>
-                  <Label htmlFor="editEmail" className="text-base">Email</Label>
+                  <Label htmlFor="editEmail" className="text-base font-medium">Email</Label>
                   <Input 
                     id="editEmail" 
                     value={editEmail} 
@@ -1383,7 +1187,7 @@ export default function ContactDetailModal({
               </div>
               
               <div>
-                <Label htmlFor="editStatus" className="text-base">Status</Label>
+                <Label htmlFor="editStatus" className="text-base font-medium">Status</Label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
                   <SelectTrigger id="editStatus" className="mt-2 h-11 text-base">
                     <SelectValue placeholder="Select status" />
@@ -1423,21 +1227,19 @@ export default function ContactDetailModal({
             </div>
           </div>
         ) : (
-          <div className="border-t border-neutral-200 px-4 py-3 flex justify-between">
-            <div className="flex space-x-2">
+          <div className="border-t border-neutral-200 px-6 py-4 flex justify-between">
+            <div className="flex space-x-3">
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="flex items-center"
+                className="flex items-center h-10"
                 onClick={handleEditButtonClick}
               >
-                <span className="material-icons text-sm mr-1">edit</span>
+                <span className="material-icons text-sm mr-2">edit</span>
                 Edit Contact
               </Button>
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="flex items-center"
+                className="flex items-center h-10"
                 onClick={() => {
                   if (window.confirm(`Are you sure you want to delete ${contact.fullName}?`)) {
                     deleteContactMutation.mutate();
@@ -1445,11 +1247,11 @@ export default function ContactDetailModal({
                 }}
                 disabled={deleteContactMutation.isPending}
               >
-                <span className="material-icons text-sm mr-1">delete</span>
+                <span className="material-icons text-sm mr-2">delete</span>
                 {deleteContactMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </div>
-            <Button onClick={onClose}>Close</Button>
+            <Button className="h-10" onClick={onClose}>Close</Button>
           </div>
         )}
       </DialogContent>
