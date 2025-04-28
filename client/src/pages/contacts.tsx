@@ -219,42 +219,28 @@ export default function Contacts() {
 
   // Get contact status badge
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { bg: string; text: string; label: string }> = {
-      interested: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        label: "Interested",
-      },
-      not_interested: {
-        bg: "bg-red-100",
-        text: "text-red-800",
-        label: "Not interested",
-      },
-      converted: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Converted",
-      },
-      considering: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Considering",
-      },
-      not_visited: {
-        bg: "bg-neutral-100",
-        text: "text-neutral-800",
-        label: "Not visited",
-      },
+    // Use a standard gray style for all statuses
+    const statusLabels: Record<string, string> = {
+      interested: "Interested",
+      not_interested: "Not interested",
+      converted: "Converted",
+      considering: "Considering",
+      not_visited: "Not visited",
+      no_answer: "No Answer",
+      presented: "Presented",
+      booked: "Booked",
+      sold: "Sold",
+      no_soliciting: "No Soliciting",
+      check_back: "Check Back",
     };
 
-    const { bg, text, label } = config[status] || {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
-      label: status,
-    };
+    // Convert snake_case status to label if not in the mapping
+    const label = statusLabels[status] || status.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
 
     return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
         {label}
       </span>
     );
