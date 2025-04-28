@@ -570,39 +570,36 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         className="w-full h-full rounded-lg overflow-hidden shadow-lg"
       />
       
-      {/* Map Controls Overlay - Top Right */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-        {/* Map Type Controls */}
-        <div className="bg-white p-2 rounded-lg shadow-lg grid grid-cols-2 gap-1">
-          <Button
-            variant={mapType === "roadmap" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMapType("roadmap")}
-          >
-            Map
-          </Button>
-          <Button
-            variant={mapType === "satellite" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMapType("satellite")}
-          >
-            Satellite
-          </Button>
-          <Button
-            variant={mapType === "hybrid" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMapType("hybrid")}
-          >
-            Hybrid
-          </Button>
-          <Button
-            variant={mapType === "terrain" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMapType("terrain")}
-          >
-            Terrain
-          </Button>
-        </div>
+      {/* Map Type Controls - Top Right */}
+      <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("roadmap")}
+        >
+          Road
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("satellite")}
+        >
+          Satellite
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("hybrid")}
+        >
+          Hybrid
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("terrain")}
+        >
+          Terrain
+        </button>
+      </div>
+      
+      {/* Other Controls - Right side */}
+      <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
         
         {/* Location and Search Controls */}
         <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col gap-2">
