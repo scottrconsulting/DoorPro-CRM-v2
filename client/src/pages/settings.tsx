@@ -28,6 +28,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { 
   Form, 
   FormControl, 
@@ -37,12 +43,20 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { UserRole, getPlanName } from "@/lib/auth";
 import { Link } from "wouter";
+import { Customization } from "@shared/schema";
+import { 
+  STATISTICS_METRICS, 
+  STATISTICS_METRIC_LABELS 
+} from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Profile schema
 const profileSchema = z.object({

@@ -53,8 +53,18 @@ export default function Dashboard() {
   const selectedStatistics = customization?.statisticsMetrics || 
     ["today_visits", "conversions", "follow_ups", "sales_count"];
 
+  // Define a type for statistic metrics
+  type StatisticMetric = {
+    value: string | number;
+    trend: {
+      value: string;
+      label: string;
+      isPositive: boolean;
+    }
+  };
+  
   // Calculate all statistics metrics
-  const statisticsData = useMemo(() => {
+  const statisticsData = useMemo<Record<string, StatisticMetric>>(() => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
