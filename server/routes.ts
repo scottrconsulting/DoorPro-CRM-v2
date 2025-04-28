@@ -776,9 +776,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to update this contact" });
       }
 
+      // Check if this is a status change to "booked" or "check_back"
+      const isStatusChange = req.body.status && req.body.status !== existingContact.status;
+      const isBookedOrCheckBack = req.body.status === "booked" || req.body.status === "check_back";
+      
+      // Update the contact first
       const updatedContact = await storage.updateContact(contactId, req.body);
+      
+      // If the status has changed to booked or check_back, create a schedule entry
+      if (isStatusChange && isBookedOrCheckBack) {
+        try {
+          // Set up schedule date (default to tomorrow at 10am)
+          const scheduleDate = new Date();
+          scheduleDate.setDate(scheduleDate.getDate() + 1); // tomorrow
+          scheduleDate.setHours(10, 0, 0, 0); // 10:00 AM
+          
+          const endTime = new Date(scheduleDate);
+          endTime.setHours(endTime.getHours() + 1); // 1 hour appointment
+          
+          // Create the schedule entry
+          const scheduleData = {
+            title: req.body.status === "booked" 
+              ? `Appointment with ${updatedContact.fullName}`
+              : `Follow-up with ${updatedContact.fullName}`,
+            type: req.body.status === "booked" ? "appointment" : "follow_up",
+            userId: user.id,
+            startTime: scheduleDate,
+            endTime: endTime,
+            location: updatedContact.address,
+            description: req.body.status === "booked"
+              ? `Scheduled appointment for ${updatedContact.fullName} at ${updatedContact.address}`
+              : `Follow up with ${updatedContact.fullName} at ${updatedContact.address}`,
+            contactIds: [contactId],
+            priority: req.body.status === "booked" ? "high" : "medium"
+          };
+          
+          await storage.createSchedule(scheduleData);
+          
+          // Add a visit record for this status change
+          const visitData = {
+            contactId,
+            userId: user.id,
+            visitType: req.body.status === "booked" ? "appointment_scheduled" : "follow_up_scheduled",
+            notes: req.body.status === "booked"
+              ? `Status changed to Booked. Appointment scheduled for ${scheduleDate.toLocaleString()}.`
+              : `Status changed to Check Back. Follow-up scheduled for ${scheduleDate.toLocaleString()}.`,
+            visitDate: new Date()
+          };
+          
+          await storage.createVisit(visitData);
+          
+          console.log(`Auto-scheduled ${req.body.status} event for contact ${contactId}`);
+        } catch (scheduleError) {
+          console.error("Failed to auto-schedule event:", scheduleError);
+          // We don't want to fail the contact update if scheduling fails
+          // Just log the error and continue
+        }
+      }
+      
       return res.json(updatedContact);
     } catch (error) {
+      console.error("Error updating contact:", error);
+      return res.status(500).json({ message: "Failed to update contact" });
+    }
+  });
+
+  app.patch("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id, 10);
+      const existingContact = await storage.getContact(contactId);
+
+      if (!existingContact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const user = req.user as any;
+      if (existingContact.userId !== user.id && user.role !== "admin") {
+        return res.status(403).json({ message: "Not authorized to update this contact" });
+      }
+
+      // Check if this is a status change to "booked" or "check_back"
+      const isStatusChange = req.body.status && req.body.status !== existingContact.status;
+      const isBookedOrCheckBack = req.body.status === "booked" || req.body.status === "check_back";
+      
+      // Update the contact first
+      const updatedContact = await storage.updateContact(contactId, req.body);
+      
+      // If the status has changed to booked or check_back, create a schedule entry
+      if (isStatusChange && isBookedOrCheckBack) {
+        try {
+          // Set up schedule date (default to tomorrow at 10am)
+          const scheduleDate = new Date();
+          scheduleDate.setDate(scheduleDate.getDate() + 1); // tomorrow
+          scheduleDate.setHours(10, 0, 0, 0); // 10:00 AM
+          
+          const endTime = new Date(scheduleDate);
+          endTime.setHours(endTime.getHours() + 1); // 1 hour appointment
+          
+          // Create the schedule entry
+          const scheduleData = {
+            title: req.body.status === "booked" 
+              ? `Appointment with ${updatedContact.fullName}`
+              : `Follow-up with ${updatedContact.fullName}`,
+            type: req.body.status === "booked" ? "appointment" : "follow_up",
+            userId: user.id,
+            startTime: scheduleDate,
+            endTime: endTime,
+            location: updatedContact.address,
+            description: req.body.status === "booked"
+              ? `Scheduled appointment for ${updatedContact.fullName} at ${updatedContact.address}`
+              : `Follow up with ${updatedContact.fullName} at ${updatedContact.address}`,
+            contactIds: [contactId],
+            priority: req.body.status === "booked" ? "high" : "medium"
+          };
+          
+          await storage.createSchedule(scheduleData);
+          
+          // Add a visit record for this status change
+          const visitData = {
+            contactId,
+            userId: user.id,
+            visitType: req.body.status === "booked" ? "appointment_scheduled" : "follow_up_scheduled",
+            notes: req.body.status === "booked"
+              ? `Status changed to Booked. Appointment scheduled for ${scheduleDate.toLocaleString()}.`
+              : `Status changed to Check Back. Follow-up scheduled for ${scheduleDate.toLocaleString()}.`,
+            visitDate: new Date()
+          };
+          
+          await storage.createVisit(visitData);
+          
+          console.log(`Auto-scheduled ${req.body.status} event for contact ${contactId}`);
+        } catch (scheduleError) {
+          console.error("Failed to auto-schedule event:", scheduleError);
+          // We don't want to fail the contact update if scheduling fails
+          // Just log the error and continue
+        }
+      }
+      
+      return res.json(updatedContact);
+    } catch (error) {
+      console.error("Error updating contact:", error);
       return res.status(500).json({ message: "Failed to update contact" });
     }
   });
