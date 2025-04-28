@@ -3,6 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+
+// Extend the User type to include isManager
+declare module "@/hooks/use-auth" {
+  interface User {
+    isManager?: boolean;
+  }
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +77,10 @@ interface Conversation {
   isTeamChannel: boolean;
   createdAt: string;
   updatedAt: string;
+  isChannelType?: boolean;
+  channelTag?: string | null;
+  isPublic?: boolean;
+  creatorId?: number | null;
 }
 
 interface Participant {
@@ -354,13 +365,40 @@ export default function ChatPage() {
   // Mutation for deleting conversations (single or multiple)
   const deleteConversationsMutation = useMutation({
     mutationFn: async (conversationIds: number[]) => {
+      // Store any errors for conversations that couldn't be deleted
+      const errors: { id: number; error: string }[] = [];
+      const deletedIds: number[] = [];
+
       // Delete one by one to ensure each deletion completes
       for (const id of conversationIds) {
-        await apiRequest("DELETE", `/api/chat/conversations/${id}`);
+        try {
+          const conversation = conversations?.find(c => c.id === id);
+          
+          // Only allow deletion if:
+          // 1. It's a direct message (always allowed for participants)
+          // 2. User is the creator of a channel
+          // 3. User is a manager (has admin rights)
+          if (!conversation?.isChannelType || 
+              conversation.creatorId === user?.id || 
+              user?.isManager) {
+            await apiRequest("DELETE", `/api/chat/conversations/${id}`);
+            deletedIds.push(id);
+          } else {
+            errors.push({ 
+              id, 
+              error: "You don't have permission to delete this channel" 
+            });
+          }
+        } catch (error: any) {
+          errors.push({ id, error: error.message || "Failed to delete" });
+        }
       }
-      return conversationIds;
+
+      return { deletedIds, errors };
     },
-    onSuccess: (deletedIds) => {
+    onSuccess: (result) => {
+      const { deletedIds, errors } = result;
+      
       // Invalidate queries to refresh conversation list
       queryClient.invalidateQueries({
         queryKey: ["/api/chat/conversations"],
@@ -372,7 +410,7 @@ export default function ChatPage() {
       setIsDeleteDialogOpen(false);
       
       // Reset selected conversation if it was deleted
-      if (selectedConversation && deletedIds.includes(selectedConversation)) {
+      if (selectedConversation && deletedIds.some(id => id === selectedConversation)) {
         setSelectedConversation(null);
       }
       
@@ -381,12 +419,26 @@ export default function ChatPage() {
         queryKey: ["/api/chat/conversations"],
       });
       
-      toast({
-        title: "Conversations deleted",
-        description: selectedConversations.length > 1 
-          ? `${selectedConversations.length} conversations have been deleted.`
-          : "The conversation has been deleted.",
-      });
+      // Show success message if any conversations were deleted
+      if (deletedIds.length > 0) {
+        toast({
+          title: "Conversations deleted",
+          description: deletedIds.length > 1 
+            ? `${deletedIds.length} conversations have been deleted.`
+            : "The conversation has been deleted.",
+        });
+      }
+      
+      // Show error messages for any conversations that couldn't be deleted
+      if (errors.length > 0) {
+        errors.forEach(error => {
+          toast({
+            title: "Deletion error",
+            description: error.error,
+            variant: "destructive",
+          });
+        });
+      }
     },
     onError: (error: any) => {
       toast({
