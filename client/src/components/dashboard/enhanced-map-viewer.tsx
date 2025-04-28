@@ -1236,6 +1236,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   // Handle scheduling fields based on status
                   if (newContactForm.appointmentDate) {
                     // Common scheduling data for both booked and check_back
+                    // Format appointment as needed for server-side processing
+                    contactData.appointment = `${newContactForm.appointmentDate} ${newContactForm.appointmentTime}`;
+                    
+                    // Also keep the separate fields for more detailed processing
                     contactData.appointmentDate = newContactForm.appointmentDate;
                     contactData.appointmentTime = newContactForm.appointmentTime;
                     
