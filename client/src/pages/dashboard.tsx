@@ -293,8 +293,16 @@ export default function Dashboard() {
             </div>
           );
         case "map":
-          // Map widget is temporarily hidden until core functionality is stable
-          return null;
+          return (
+            <div key="map" className="mb-6">
+              <h2 className="font-semibold text-xl mb-3">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
+              <div className="rounded-lg h-[500px]">
+                <EnhancedMapViewer 
+                  onSelectContact={(contactId) => setSelectedContactId(contactId)} 
+                />
+              </div>
+            </div>
+          );
         case "contacts":
           return (
             <div key="contacts" className="mb-6">

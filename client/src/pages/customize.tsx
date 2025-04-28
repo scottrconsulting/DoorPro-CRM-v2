@@ -7,7 +7,7 @@ import { useLocation, Link } from "wouter";
 import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS, STATISTICS_METRICS, STATISTICS_METRIC_LABELS } from "@shared/schema";
 
 // Define widgets to hide temporarily until core functionality is stable
-const HIDDEN_WIDGETS = ["territory_coverage", "map"];
+const HIDDEN_WIDGETS = ["territory_coverage"];
 
 import {
   Card,
