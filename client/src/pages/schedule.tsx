@@ -857,15 +857,30 @@ export default function SchedulePage() {
           <div className="col-span-full flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
-        ) : sortedDates.length === 0 ? (
+        ) : filteredDates.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-white rounded-lg shadow-md">
             <div className="material-icons text-neutral-400 text-5xl mb-2">event_busy</div>
-            <h3 className="text-lg font-medium text-neutral-800">No tasks or appointments yet</h3>
-            <p className="text-neutral-500 mb-4">Click the button below to add your first task or appointment</p>
-            <Button onClick={() => setShowAddForm(true)}>Add Task/Appointment</Button>
+            <h3 className="text-lg font-medium text-neutral-800">
+              {viewMode === 'today' 
+                ? "No tasks or appointments for today" 
+                : viewMode === 'upcoming' 
+                  ? "No upcoming tasks or appointments" 
+                  : "No tasks or appointments yet"}
+            </h3>
+            <p className="text-neutral-500 mb-4">
+              {viewMode !== 'all' && sortedDates.length > 0 
+                ? "Try switching to 'All' view or"
+                : ""} Click the button below to add a new task or appointment
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {viewMode !== 'all' && sortedDates.length > 0 && (
+                <Button variant="outline" onClick={() => setViewMode('all')}>Show All</Button>
+              )}
+              <Button onClick={() => setShowAddForm(true)}>Add Task/Appointment</Button>
+            </div>
           </div>
         ) : (
-          sortedDates.map((date) => (
+          filteredDates.map((date) => (
             <Card key={date} className="shadow-md">
               <CardHeader className="bg-neutral-50 border-b pb-3">
                 <CardTitle className="text-lg">{format(new Date(date + 'T12:00:00'), "EEEE, MMMM d, yyyy")}</CardTitle>
