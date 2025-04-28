@@ -59,7 +59,7 @@ export default function DirectLogin() {
           <CardHeader>
             <div className="flex justify-center mb-2">
               <img 
-                src="/images/doorpro-logo-large.png" 
+                src="/client/public/images/doorpro-logo.png" 
                 alt="DoorPro CRM" 
                 className="h-20 w-auto" 
               />

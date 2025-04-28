@@ -54,7 +54,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           <div className="flex items-center">
             <Link href="/" className="flex items-center font-sans text-xl font-semibold">
               <img 
-                src="/images/doorpro-icon.png" 
+                src="/client/public/images/doorpro-logo.png" 
                 alt="DoorPro CRM" 
                 className="h-8 w-8 mr-2" 
               />
