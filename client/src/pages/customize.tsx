@@ -6,6 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
 import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS, STATISTICS_METRICS, STATISTICS_METRIC_LABELS } from "@shared/schema";
 
+// Define widgets to hide temporarily until core functionality is stable
+const HIDDEN_WIDGETS = ["territory_coverage"];
+
 import {
   Card,
   CardContent,
@@ -715,7 +718,7 @@ useEffect(() => {
                   <p className="text-sm text-muted-foreground">Select which widgets to display on your dashboard.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {DASHBOARD_WIDGETS.map(widget => (
+                    {DASHBOARD_WIDGETS.filter(widget => !HIDDEN_WIDGETS.includes(widget)).map(widget => (
                       <div key={widget} className="flex items-center space-x-2 p-2 border rounded">
                         <Checkbox 
                           id={`widget-${widget}`} 
@@ -812,7 +815,8 @@ useEffect(() => {
                       </div>
                     ) : (
                       // Only show the enabled widgets in the order list, but maintain their positions
-                      enabledWidgets
+                      // Also filter out any hidden widgets
+                      enabledWidgets.filter(widget => !HIDDEN_WIDGETS.includes(widget))
                         .map(enabledWidget => {
                           // Get the index in the widgetOrder array or add to the end if not found
                           const orderIndex = widgetOrder.findIndex(w => w === enabledWidget);
