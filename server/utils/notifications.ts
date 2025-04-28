@@ -1,158 +1,172 @@
 import sgMail from '@sendgrid/mail';
-import { MessageTemplate, Contact } from '@shared/schema';
+import { db } from '../db';
+import { messageTemplates } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Initialize SendGrid if API key is available
-export const initializeSendGrid = () => {
-  if (process.env.SENDGRID_API_KEY) {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    return true;
-  }
-  console.warn("SendGrid API key not set. Email notifications will be disabled.");
-  return false;
-};
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
-// Initialize when this module is imported
-initializeSendGrid();
+interface AppointmentInfo {
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  date: string;
+  time: string;
+  address?: string;
+  notes?: string;
+  userId: number;
+}
 
 /**
- * Send appointment confirmation via email
+ * Fetches a message template by type and name
  */
-export const sendAppointmentEmail = async (
-  contact: Contact,
-  template: MessageTemplate,
-  appointmentDate: string,
-  appointmentTime: string
-): Promise<boolean> => {
+async function getMessageTemplate(type: 'email' | 'text', userId: number, isDefault: boolean = true) {
+  try {
+    const template = await db.query.messageTemplates.findFirst({
+      where: and(
+        eq(messageTemplates.type, type),
+        eq(messageTemplates.userId, userId),
+        eq(messageTemplates.isDefault, isDefault)
+      )
+    });
+    
+    return template;
+  } catch (error) {
+    console.error(`Error fetching ${type} template:`, error);
+    return null;
+  }
+}
+
+/**
+ * Replaces placeholder tokens in template with actual values
+ */
+function replaceTokens(template: string, data: Record<string, string>): string {
+  let result = template;
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Replace tokens in format {{token_name}}
+    const token = new RegExp(`{{${key}}}`, 'g');
+    result = result.replace(token, value || '');
+  }
+  
+  return result;
+}
+
+/**
+ * Sends an email appointment confirmation
+ */
+export async function sendEmailConfirmation(appointmentInfo: AppointmentInfo): Promise<boolean> {
   if (!process.env.SENDGRID_API_KEY) {
-    console.error("SendGrid API key not found. Cannot send email.");
+    console.error('SendGrid API key not configured');
     return false;
   }
-
-  if (!contact.email) {
-    console.error("Cannot send email: Contact does not have an email address");
+  
+  if (!appointmentInfo.contactEmail) {
+    console.error('Cannot send email confirmation: contact email is missing');
     return false;
   }
-
-  // Format appointment date
-  const dateObj = new Date(appointmentDate);
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long', 
-    day: 'numeric',
-    year: 'numeric'
-  });
-  
-  // Format appointment time
-  const [hours, minutes] = appointmentTime.split(':');
-  const timePart = parseInt(hours) >= 12 ? 'PM' : 'AM';
-  const hour12 = parseInt(hours) % 12 || 12;
-  const formattedTime = `${hour12}:${minutes} ${timePart}`;
-  
-  // Replace template placeholders with actual data
-  const processedBody = template.body
-    .replace(/{{customerName}}/g, contact.fullName)
-    .replace(/{{appointmentDate}}/g, formattedDate)
-    .replace(/{{appointmentTime}}/g, formattedTime)
-    .replace(/{{address}}/g, contact.address);
-
-  const msg = {
-    to: contact.email,
-    from: 'noreply@doorprocrm.com', // Use your verified sender
-    subject: template.subject?.replace(/{{customerName}}/g, contact.fullName) || 'Your Appointment Confirmation',
-    content: [
-      {
-        type: template.isHtml ? 'text/html' : 'text/plain',
-        value: processedBody
-      }
-    ]
-  };
   
   try {
+    // Fetch appropriate email template
+    const template = await getMessageTemplate('email', appointmentInfo.userId);
+    
+    if (!template) {
+      console.error('No default email template found for user ID:', appointmentInfo.userId);
+      return false;
+    }
+    
+    // Build token replacement data
+    const tokenData = {
+      contact_name: appointmentInfo.contactName,
+      appointment_date: appointmentInfo.date,
+      appointment_time: appointmentInfo.time,
+      address: appointmentInfo.address || '',
+      notes: appointmentInfo.notes || '',
+    };
+    
+    // Replace tokens in template
+    const subject = template.subject ? replaceTokens(template.subject, tokenData) : 'Appointment Confirmation';
+    const htmlContent = replaceTokens(template.body, tokenData);
+    
+    // Send email
+    const msg = {
+      to: appointmentInfo.contactEmail,
+      from: 'noreply@doorpro.app', // This should be your verified sender in SendGrid
+      subject: subject,
+      text: htmlContent.replace(/<[^>]*>?/gm, ''), // Plain text version
+      html: htmlContent,
+    };
+    
     await sgMail.send(msg);
+    console.log(`Email confirmation sent to ${appointmentInfo.contactEmail}`);
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('Error sending email confirmation:', error);
     return false;
   }
-};
+}
 
 /**
- * Send text message for appointment confirmation
- * This is a placeholder - implement actual SMS provider like Twilio
+ * Sends a text (SMS) appointment confirmation
+ * Note: This is a placeholder for a future SMS integration
  */
-export const sendAppointmentSMS = async (
-  contact: Contact,
-  template: MessageTemplate,
-  appointmentDate: string,
-  appointmentTime: string
-): Promise<boolean> => {
-  if (!contact.phone) {
-    console.error("Cannot send SMS: Contact does not have a phone number");
+export async function sendTextConfirmation(appointmentInfo: AppointmentInfo): Promise<boolean> {
+  if (!appointmentInfo.contactPhone) {
+    console.error('Cannot send text confirmation: contact phone is missing');
     return false;
   }
-
-  // This is a placeholder for SMS functionality
-  // You would need to implement an actual SMS provider like Twilio here
-  console.log(`SMS would be sent to ${contact.phone} with message: ${template.body}`);
   
-  // Currently just simulating success for the interface to work
-  return true;
-};
-
-/**
- * Send appointment confirmation via email, SMS, or both
- */
-export const sendAppointmentConfirmation = async (
-  contact: Contact,
-  emailTemplate: MessageTemplate | null,
-  smsTemplate: MessageTemplate | null,
-  appointmentDate: string,
-  appointmentTime: string,
-  method: 'email' | 'sms' | 'both'
-): Promise<{ success: boolean, message: string }> => {
-  let emailSent = false;
-  let smsSent = false;
-  
-  // Send email if requested and we have a template and contact email
-  if ((method === 'email' || method === 'both') && emailTemplate && contact.email) {
-    emailSent = await sendAppointmentEmail(
-      contact, 
-      emailTemplate, 
-      appointmentDate,
-      appointmentTime
-    );
-  }
-  
-  // Send SMS if requested and we have a template and contact phone
-  if ((method === 'sms' || method === 'both') && smsTemplate && contact.phone) {
-    smsSent = await sendAppointmentSMS(
-      contact, 
-      smsTemplate, 
-      appointmentDate,
-      appointmentTime
-    );
-  }
-  
-  // Generate appropriate response
-  if (method === 'both') {
-    if (emailSent && smsSent) {
-      return { success: true, message: "Confirmation sent via email and SMS" };
-    } else if (emailSent) {
-      return { success: true, message: "Confirmation sent via email only" };
-    } else if (smsSent) {
-      return { success: true, message: "Confirmation sent via SMS only" };
-    } else {
-      return { success: false, message: "Failed to send confirmation" };
+  try {
+    // Fetch appropriate text template
+    const template = await getMessageTemplate('text', appointmentInfo.userId);
+    
+    if (!template) {
+      console.error('No default text template found for user ID:', appointmentInfo.userId);
+      return false;
     }
-  } else if (method === 'email') {
-    return { 
-      success: emailSent, 
-      message: emailSent ? "Email confirmation sent" : "Failed to send email confirmation" 
+    
+    // Build token replacement data
+    const tokenData = {
+      contact_name: appointmentInfo.contactName,
+      appointment_date: appointmentInfo.date,
+      appointment_time: appointmentInfo.time,
+      address: appointmentInfo.address || '',
+      notes: appointmentInfo.notes || '',
     };
-  } else {
-    return { 
-      success: smsSent, 
-      message: smsSent ? "SMS confirmation sent" : "Failed to send SMS confirmation" 
-    };
+    
+    // Replace tokens in template
+    const textContent = replaceTokens(template.body, tokenData);
+    
+    // In a real implementation, this would integrate with an SMS service like Twilio
+    // For now, we'll just log the message
+    console.log(`SMS would be sent to ${appointmentInfo.contactPhone}: ${textContent}`);
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending text confirmation:', error);
+    return false;
   }
-};
+}
+
+/**
+ * Sends appointment confirmations based on user preferences
+ */
+export async function sendAppointmentConfirmations(appointmentInfo: AppointmentInfo, 
+                                                 methods: {email: boolean, text: boolean} = {email: true, text: false}): Promise<{email: boolean, text: boolean}> {
+  const results = {
+    email: false,
+    text: false
+  };
+  
+  if (methods.email && appointmentInfo.contactEmail) {
+    results.email = await sendEmailConfirmation(appointmentInfo);
+  }
+  
+  if (methods.text && appointmentInfo.contactPhone) {
+    results.text = await sendTextConfirmation(appointmentInfo);
+  }
+  
+  return results;
+}

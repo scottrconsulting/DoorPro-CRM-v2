@@ -678,6 +678,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const contactData = insertContactSchema.parse({ ...req.body, userId: user.id });
       const contact = await storage.createContact(contactData);
+      
+      // Check if there's an appointment to schedule
+      if (contact.appointment && (contact.status === 'booked' || contact.status === 'check_back')) {
+        try {
+          // Get user's notification preferences
+          const userCustomization = await storage.getCustomizationByUser(user.id);
+          
+          // Default confirmation options if not set
+          const confirmOptions = userCustomization?.confirmationOptions || {
+            email: true,
+            sms: false,
+            reminderTime: 60 // minutes before appointment
+          };
+          
+          // Only send confirmation if contact has email or phone
+          if ((confirmOptions.email && contact.email) || (confirmOptions.sms && contact.phone)) {
+            // Parse appointment string into date and time
+            const [appointmentDate, appointmentTime] = contact.appointment.split(' ');
+            
+            // Import notifications utility
+            const { sendAppointmentConfirmations } = await import('./utils/notifications');
+            
+            // Send the appointment confirmations
+            await sendAppointmentConfirmations({
+              contactName: contact.fullName,
+              contactEmail: contact.email,
+              contactPhone: contact.phone,
+              date: appointmentDate,
+              time: appointmentTime,
+              address: contact.address,
+              notes: contact.notes,
+              userId: user.id
+            }, {
+              email: confirmOptions.email && !!contact.email,
+              text: confirmOptions.sms && !!contact.phone
+            });
+            
+            // If this is an actual appointment (not just check-back), add to schedule
+            if (contact.status === 'booked') {
+              // Add a schedule entry for this appointment
+              // Parse appointment date/time and create proper start/end times
+              const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+              const endDateTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour appointment
+              
+              await storage.createSchedule({
+                userId: user.id,
+                title: `Appointment with ${contact.fullName}`,
+                description: contact.notes || `Scheduled appointment with ${contact.fullName}`,
+                startTime: appointmentDateTime,
+                endTime: endDateTime,
+                type: 'appointment',
+                location: contact.address,
+                contactIds: [contact.id],
+                reminderTime: new Date(appointmentDateTime.getTime() - (confirmOptions.reminderTime * 60 * 1000)),
+                confirmationMethod: confirmOptions.email && confirmOptions.sms ? 'both' : 
+                                   confirmOptions.email ? 'email' : 
+                                   confirmOptions.sms ? 'sms' : 'none',
+                confirmationStatus: 'pending'
+              });
+            }
+          }
+        } catch (notificationError) {
+          console.error("Failed to send appointment confirmation:", notificationError);
+          // Don't return an error here, as the contact was still created successfully
+        }
+      }
+      
       return res.status(201).json(contact);
     } catch (error) {
       if (error instanceof ZodError) {
