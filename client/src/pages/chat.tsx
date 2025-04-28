@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 // Extend the User type to include isManager
 declare module "@/hooks/use-auth" {
@@ -153,6 +154,11 @@ export default function ChatPage() {
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
   const [enableNotifications, setEnableNotifications] = useState(true);
   const [notificationTarget, setNotificationTarget] = useState<"all" | "mentions" | "urgent" | "none">("all");
+  
+  // Get chat type from URL query parameters (messages or channels)
+  const [location] = useLocation();
+  const queryParams = new URLSearchParams(location.split('?')[1] || '');
+  const chatType = queryParams.get('type') || 'messages';
   
   // Multi-select chat conversations functionality
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
