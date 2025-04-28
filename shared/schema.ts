@@ -277,6 +277,7 @@ export const customizations = pgTable("customizations", {
   dashboardWidgets: text("dashboard_widgets").array(),
   dashboardWidgetLabels: json("dashboard_widget_labels").$type<Record<string, string>>().default({}),
   statisticsMetrics: text("statistics_metrics").array(), // Selected metrics for the statistics widget
+  statisticsMetricLabels: json("statistics_metric_labels").$type<Record<string, string>>().default({}), // Custom labels for statistics metrics
   
   // Other settings
   timerSettings: json("timer_settings").$type<Record<string, any>>().default({}),
