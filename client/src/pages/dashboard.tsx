@@ -255,44 +255,49 @@ export default function Dashboard() {
       switch (widgetId) {
         case "stats":
           return (
-            <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {selectedStatistics.map(metricId => {
-                // Get metric data
-                const metricData = statisticsData[metricId];
-                if (!metricData) return null;
-                
-                // Get background color based on metric type
-                let iconBgColor = "bg-blue-100";
-                
-                if (metricId.includes("sale")) {
-                  iconBgColor = "bg-green-100"; // Sales metrics
-                } else if (metricId.includes("time")) {
-                  iconBgColor = "bg-purple-100"; // Time metrics
-                } else if (metricId === "not_interested" || metricId === "no_soliciting") {
-                  iconBgColor = "bg-red-100"; // Negative metrics
-                } else if (metricId === "presented" || metricId === "check_back") {
-                  iconBgColor = "bg-yellow-100"; // Potential metrics
-                } else if (metricId === "appointments" || metricId === "booked") {
-                  iconBgColor = "bg-orange-100"; // Appointment metrics
-                }
-                
-                return (
-                  <StatCard
-                    key={metricId}
-                    title={metricLabels[metricId] || STATISTICS_METRIC_LABELS[metricId] || metricId}
-                    value={metricData.value}
-                    icon={STATISTICS_METRIC_ICONS[metricId] || "analytics"}
-                    iconBgColor={iconBgColor}
-                    trend={metricData.trend}
-                  />
-                );
-              })}
+            <div key="stats" className="mb-6">
+              <p className="text-muted-foreground mb-3">Here's your activity summary for today</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {selectedStatistics.map(metricId => {
+                  // Get metric data
+                  const metricData = statisticsData[metricId];
+                  if (!metricData) return null;
+                  
+                  // Get background color based on metric type
+                  let iconBgColor = "bg-blue-100";
+                  
+                  if (metricId.includes("sale")) {
+                    iconBgColor = "bg-green-100"; // Sales metrics
+                  } else if (metricId.includes("time")) {
+                    iconBgColor = "bg-purple-100"; // Time metrics
+                  } else if (metricId === "not_interested" || metricId === "no_soliciting") {
+                    iconBgColor = "bg-red-100"; // Negative metrics
+                  } else if (metricId === "presented" || metricId === "check_back") {
+                    iconBgColor = "bg-yellow-100"; // Potential metrics
+                  } else if (metricId === "appointments" || metricId === "booked") {
+                    iconBgColor = "bg-orange-100"; // Appointment metrics
+                  }
+                  
+                  return (
+                    <StatCard
+                      key={metricId}
+                      title={metricLabels[metricId] || STATISTICS_METRIC_LABELS[metricId] || metricId}
+                      value={metricData.value}
+                      icon={STATISTICS_METRIC_ICONS[metricId] || "analytics"}
+                      iconBgColor={iconBgColor}
+                      trend={metricData.trend}
+                    />
+                  );
+                })}
+              </div>
             </div>
           );
         case "map":
           return (
-            <div key="map" className="mb-6 h-[500px]">
-              <EnhancedMapViewer onSelectContact={handleContactSelect} />
+            <div key="map" className="mb-6">
+              <div className="h-[500px]">
+                <EnhancedMapViewer onSelectContact={handleContactSelect} />
+              </div>
             </div>
           );
         case "contacts":
@@ -324,20 +329,8 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold font-sans text-foreground">
             Welcome back, {user?.fullName?.split(' ')[0] || 'User'}
           </h1>
-          <p className="text-muted-foreground">Here's your activity summary for today</p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <Button 
-            variant="ghost" 
-            className="flex items-center" 
-            onClick={() => {
-              refetchContacts();
-              refetchVisits();
-            }}
-            title="Refresh data"
-          >
-            <span className="material-icons text-sm mr-1">refresh</span> Refresh
-          </Button>
           <Link href="/contacts">
             <Button variant="outline" className="flex items-center">
               <span className="material-icons text-sm mr-1">add</span> Add Contact
