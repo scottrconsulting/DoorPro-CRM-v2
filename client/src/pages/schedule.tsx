@@ -107,34 +107,36 @@ export default function SchedulePage() {
     return new Date(a).getTime() - new Date(b).getTime();
   });
 
-  // Calculate reminder time with proper timezone handling
+  // Calculate reminder time using local time
   const calculateReminderTime = (startDateTime: Date): Date => {
     // Clone the date to avoid modifying the original
     const reminder = new Date(startDateTime.getTime());
     
     switch (reminderTime) {
       case "15_min":
-        reminder.setUTCMinutes(reminder.getUTCMinutes() - 15);
+        reminder.setMinutes(reminder.getMinutes() - 15);
         break;
       case "30_min":
-        reminder.setUTCMinutes(reminder.getUTCMinutes() - 30);
+        reminder.setMinutes(reminder.getMinutes() - 30);
         break;
       case "1_hour":
-        reminder.setUTCHours(reminder.getUTCHours() - 1);
+        reminder.setHours(reminder.getHours() - 1);
         break;
       case "2_hours":
-        reminder.setUTCHours(reminder.getUTCHours() - 2);
+        reminder.setHours(reminder.getHours() - 2);
         break;
       case "1_day":
-        reminder.setUTCDate(reminder.getUTCDate() - 1);
+        reminder.setDate(reminder.getDate() - 1);
         break;
       default:
-        reminder.setUTCHours(reminder.getUTCHours() - 1);
+        reminder.setHours(reminder.getHours() - 1);
     }
     
     console.log('Reminder Time:', {
-      original: startDateTime.toISOString(),
-      reminder: reminder.toISOString(),
+      original: startDateTime.toString(),
+      originalISO: startDateTime.toISOString(),
+      reminder: reminder.toString(),
+      reminderISO: reminder.toISOString(),
       timeOption: reminderTime
     });
     

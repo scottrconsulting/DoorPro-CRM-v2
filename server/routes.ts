@@ -786,13 +786,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If the status has changed to booked or check_back, create a schedule entry
       if (isStatusChange && isBookedOrCheckBack) {
         try {
-          // Set up schedule date (default to tomorrow at 10am)
-          const scheduleDate = new Date();
-          scheduleDate.setDate(scheduleDate.getDate() + 1); // tomorrow
-          scheduleDate.setHours(10, 0, 0, 0); // 10:00 AM
+          // Set up schedule date (default to tomorrow at 10am) in local time
+          const currentDate = new Date();
+          const tomorrowDate = new Date(currentDate);
+          tomorrowDate.setDate(currentDate.getDate() + 1);
           
-          const endTime = new Date(scheduleDate);
-          endTime.setHours(endTime.getHours() + 1); // 1 hour appointment
+          // Start time - tomorrow 10am local time
+          const scheduleDate = new Date(
+            tomorrowDate.getFullYear(),
+            tomorrowDate.getMonth(),
+            tomorrowDate.getDate(),
+            10, 0, 0
+          );
+          
+          // End time - tomorrow 11am local time (1 hour later)
+          const endTime = new Date(
+            tomorrowDate.getFullYear(),
+            tomorrowDate.getMonth(),
+            tomorrowDate.getDate(),
+            11, 0, 0
+          );
           
           // Create the schedule entry
           const scheduleData = {
@@ -852,26 +865,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = req.user as any;
       if (existingContact.userId !== user.id && user.role !== "admin") {
-        return res.status(403).json({ message: "Not authorized to update this contact" });
+        return res.status(403).json({ message: "You don't have permission to update this contact" });
       }
-
-      // Check if this is a status change to "booked" or "check_back"
-      const isStatusChange = req.body.status && req.body.status !== existingContact.status;
-      const isBookedOrCheckBack = req.body.status === "booked" || req.body.status === "check_back";
       
       // Update the contact first
       const updatedContact = await storage.updateContact(contactId, req.body);
       
+      // Check if status has changed
+      const isStatusChange = req.body.status && existingContact.status !== req.body.status;
+      const isBookedOrCheckBack = req.body.status === "booked" || req.body.status === "check_back";
+      
       // If the status has changed to booked or check_back, create a schedule entry
       if (isStatusChange && isBookedOrCheckBack) {
         try {
-          // Set up schedule date (default to tomorrow at 10am)
-          const scheduleDate = new Date();
-          scheduleDate.setDate(scheduleDate.getDate() + 1); // tomorrow
-          scheduleDate.setHours(10, 0, 0, 0); // 10:00 AM
+          // Set up schedule date (default to tomorrow at 10am) in local time
+          const currentDate = new Date();
+          const tomorrowDate = new Date(currentDate);
+          tomorrowDate.setDate(currentDate.getDate() + 1);
           
-          const endTime = new Date(scheduleDate);
-          endTime.setHours(endTime.getHours() + 1); // 1 hour appointment
+          // Start time - tomorrow 10am local time
+          const scheduleDate = new Date(
+            tomorrowDate.getFullYear(),
+            tomorrowDate.getMonth(),
+            tomorrowDate.getDate(),
+            10, 0, 0
+          );
+          
+          // End time - tomorrow 11am local time (1 hour later)
+          const endTime = new Date(
+            tomorrowDate.getFullYear(),
+            tomorrowDate.getMonth(),
+            tomorrowDate.getDate(),
+            11, 0, 0
+          );
           
           // Create the schedule entry
           const scheduleData = {
