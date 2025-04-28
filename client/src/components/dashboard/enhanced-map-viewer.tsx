@@ -288,8 +288,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const res = await apiRequest("POST", "/api/schedules", scheduleData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Schedule Created",
+        description: variables.type === 'appointment' 
+          ? "Appointment has been added to your schedule" 
+          : "Follow-up has been added to your schedule",
+      });
     },
     onError: (error) => {
       console.error("Failed to create schedule entry", error);
