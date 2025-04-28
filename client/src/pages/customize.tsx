@@ -196,15 +196,25 @@ useEffect(() => {
       }
       
       // Initialize dashboard widgets settings
-      if (customization.dashboardWidgets) {
-        setEnabledWidgets(customization.dashboardWidgets || DASHBOARD_WIDGETS);
-      }
+      const widgets = customization.dashboardWidgets || DASHBOARD_WIDGETS;
+      setEnabledWidgets(widgets);
       
-      // Use dashboardWidgetOrder if available, otherwise use dashboardWidgets or default order
-      if (customization.dashboardWidgetOrder) {
-        setWidgetOrder(customization.dashboardWidgetOrder);
-      } else if (customization.dashboardWidgets) {
-        setWidgetOrder(customization.dashboardWidgets);
+      // Initialize widget order, ensuring all enabled widgets are included
+      if (customization.dashboardWidgetOrder && customization.dashboardWidgetOrder.length > 0) {
+        // Start with the custom order
+        let order = [...customization.dashboardWidgetOrder];
+        
+        // Add any enabled widgets that aren't in the order yet
+        widgets.forEach(widget => {
+          if (!order.includes(widget)) {
+            order.push(widget);
+          }
+        });
+        
+        setWidgetOrder(order);
+      } else {
+        // If no custom order, use the enabled widgets
+        setWidgetOrder([...widgets]);
       }
       
       if (customization.dashboardWidgetLabels) {
@@ -737,6 +747,7 @@ useEffect(() => {
                           checked={enabledWidgets.includes(widget)}
                           onCheckedChange={(checked) => {
                             if (checked === true) {
+                              // Add widget to enabled widgets
                               const newEnabledWidgets = [...enabledWidgets, widget];
                               setEnabledWidgets(newEnabledWidgets);
                               
@@ -745,7 +756,11 @@ useEffect(() => {
                                 setWidgetOrder([...widgetOrder, widget]);
                               }
                             } else {
+                              // Remove widget from enabled widgets
                               setEnabledWidgets(enabledWidgets.filter(w => w !== widget));
+                              
+                              // Keep widget in the order to maintain configuration
+                              // This allows re-enabling later with the same position
                             }
                           }}
                         />
@@ -821,9 +836,19 @@ useEffect(() => {
                         <p className="text-muted-foreground">No widgets enabled. Enable widgets above to arrange them.</p>
                       </div>
                     ) : (
-                      widgetOrder
-                        .filter(widget => enabledWidgets.includes(widget))
-                        .map((widget, index) => (
+                      // Only show the enabled widgets in the order list, but maintain their positions
+                      enabledWidgets
+                        .map(enabledWidget => {
+                          // Get the index in the widgetOrder array or add to the end if not found
+                          const orderIndex = widgetOrder.findIndex(w => w === enabledWidget);
+                          return { 
+                            widget: enabledWidget, 
+                            orderIndex: orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER 
+                          };
+                        })
+                        // Sort by the order index
+                        .sort((a, b) => a.orderIndex - b.orderIndex)
+                        .map(({ widget }, index) => (
                         <div 
                           key={widget} 
                           className="flex items-center justify-between p-3 bg-muted/50 border rounded-md"
@@ -840,10 +865,27 @@ useEffect(() => {
                               variant="ghost"
                               onClick={() => {
                                 if (index === 0) return;
+                                
+                                // Find the actual indexes in the full widgetOrder array
+                                const widgetToMove = widget;
+                                const previousWidgetIndex = enabledWidgets
+                                  .map(w => {
+                                    const orderIndex = widgetOrder.findIndex(wo => wo === w);
+                                    return orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER;
+                                  })
+                                  .sort((a, b) => a - b)[index - 1];
+                                
+                                // Create new order with these widgets swapped
                                 const newOrder = [...widgetOrder];
-                                const temp = newOrder[index];
-                                newOrder[index] = newOrder[index - 1];
-                                newOrder[index - 1] = temp;
+                                
+                                // Find indexes of widgets in the full order array
+                                const widgetIndex = widgetOrder.findIndex(w => w === widgetToMove);
+                                const previousWidget = widgetOrder[previousWidgetIndex];
+                                
+                                // Swap them
+                                newOrder[previousWidgetIndex] = widgetToMove;
+                                newOrder[widgetIndex] = previousWidget;
+                                
                                 setWidgetOrder(newOrder);
                               }}
                               disabled={index === 0}
@@ -854,11 +896,29 @@ useEffect(() => {
                               size="sm"
                               variant="ghost"
                               onClick={() => {
-                                if (index === widgetOrder.filter(w => enabledWidgets.includes(w)).length - 1) return;
+                                const enabledCount = enabledWidgets.length;
+                                if (index === enabledCount - 1) return;
+                                
+                                // Find the actual indexes in the full widgetOrder array
+                                const widgetToMove = widget;
+                                const nextWidgetIndex = enabledWidgets
+                                  .map(w => {
+                                    const orderIndex = widgetOrder.findIndex(wo => wo === w);
+                                    return orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER;
+                                  })
+                                  .sort((a, b) => a - b)[index + 1];
+                                
+                                // Create new order with these widgets swapped
                                 const newOrder = [...widgetOrder];
-                                const temp = newOrder[index];
-                                newOrder[index] = newOrder[index + 1];
-                                newOrder[index + 1] = temp;
+                                
+                                // Find indexes of widgets in the full order array
+                                const widgetIndex = widgetOrder.findIndex(w => w === widgetToMove);
+                                const nextWidget = widgetOrder[nextWidgetIndex];
+                                
+                                // Swap them
+                                newOrder[nextWidgetIndex] = widgetToMove;
+                                newOrder[widgetIndex] = nextWidget;
+                                
                                 setWidgetOrder(newOrder);
                               }}
                               disabled={index === widgetOrder.filter(w => enabledWidgets.includes(w)).length - 1}
