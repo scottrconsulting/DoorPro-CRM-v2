@@ -177,45 +177,45 @@ export default function SchedulePage() {
       return;
     }
     
-    // Extract the year, month, and day from the selected date
+    // Extract the year, month, and day from the selected date using local time
     const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth(); // 0-indexed
+    const month = selectedDate.getMonth();
     const day = selectedDate.getDate();
     
     // Parse hours and minutes from time strings
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     
-    // Create start date using Date.UTC to avoid timezone conversion issues
-    const startDateTime = new Date(Date.UTC(year, month, day, startHours, startMinutes, 0));
+    // Create a new date in local time first
+    const startDateTime = new Date(year, month, day, startHours, startMinutes, 0);
     
     // Create default end time 30 minutes after start if not provided
     let endDateTime;
     
     if (endTime) {
       const [endHours, endMinutes] = endTime.split(":").map(Number);
-      endDateTime = new Date(Date.UTC(year, month, day, endHours, endMinutes, 0));
+      endDateTime = new Date(year, month, day, endHours, endMinutes, 0);
       
       // Validate time if end time is provided
       if (endDateTime <= startDateTime) {
         // Just set end time to 30 minutes after start
         endDateTime = new Date(startDateTime);
-        endDateTime.setUTCMinutes(startDateTime.getUTCMinutes() + 30);
+        endDateTime.setMinutes(startDateTime.getMinutes() + 30);
       }
     } else {
       // Default to 30 minutes after start
       endDateTime = new Date(startDateTime);
-      endDateTime.setUTCMinutes(startDateTime.getUTCMinutes() + 30);
+      endDateTime.setMinutes(startDateTime.getMinutes() + 30);
     }
     
     // Log the date values for debugging
-    console.log('Schedule Page - UTC Dates:', { 
+    console.log('Schedule Page - Dates:', { 
       selectedDate: selectedDate.toString(),
       startTime,
       endTime,
-      startTimeUTC: startDateTime.toISOString(),
-      endTimeUTC: endDateTime.toISOString(),
-      startTimeLocal: startDateTime.toString(),
-      endTimeLocal: endDateTime.toString()
+      startDateTime: startDateTime.toString(),
+      startDateTimeISO: startDateTime.toISOString(),
+      endDateTime: endDateTime.toString(),
+      endDateTimeISO: endDateTime.toISOString()
     });
     
     // Calculate reminder time (if enabled)
