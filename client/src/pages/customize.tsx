@@ -198,7 +198,13 @@ useEffect(() => {
       // Initialize dashboard widgets settings
       if (customization.dashboardWidgets) {
         setEnabledWidgets(customization.dashboardWidgets || DASHBOARD_WIDGETS);
-        setWidgetOrder(customization.dashboardWidgets || DASHBOARD_WIDGETS);
+      }
+      
+      // Use dashboardWidgetOrder if available, otherwise use dashboardWidgets or default order
+      if (customization.dashboardWidgetOrder) {
+        setWidgetOrder(customization.dashboardWidgetOrder);
+      } else if (customization.dashboardWidgets) {
+        setWidgetOrder(customization.dashboardWidgets);
       }
       
       if (customization.dashboardWidgetLabels) {
@@ -272,6 +278,7 @@ useEffect(() => {
         reminderTime
       },
       dashboardWidgets: enabledWidgets,
+      dashboardWidgetOrder: widgetOrder, // Save the widget order separately
       dashboardWidgetLabels: customWidgetLabels,
       statisticsMetrics: enabledStatisticsMetrics,
       statisticsMetricLabels: statisticsMetricLabels as Record<string, string>
