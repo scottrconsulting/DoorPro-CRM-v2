@@ -458,17 +458,31 @@ export default function ContactDetailModal({
 
   // Handle schedule follow-up
   const handleScheduleFollowUp = () => {
-    const startTime = new Date(`${followUpDate}T${followUpTime}`);
-    const endTime = new Date(startTime);
-    endTime.setMinutes(endTime.getMinutes() + 30);
+    // Create a date with the correct timezone handling
+    // First, parse the local date and time as UTC (to prevent timezone shifting)
+    const [year, month, day] = followUpDate.split('-').map(Number);
+    const [hours, minutes] = followUpTime.split(':').map(Number);
+    
+    // Create Date objects using UTC methods to avoid timezone conversion issues
+    const startTime = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+    const endTime = new Date(Date.UTC(year, month - 1, day, hours, minutes + 30, 0));
+    
+    console.log('Contact Modal - UTC Dates:', { 
+      date: followUpDate, 
+      time: followUpTime,
+      startTimeUTC: startTime.toISOString(), 
+      endTimeUTC: endTime.toISOString(),
+      startTimeLocal: startTime.toString(),
+      endTimeLocal: endTime.toString()
+    });
 
     // Create schedule data in the expected format
     scheduleFollowUpMutation.mutate({
       userId: contact?.userId || 0,
       title: `Follow-up with ${contact?.fullName}`,
       description: `${followUpReason} at ${contact?.address}`,
-      startTime: startTime, // Use Date objects directly
-      endTime: endTime,     // Use Date objects directly
+      startTime: startTime,
+      endTime: endTime,
       type: "follow_up",
       location: contact?.address || "",
       contactIds: [contactId],

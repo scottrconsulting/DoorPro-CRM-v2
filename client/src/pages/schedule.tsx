@@ -80,13 +80,25 @@ export default function SchedulePage() {
     queryKey: ["/api/contacts"],
   });
 
-  // Group schedules by date
+  // Group schedules by date - using the date in local timezone for display
   const schedulesByDate = schedules.reduce((acc, schedule) => {
-    const date = format(parseISO(schedule.startTime.toString()), "yyyy-MM-dd");
-    if (!acc[date]) {
-      acc[date] = [];
+    // For debugging, log the schedule to see the dates
+    console.log('Schedule Processing:', { 
+      id: schedule.id, 
+      title: schedule.title,
+      rawStartTime: schedule.startTime,
+      isoString: new Date(schedule.startTime).toISOString(),
+      localDate: new Date(schedule.startTime).toString() 
+    });
+    
+    // Extract the date in local timezone instead of UTC
+    const scheduleDate = new Date(schedule.startTime);
+    const dateString = format(scheduleDate, "yyyy-MM-dd");
+    
+    if (!acc[dateString]) {
+      acc[dateString] = [];
     }
-    acc[date].push(schedule);
+    acc[dateString].push(schedule);
     return acc;
   }, {} as Record<string, Schedule[]>);
   
@@ -95,29 +107,36 @@ export default function SchedulePage() {
     return new Date(a).getTime() - new Date(b).getTime();
   });
 
-  // Calculate reminder time
+  // Calculate reminder time with proper timezone handling
   const calculateReminderTime = (startDateTime: Date): Date => {
-    const reminder = new Date(startDateTime);
+    // Clone the date to avoid modifying the original
+    const reminder = new Date(startDateTime.getTime());
     
     switch (reminderTime) {
       case "15_min":
-        reminder.setMinutes(reminder.getMinutes() - 15);
+        reminder.setUTCMinutes(reminder.getUTCMinutes() - 15);
         break;
       case "30_min":
-        reminder.setMinutes(reminder.getMinutes() - 30);
+        reminder.setUTCMinutes(reminder.getUTCMinutes() - 30);
         break;
       case "1_hour":
-        reminder.setHours(reminder.getHours() - 1);
+        reminder.setUTCHours(reminder.getUTCHours() - 1);
         break;
       case "2_hours":
-        reminder.setHours(reminder.getHours() - 2);
+        reminder.setUTCHours(reminder.getUTCHours() - 2);
         break;
       case "1_day":
-        reminder.setDate(reminder.getDate() - 1);
+        reminder.setUTCDate(reminder.getUTCDate() - 1);
         break;
       default:
-        reminder.setHours(reminder.getHours() - 1);
+        reminder.setUTCHours(reminder.getUTCHours() - 1);
     }
+    
+    console.log('Reminder Time:', {
+      original: startDateTime.toISOString(),
+      reminder: reminder.toISOString(),
+      timeOption: reminderTime
+    });
     
     return reminder;
   };
@@ -158,35 +177,46 @@ export default function SchedulePage() {
       return;
     }
     
-    // Combine date and time
-    const startDateTime = set(selectedDate, {
-      hours: parseInt(startTime.split(":")[0]),
-      minutes: parseInt(startTime.split(":")[1]),
-      seconds: 0,
-      milliseconds: 0,
-    });
+    // Extract the year, month, and day from the selected date
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth(); // 0-indexed
+    const day = selectedDate.getDate();
+    
+    // Parse hours and minutes from time strings
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    
+    // Create start date using Date.UTC to avoid timezone conversion issues
+    const startDateTime = new Date(Date.UTC(year, month, day, startHours, startMinutes, 0));
     
     // Create default end time 30 minutes after start if not provided
     let endDateTime;
+    
     if (endTime) {
-      endDateTime = set(selectedDate, {
-        hours: parseInt(endTime.split(":")[0]),
-        minutes: parseInt(endTime.split(":")[1]),
-        seconds: 0,
-        milliseconds: 0,
-      });
+      const [endHours, endMinutes] = endTime.split(":").map(Number);
+      endDateTime = new Date(Date.UTC(year, month, day, endHours, endMinutes, 0));
       
       // Validate time if end time is provided
       if (endDateTime <= startDateTime) {
         // Just set end time to 30 minutes after start
         endDateTime = new Date(startDateTime);
-        endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+        endDateTime.setUTCMinutes(startDateTime.getUTCMinutes() + 30);
       }
     } else {
       // Default to 30 minutes after start
       endDateTime = new Date(startDateTime);
-      endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+      endDateTime.setUTCMinutes(startDateTime.getUTCMinutes() + 30);
     }
+    
+    // Log the date values for debugging
+    console.log('Schedule Page - UTC Dates:', { 
+      selectedDate: selectedDate.toString(),
+      startTime,
+      endTime,
+      startTimeUTC: startDateTime.toISOString(),
+      endTimeUTC: endDateTime.toISOString(),
+      startTimeLocal: startDateTime.toString(),
+      endTimeLocal: endDateTime.toString()
+    });
     
     // Calculate reminder time (if enabled)
     let reminderTimeValue = undefined;
