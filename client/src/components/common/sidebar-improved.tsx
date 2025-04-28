@@ -126,14 +126,15 @@ export default function SidebarImproved() {
             collapsed={collapsed} 
           />
           
-          <NavItem 
+          {/* Temporarily hidden until core features are stable */}
+          {/* <NavItem 
             href="/teams" 
             icon="groups" 
             label="Teams" 
             isActive={isActive("/teams")} 
             collapsed={collapsed} 
             badge={user?.role === UserRole.FREE ? "Pro" : undefined}
-          />
+          /> */}
           
           {/* Chat temporarily hidden until core features are stable */}
           
