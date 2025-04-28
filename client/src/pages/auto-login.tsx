@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { DoorProLogo } from "@/components/ui/door-pro-logo";
 
 const AUTO_LOGIN_KEY = "auto_login_attempted";
 const LOCAL_STORAGE_KEY = "auth_bypass_token";
@@ -82,11 +83,7 @@ export default function AutoLogin() {
         <Card className="w-full max-w-md p-8 shadow-md">
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <img 
-                src="/images/doorpro-logo-large.svg" 
-                alt="DoorPro CRM" 
-                className="h-20 w-auto" 
-              />
+              <DoorProLogo size="large" />
             </div>
             <h2 className="text-2xl font-bold mb-4">Logging you in...</h2>
             <p className="text-gray-500 mb-6">Please wait while we authenticate your session.</p>
@@ -105,11 +102,7 @@ export default function AutoLogin() {
         <Card className="w-full max-w-md p-8 shadow-md">
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <img 
-                src="/images/doorpro-logo-large.svg" 
-                alt="DoorPro CRM" 
-                className="h-20 w-auto" 
-              />
+              <DoorProLogo size="large" />
             </div>
             <h2 className="text-2xl font-bold mb-4">Login Issue</h2>
             <p className="text-gray-500 mb-6">{error}</p>
