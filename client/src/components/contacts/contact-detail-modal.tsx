@@ -701,51 +701,55 @@ export default function ContactDetailModal({
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 p-4 pb-10">
-          <div className="flex flex-col md:flex-row">
-            <div className="md:w-1/3 mb-4 md:mb-0">
-              <div className="bg-neutral-100 p-4 rounded-lg">
+          <div className="flex flex-col md:flex-row mb-6">
+            <div className="md:w-2/5 mb-6 md:mb-0">
+              <div className="bg-neutral-100 p-6 rounded-lg">
                 <div className="flex items-center">
-                  <div className="h-16 w-16 bg-primary text-white rounded-full flex items-center justify-center">
-                    <span className="material-icons text-2xl">person</span>
+                  <div className="h-20 w-20 bg-primary text-white rounded-full flex items-center justify-center">
+                    <span className="material-icons text-3xl">person</span>
                   </div>
-                  <div className="ml-4">
-                    <h3 className="font-bold text-neutral-800">{contact.fullName}</h3>
-                    <p className="text-sm text-neutral-600">
+                  <div className="ml-5">
+                    <h3 className="font-bold text-xl text-neutral-800">{contact.fullName}</h3>
+                    <p className="text-sm text-neutral-600 mt-1">
                       Added {timeFromNow(contact.createdAt)}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="text-sm font-medium text-neutral-500 mb-1">Contact Info</div>
-                  <div className="text-sm mb-2">
-                    <span className="material-icons text-xs align-text-bottom mr-1">home</span>
-                    {contact.address}
-                    {contact.city || contact.state ? (
-                      <div className="ml-5 mt-1 text-xs text-neutral-600">
-                        {contact.city ? `${contact.city}, ` : ''}
-                        {contact.state || ''} 
-                        {contact.zipCode ? ` ${contact.zipCode}` : ''}
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="text-base font-medium text-neutral-600 mb-2">Contact Info</div>
+                    <div className="text-base mb-3 flex items-start">
+                      <span className="material-icons text-sm mr-2 mt-1 text-neutral-500">home</span>
+                      <div>
+                        <div>{contact.address}</div>
+                        {contact.city || contact.state ? (
+                          <div className="text-neutral-600">
+                            {contact.city ? `${contact.city}, ` : ''}
+                            {contact.state || ''} 
+                            {contact.zipCode ? ` ${contact.zipCode}` : ''}
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
+                    </div>
+                    {contact.phone && (
+                      <div className="text-base mb-3 flex items-center">
+                        <span className="material-icons text-sm mr-2 text-neutral-500">phone</span>
+                        {contact.phone}
+                      </div>
+                    )}
+                    {contact.email && (
+                      <div className="text-base flex items-center">
+                        <span className="material-icons text-sm mr-2 text-neutral-500">email</span>
+                        {contact.email}
+                      </div>
+                    )}
                   </div>
-                  {contact.phone && (
-                    <div className="text-sm mb-2">
-                      <span className="material-icons text-xs align-text-bottom mr-1">phone</span>
-                      {contact.phone}
-                    </div>
-                  )}
-                  {contact.email && (
-                    <div className="text-sm">
-                      <span className="material-icons text-xs align-text-bottom mr-1">email</span>
-                      {contact.email}
-                    </div>
-                  )}
-                </div>
 
-                <div className="mt-4">
-                  <div className="text-sm font-medium text-neutral-500 mb-1">Status</div>
-                  {getStatusBadge(contact.status)}
+                  <div>
+                    <div className="text-base font-medium text-neutral-600 mb-2">Status</div>
+                    {getStatusBadge(contact.status)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1297,43 +1301,43 @@ export default function ContactDetailModal({
         </div>
 
         {isEditMode ? (
-          <div className="border-t border-neutral-200 p-4">
-            <h3 className="font-medium text-lg mb-4">Edit Contact</h3>
-            <div className="space-y-4">
+          <div className="border-t border-neutral-200 p-6">
+            <h3 className="font-semibold text-xl mb-6">Edit Contact</h3>
+            <div className="space-y-6">
               <div>
-                <Label htmlFor="editName">Full Name</Label>
+                <Label htmlFor="editName" className="text-base">Full Name</Label>
                 <Input 
                   id="editName" 
                   value={editName} 
                   onChange={(e) => setEditName(e.target.value)} 
-                  className="mt-1"
+                  className="mt-2 h-11 text-base"
                 />
               </div>
               
               <div>
-                <Label htmlFor="editAddress">Street Address</Label>
+                <Label htmlFor="editAddress" className="text-base">Street Address</Label>
                 <Input 
                   id="editAddress" 
                   value={editAddress} 
                   onChange={(e) => handleAddressChange(e.target.value)} 
-                  className="mt-1"
+                  className="mt-2 h-11 text-base"
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <Label htmlFor="editCity">City</Label>
+                  <Label htmlFor="editCity" className="text-base">City</Label>
                   <Input 
                     id="editCity" 
                     value={editCity} 
                     onChange={(e) => setEditCity(e.target.value)} 
-                    className="mt-1"
+                    className="mt-2 h-11 text-base"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="editState">State</Label>
+                  <Label htmlFor="editState" className="text-base">State</Label>
                   <Select value={editState} onValueChange={setEditState}>
-                    <SelectTrigger id="editState" className="mt-1">
+                    <SelectTrigger id="editState" className="mt-2 h-11 text-base">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1346,42 +1350,42 @@ export default function ContactDetailModal({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="editZipCode">Zip Code</Label>
+                  <Label htmlFor="editZipCode" className="text-base">Zip Code</Label>
                   <Input 
                     id="editZipCode" 
                     value={editZipCode} 
                     onChange={(e) => setEditZipCode(e.target.value)} 
-                    className="mt-1"
+                    className="mt-2 h-11 text-base"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="editPhone">Phone</Label>
+                  <Label htmlFor="editPhone" className="text-base">Phone</Label>
                   <Input 
                     id="editPhone" 
                     value={editPhone} 
                     onChange={(e) => setEditPhone(e.target.value)} 
-                    className="mt-1"
+                    className="mt-2 h-11 text-base"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="editEmail">Email</Label>
+                  <Label htmlFor="editEmail" className="text-base">Email</Label>
                   <Input 
                     id="editEmail" 
                     value={editEmail} 
                     onChange={(e) => setEditEmail(e.target.value)} 
-                    className="mt-1"
+                    className="mt-2 h-11 text-base"
                   />
                 </div>
               </div>
               
               <div>
-                <Label htmlFor="editStatus">Status</Label>
+                <Label htmlFor="editStatus" className="text-base">Status</Label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
-                  <SelectTrigger id="editStatus" className="mt-1">
+                  <SelectTrigger id="editStatus" className="mt-2 h-11 text-base">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1391,25 +1395,27 @@ export default function ContactDetailModal({
                     <SelectItem value="considering">Considering</SelectItem>
                     <SelectItem value="converted">Converted</SelectItem>
                     <SelectItem value="no_soliciting">No soliciting</SelectItem>
-                    <SelectItem value="call_back">Call back</SelectItem>
-                    <SelectItem value="appointment_scheduled">Appointment scheduled</SelectItem>
+                    <SelectItem value="check_back">Check back</SelectItem>
+                    <SelectItem value="booked">Booked</SelectItem>
+                    <SelectItem value="presented">Presented</SelectItem> 
+                    <SelectItem value="sold">Sold</SelectItem>
                     <SelectItem value="no_answer">No answer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div className="flex justify-end space-x-2 pt-2">
+              <div className="flex justify-end space-x-3 pt-4">
                 <Button 
                   variant="outline" 
-                  size="sm" 
                   onClick={() => setIsEditMode(false)}
+                  className="h-11 px-6"
                 >
                   Cancel
                 </Button>
                 <Button 
-                  size="sm" 
                   onClick={handleSaveEditedContact}
                   disabled={updateContactMutation.isPending}
+                  className="h-11 px-6"
                 >
                   {updateContactMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
