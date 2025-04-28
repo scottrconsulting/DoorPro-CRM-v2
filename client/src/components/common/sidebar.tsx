@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { Contact } from "@shared/schema";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { DoorProIcon } from "@/components/ui/logo";
 
 export default function Sidebar() {
   const { user, logout } = useDirectAuth();
@@ -37,11 +38,7 @@ export default function Sidebar() {
       <div className="p-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center">
           <Link href="/" className="flex items-center font-sans text-xl font-semibold">
-            <img 
-              src="/images/doorpro-icon.svg" 
-              alt="DoorPro CRM" 
-              className="h-8 w-8 mr-2" 
-            />
+            <DoorProIcon className="h-8 w-8 mr-2" />
             <span className="text-primary">DoorPro CRM</span>
           </Link>
           <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
