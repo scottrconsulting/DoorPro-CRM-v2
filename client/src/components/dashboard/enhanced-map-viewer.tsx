@@ -156,9 +156,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     apiKey: GOOGLE_MAPS_API_KEY,
     center: { lat: 39.8283, lng: -98.5795 },
     zoom: 5,
-    mapTypeId: "roadmap",
-    // Adding mapId param for Advanced Markers support
-    mapId: "8e0a97af9386fef"
+    mapTypeId: "roadmap"
+    // Removed custom mapId to use standard Google Maps appearance
   });
 
   // Create contact mutation
@@ -236,6 +235,40 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     if (position && map) {
       panTo(position);
       map.setZoom(15);
+      
+      // Remove previous user location marker if it exists
+      if (userMarker) {
+        userMarker.setMap(null);
+      }
+      
+      // Create a blue dot marker for user's current location
+      const newUserMarker = new window.google.maps.Marker({
+        position: position,
+        map: map,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#4285F4", // Google blue
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#FFFFFF",
+        },
+        title: "Your Location",
+        zIndex: 1000 // Ensure it's above other markers
+      });
+      
+      setUserMarker(newUserMarker);
+      
+      toast({
+        title: "Location Found",
+        description: "Map centered to your current location",
+      });
+    } else {
+      toast({
+        title: "Location Error",
+        description: "Unable to get your current location. Please ensure location services are enabled.",
+        variant: "destructive",
+      });
     }
   };
   
