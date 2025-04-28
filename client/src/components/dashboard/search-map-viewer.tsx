@@ -492,14 +492,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const getStatusColor = (status: string): string => {
     // Default color mapping
     const defaultColorMap: Record<string, string> = {
-      not_visited: 'bg-blue-500',
-      interested: 'bg-yellow-500',
-      not_interested: 'bg-red-500',
-      call_back: 'bg-blue-500',
-      appointment_scheduled: 'bg-orange-500',
-      converted: 'bg-green-500',
-      no_soliciting: 'bg-purple-500',
-      considering: 'bg-purple-500',
+      no_answer: 'bg-pink-500',       // Pink for No Answer (replacing not_visited)
+      not_visited: 'bg-pink-500',     // For backward compatibility
+      presented: 'bg-orange-500',     // Orange for Presented/Demoed
+      booked: 'bg-blue-500',          // Blue for Booked/Appointments
+      sold: 'bg-green-500',           // Green for Sold/Converted
+      not_interested: 'bg-red-500',   // Red for Not Interested
+      no_soliciting: 'bg-purple-500', // Purple for No Soliciting
+      check_back: 'bg-yellow-500',    // Yellow for Check Back/Follow-up
+      interested: 'bg-yellow-500',    // For backward compatibility
+      call_back: 'bg-yellow-500',     // For backward compatibility
+      appointment_scheduled: 'bg-blue-500', // For backward compatibility
+      converted: 'bg-green-500',      // For backward compatibility
+      considering: 'bg-purple-500',   // For backward compatibility
     };
     
     // If customization is available, use the customized color
@@ -768,14 +773,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   style={{
                     backgroundColor: customization?.pinColors?.[status.id] || 
                       // Default colors for standard statuses
-                      (status.id === "not_visited" || status.id === "unknown" ? "#ffffff" :
-                      status.id === "no_soliciting" ? "#000000" :
-                      status.id === "converted" || status.id === "sold" ? "#00c853" :
-                      status.id === "interested" || status.id === "presented" ? "#ffd600" :
-                      status.id === "appointment_scheduled" || status.id === "booked" ? "#ff9800" :
-                      status.id === "not_interested" ? "#f44336" :
-                      status.id === "call_back" || status.id === "check_back" ? "#2196f3" :
-                      status.id === "no_answer" ? "#9c27b0" : "#cccccc")
+                      // Colors matching DEFAULT_PIN_COLORS from schema.ts
+                      status.id === "no_answer" || status.id === "not_visited" ? "#e91e63" :  // Pink
+                      status.id === "presented" ? "#ff9800" :   // Orange
+                      status.id === "booked" || status.id === "appointment_scheduled" ? "#2196f3" :  // Blue
+                      status.id === "sold" || status.id === "converted" ? "#4caf50" :  // Green
+                      status.id === "not_interested" ? "#f44336" :  // Red
+                      status.id === "no_soliciting" ? "#9c27b0" :  // Purple
+                      status.id === "check_back" || status.id === "call_back" || status.id === "interested" ? "#ffeb3b" :  // Yellow
+                      "#cccccc")
                   }}
                 />
                 {customization?.statusLabels && customization.statusLabels[status.id] 
