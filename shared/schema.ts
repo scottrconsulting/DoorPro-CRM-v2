@@ -412,6 +412,10 @@ export const chatConversations = pgTable("chat_conversations", {
   name: text("name"),
   teamId: integer("team_id").references(() => teams.id),
   isTeamChannel: boolean("is_team_channel").default(false),
+  creatorId: integer("creator_id").references(() => users.id),
+  isChannelType: boolean("is_channel_type").default(false),
+  channelTag: text("channel_tag"),
+  isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
