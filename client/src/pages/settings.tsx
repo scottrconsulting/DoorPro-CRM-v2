@@ -120,6 +120,80 @@ export default function Settings() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  // Handle profile picture upload
+  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file is an image and not too large
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "File too large",
+        description: "Profile picture must be less than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    
+    setIsUploading(true);
+    
+    try {
+      // Upload the profile picture
+      const response = await fetch('/api/profile/upload-picture', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload profile picture');
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Profile picture updated",
+        description: "Your profile picture has been updated successfully"
+      });
+      
+      // Refresh user data to get the updated profile picture URL
+      refetchUserData();
+      
+    } catch (error: any) {
+      toast({
+        title: "Error uploading profile picture",
+        description: error.message || "An error occurred while uploading your profile picture",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  // Trigger file input click when avatar is clicked
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   // Profile form
   const profileForm = useForm<ProfileFormValues>({
@@ -258,9 +332,30 @@ export default function Settings() {
             <CardContent>
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
-                  <div className="flex items-center space-x-4 mb-6">
-                    <div className="h-16 w-16 bg-primary text-white rounded-full flex items-center justify-center">
-                      <span className="material-icons text-2xl">person</span>
+                  <div className="flex items-center space-x-6 mb-6">
+                    <div className="relative group">
+                      <Avatar className="h-20 w-20 cursor-pointer border-2 border-border hover:border-primary transition-colors">
+                        {userData?.user?.profilePictureUrl ? (
+                          <AvatarImage src={userData?.user?.profilePictureUrl} alt={user?.fullName || user?.username || "Profile"} />
+                        ) : (
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                            {user?.fullName ? user?.fullName.charAt(0).toUpperCase() : (user?.username ? user?.username.charAt(0).toUpperCase() : "U")}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      
+                      <div 
+                        className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center cursor-pointer"
+                        onClick={triggerFileInput}
+                      >
+                        <div className="bg-white p-1 rounded-full">
+                          {isUploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          ) : (
+                            <Camera className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <h3 className="font-medium">{user?.fullName}</h3>
@@ -401,13 +496,44 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="h-16 w-16 bg-primary text-white rounded-full flex items-center justify-center">
-                    <span className="material-icons text-2xl">person</span>
+                {/* Profile Picture Upload */}
+                <div className="flex items-center space-x-6 mb-6">
+                  <div className="relative group">
+                    <Avatar className="h-24 w-24 cursor-pointer border-2 border-border hover:border-primary transition-colors">
+                      {userData?.user?.profilePictureUrl ? (
+                        <AvatarImage src={userData?.user?.profilePictureUrl} alt={user?.fullName || user?.username || "Profile"} />
+                      ) : (
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                          {user?.fullName ? user?.fullName.charAt(0).toUpperCase() : (user?.username ? user?.username.charAt(0).toUpperCase() : "U")}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    
+                    <div 
+                      className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center cursor-pointer"
+                      onClick={triggerFileInput}
+                    >
+                      <div className="bg-white p-1 rounded-full">
+                        {isUploading ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : (
+                          <Camera className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    <input 
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleProfilePictureUpload}
+                    />
                   </div>
+                  
                   <div>
-                    <h3 className="font-medium">{user?.fullName || user?.username}</h3>
-                    <p className="text-sm text-neutral-500">{user?.email || "No email specified"}</p>
+                    <h3 className="font-medium text-lg">{user?.fullName || user?.username}</h3>
+                    <p className="text-sm text-muted-foreground mb-1">{user?.email || "No email specified"}</p>
                     <div className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded-md text-neutral-700 inline-block mt-1">
                       {getPlanName(user?.role)}
                     </div>

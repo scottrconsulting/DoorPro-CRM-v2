@@ -6,6 +6,7 @@ import { getPlanName } from "@/lib/auth";
 import { Link } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DoorProLogo } from "@/components/ui/door-pro-logo";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 interface AppShellProps {
   children: ReactNode;
@@ -15,6 +16,8 @@ export default function AppShell({ children }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  // Track user's online status
+  const { isActive } = useOnlineStatus();
 
   // Close mobile menu on route change
   useEffect(() => {
