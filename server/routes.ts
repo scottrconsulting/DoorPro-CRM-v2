@@ -17,7 +17,8 @@ import {
   CONTACT_STATUSES,
   QUICK_ACTIONS,
   DASHBOARD_WIDGETS,
-  DASHBOARD_WIDGET_LABELS
+  DASHBOARD_WIDGET_LABELS,
+  chatParticipants
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";
@@ -39,6 +40,8 @@ import {
 import type Stripe from 'stripe';
 import { verifyPassword, generateResetToken, hashPassword } from './utils/password';
 import { sendPasswordResetEmail, initializeSendGrid } from './utils/email';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 
 // Import direct auth router and token verification function
 import directAuthRouter, { verifyToken } from './direct-auth';
