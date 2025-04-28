@@ -1240,23 +1240,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                       contactData.notes = contactData.notes 
                         ? `${contactData.notes}\n\n${appointmentNotes}`
                         : appointmentNotes;
-                        
-                      // Also create a schedule entry for this appointment
-                      const startDateTime = new Date(`${newContactForm.appointmentDate}T${newContactForm.appointmentTime}`);
-                      const endDateTime = new Date(startDateTime);
-                      endDateTime.setMinutes(endDateTime.getMinutes() + 60); // Default to 1 hour appointment
-                      
-                      createScheduleEntry({
-                        userId: user?.id || 0,
-                        title: `Appointment with ${newContactForm.fullName}`,
-                        description: `Sales appointment at ${newContactForm.address}`,
-                        startTime: startDateTime.toISOString(),
-                        endTime: endDateTime.toISOString(),
-                        type: "appointment",
-                        location: newContactForm.address,
-                        reminderSent: false,
-                        contactIds: [] // We'll fill this in after contact is created
-                      });
                       
                       toast({
                         title: "Appointment Scheduled",
@@ -1271,23 +1254,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                       contactData.notes = contactData.notes 
                         ? `${contactData.notes}\n\n${checkBackNotes}`
                         : checkBackNotes;
-                      
-                      // Also create a schedule entry for this follow-up
-                      const startDateTime = new Date(`${newContactForm.appointmentDate}T${newContactForm.appointmentTime}`);
-                      const endDateTime = new Date(startDateTime);
-                      endDateTime.setMinutes(endDateTime.getMinutes() + 30); // Default to 30 min follow-up
-                      
-                      createScheduleEntry({
-                        userId: user?.id || 0,
-                        title: `Follow-up with ${newContactForm.fullName}`,
-                        description: `Check back at ${newContactForm.address}`,
-                        startTime: startDateTime.toISOString(),
-                        endTime: endDateTime.toISOString(),
-                        type: "follow_up",
-                        location: newContactForm.address,
-                        reminderSent: false,
-                        contactIds: [] // We'll fill this in after contact is created
-                      });
                       
                       toast({
                         title: "Check Back Scheduled",
