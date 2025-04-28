@@ -545,18 +545,45 @@ export default function ChatPage() {
 
   // Separate conversations into direct messages and group chats
   const directMessages = filteredConversations?.filter(c => 
-    !c.isTeamChannel && participants?.filter(p => p.conversationId === c.id)?.length === 2
+    !c.isTeamChannel && !c.isChannelType && participants?.filter(p => p.conversationId === c.id)?.length === 2
   ) || [];
   
   const groupChats = filteredConversations?.filter(c => 
-    !c.isTeamChannel && (!participants?.filter(p => p.conversationId === c.id) || 
+    !c.isTeamChannel && !c.isChannelType && (!participants?.filter(p => p.conversationId === c.id) || 
     participants?.filter(p => p.conversationId === c.id)?.length > 2)
   ) || [];
   
-  const teamChannels = filteredConversations?.filter(c => c.isTeamChannel) || [];
+  const teamChannels = filteredConversations?.filter(c => c.isTeamChannel || c.isChannelType) || [];
+  
+  // Display only relevant conversations based on selected tab
+  const displayedConversations = chatType === 'messages' 
+    ? [...directMessages, ...groupChats] 
+    : teamChannels;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Messages/Channels Tab Navigation */}
+      <div className="px-4 pt-4 mb-2 flex space-x-4 border-b">
+        <a 
+          href="/chat?type=messages" 
+          className={`px-4 py-2 flex items-center ${chatType === 'messages' 
+            ? 'border-b-2 border-primary font-semibold text-primary' 
+            : 'text-muted-foreground hover:text-foreground transition-colors'}`}
+        >
+          <MessageCircle className="h-4 w-4 mr-2" />
+          Messages
+        </a>
+        <a
+          href="/chat?type=channels" 
+          className={`px-4 py-2 flex items-center ${chatType === 'channels' 
+            ? 'border-b-2 border-primary font-semibold text-primary' 
+            : 'text-muted-foreground hover:text-foreground transition-colors'}`}
+        >
+          <Hash className="h-4 w-4 mr-2" />
+          Channels
+        </a>
+      </div>
+      
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Conversations Sidebar - Slack-like */}
         <div className="w-full md:w-80 border-r flex flex-col md:h-full h-auto">
