@@ -293,13 +293,7 @@ export default function Dashboard() {
             </div>
           );
         case "map":
-          return (
-            <div key="map" className="mb-6">
-              <div className="h-[500px]">
-                <EnhancedMapViewer onSelectContact={handleContactSelect} />
-              </div>
-            </div>
-          );
+          return null;
         case "contacts":
           return (
             <div key="contacts" className="mb-6">
