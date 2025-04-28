@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -167,6 +167,10 @@ export default function ChatPage() {
   const [isChannelType, setIsChannelType] = useState(chatType === 'channels');
   const [channelTag, setChannelTag] = useState("");
   const [isPublicChannel, setIsPublicChannel] = useState(false);
+  
+  // WebSocket connection reference
+  const wsRef = useRef<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Form for creating a new conversation
   const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
@@ -455,6 +459,129 @@ export default function ChatPage() {
     },
   });
 
+  // WebSocket connection setup
+  const setupWebSocket = useCallback(() => {
+    // Close existing connection if any
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close();
+    }
+    
+    // Determine the WebSocket URL based on the current protocol and host
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    console.log("Connecting to WebSocket at:", wsUrl);
+    const socket = new WebSocket(wsUrl);
+    wsRef.current = socket;
+    
+    socket.onopen = () => {
+      console.log("WebSocket connection established");
+      setWsConnected(true);
+      
+      // Authenticate the WebSocket connection with our token
+      const authToken = localStorage.getItem("authToken");
+      if (authToken) {
+        socket.send(JSON.stringify({
+          type: "authenticate",
+          token: authToken,
+          conversationIds: selectedConversation ? [selectedConversation] : []
+        }));
+      }
+    };
+    
+    socket.onclose = () => {
+      console.log("WebSocket connection closed");
+      setWsConnected(false);
+      
+      // Attempt to reconnect after a delay
+      setTimeout(() => {
+        if (user) {
+          setupWebSocket();
+        }
+      }, 3000);
+    };
+    
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setWsConnected(false);
+    };
+    
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data.type);
+        
+        // Handle different message types
+        switch (data.type) {
+          case "authenticated":
+            console.log("WebSocket authenticated as user:", data.userId);
+            
+            // Subscribe to the selected conversation if any
+            if (selectedConversation) {
+              socket.send(JSON.stringify({
+                type: "subscribe",
+                conversationId: selectedConversation
+              }));
+            }
+            break;
+            
+          case "new_message":
+            // If this is a message for our current conversation, add it to the UI
+            if (data.message.conversationId === selectedConversation) {
+              // Update the messages via React Query
+              queryClient.invalidateQueries({
+                queryKey: ["/api/chat/conversations", selectedConversation, "messages"],
+              });
+            } else {
+              // Update unread count if the message is for another conversation
+              queryClient.invalidateQueries({
+                queryKey: ["/api/chat/unread-count"],
+              });
+            }
+            break;
+            
+          case "error":
+            console.error("WebSocket error message:", data.message);
+            toast({
+              title: "Chat Error",
+              description: data.message,
+              variant: "destructive",
+            });
+            break;
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+    
+    return socket;
+  }, [selectedConversation, toast, user]);
+  
+  // Set up WebSocket connection when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      const socket = setupWebSocket();
+      
+      return () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+      };
+    }
+  }, [user, setupWebSocket]);
+  
+  // Subscribe to selected conversation when it changes
+  useEffect(() => {
+    const socket = wsRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN && selectedConversation) {
+      // Subscribe to the newly selected conversation
+      socket.send(JSON.stringify({
+        type: "subscribe",
+        conversationId: selectedConversation
+      }));
+    }
+  }, [selectedConversation]);
+
   // Auto-scroll to the bottom of the messages when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -465,13 +592,29 @@ export default function ChatPage() {
   // Handle sending a message
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedConversation) return;
-
-    sendMessageMutation.mutate({
-      conversationId: selectedConversation,
-      content: newMessage,
-      isUrgent,
-      attachmentUrl: null,
-    });
+    
+    // Try to send via WebSocket first (faster real-time updates)
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && wsConnected) {
+      wsRef.current.send(JSON.stringify({
+        type: "chat_message",
+        conversationId: selectedConversation,
+        content: newMessage,
+        isUrgent,
+        attachmentUrl: null
+      }));
+      
+      // Clear the input immediately for better UX
+      setNewMessage("");
+      setIsUrgent(false);
+    } else {
+      // Fallback to REST API if WebSocket is not available
+      sendMessageMutation.mutate({
+        conversationId: selectedConversation,
+        content: newMessage,
+        isUrgent,
+        attachmentUrl: null,
+      });
+    }
   };
 
   // Handle creating a new conversation

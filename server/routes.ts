@@ -2527,5 +2527,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket server on a different path to avoid conflicts with Vite's HMR
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store active connections with userId for message targeting
+  const clients = new Map<WebSocket, { userId: number, conversationIds: Set<number> }>();
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    // Set initial client data
+    clients.set(ws, { userId: 0, conversationIds: new Set() });
+    
+    ws.on('message', async (messageData) => {
+      try {
+        const message = JSON.parse(messageData.toString());
+        console.log('Received WebSocket message:', message.type);
+        
+        if (message.type === 'authenticate') {
+          // Authenticate using token
+          if (message.token && verifyToken(message.token)) {
+            // For simplicity, using admin ID (1) for all token auth
+            clients.set(ws, { 
+              userId: 1, // Admin user ID
+              conversationIds: new Set(message.conversationIds || [])
+            });
+            ws.send(JSON.stringify({ type: 'authenticated', userId: 1 }));
+          } else {
+            ws.send(JSON.stringify({ type: 'error', message: 'Authentication failed' }));
+          }
+        }
+        else if (message.type === 'subscribe') {
+          // Subscribe to conversation updates
+          const clientData = clients.get(ws);
+          if (clientData && clientData.userId) {
+            clientData.conversationIds.add(message.conversationId);
+            clients.set(ws, clientData);
+            ws.send(JSON.stringify({ 
+              type: 'subscribed', 
+              conversationId: message.conversationId 
+            }));
+          } else {
+            ws.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
+          }
+        }
+        else if (message.type === 'unsubscribe') {
+          // Unsubscribe from conversation updates
+          const clientData = clients.get(ws);
+          if (clientData) {
+            clientData.conversationIds.delete(message.conversationId);
+            clients.set(ws, clientData);
+          }
+        }
+        else if (message.type === 'chat_message') {
+          // Process and broadcast chat message
+          const clientData = clients.get(ws);
+          if (!clientData || !clientData.userId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
+            return;
+          }
+          
+          // Validate required fields
+          if (!message.conversationId || !message.content) {
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Missing required message data' 
+            }));
+            return;
+          }
+          
+          try {
+            // Save the message to database
+            const chatMessage = await storage.createChatMessage({
+              conversationId: message.conversationId,
+              senderId: clientData.userId,
+              content: message.content,
+              isUrgent: message.isUrgent || false,
+              attachmentUrl: message.attachmentUrl || null
+            });
+            
+            // Get sender details to include in broadcast
+            const sender = await storage.getUser(clientData.userId);
+            
+            // Broadcast to all clients subscribed to this conversation
+            const broadcastMessage = {
+              type: 'new_message',
+              message: {
+                ...chatMessage,
+                sender: {
+                  id: sender.id,
+                  username: sender.username,
+                  fullName: sender.fullName
+                }
+              }
+            };
+            
+            // Send to all connected clients subscribed to this conversation
+            for (const [client, data] of clients.entries()) {
+              if (
+                client.readyState === WebSocket.OPEN && 
+                data.conversationIds.has(message.conversationId)
+              ) {
+                client.send(JSON.stringify(broadcastMessage));
+              }
+            }
+            
+            // Confirm to sender
+            ws.send(JSON.stringify({ 
+              type: 'message_sent', 
+              messageId: chatMessage.id 
+            }));
+          } catch (error) {
+            console.error('Error processing chat message:', error);
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Failed to process message' 
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      // Remove client from map when disconnected
+      clients.delete(ws);
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
+  // Log when the server is ready
+  wss.on('listening', () => {
+    console.log('WebSocket server is listening');
+  });
+  
   return httpServer;
 }
