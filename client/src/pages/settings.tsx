@@ -83,6 +83,7 @@ const preferencesSchema = z.object({
   notificationPush: z.boolean(),
   defaultScheduleView: z.enum(["day", "week", "month"]),
   autoCheckIn: z.boolean(),
+  statisticsMetrics: z.array(z.string()).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -95,6 +96,12 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [isUpdating, setIsUpdating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // Fetch customization settings
+  const { data: customization } = useQuery<Customization>({
+    queryKey: ["/api/customizations/current"],
+    enabled: !!user
+  });
 
   // Set mounted state to avoid hydration issues with theme
   useEffect(() => {
@@ -126,11 +133,12 @@ export default function Settings() {
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
       theme: mounted ? (theme as "light" | "dark" | "system") : "light",
-      defaultMapType: "roadmap",
+      defaultMapType: customization?.mapDefaultView || "roadmap",
       notificationEmail: true,
       notificationPush: true,
       defaultScheduleView: "week",
       autoCheckIn: false,
+      statisticsMetrics: customization?.statisticsMetrics || ["today_visits", "conversions", "follow_ups", "sales_count"],
     },
   });
   
@@ -166,6 +174,17 @@ export default function Settings() {
     }, 1000);
   };
 
+  // Customization mutation
+  const updateCustomizationMutation = useMutation({
+    mutationFn: async (data: Partial<Customization>) => {
+      const response = await apiRequest('PUT', '/api/customizations/current', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customizations/current'] });
+    }
+  });
+
   const onPreferencesSubmit = (data: PreferencesFormValues) => {
     setIsUpdating(true);
     
@@ -174,14 +193,27 @@ export default function Settings() {
       setTheme(data.theme);
     }
     
-    // In a real app, this would call a mutation to update preferences
-    setTimeout(() => {
-      toast({
-        title: "Preferences saved",
-        description: "Your preferences have been updated successfully.",
-      });
-      setIsUpdating(false);
-    }, 1000);
+    // Update customization in the database
+    updateCustomizationMutation.mutate({
+      mapDefaultView: data.defaultMapType,
+      statisticsMetrics: data.statisticsMetrics || []
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Preferences saved",
+          description: "Your preferences have been updated successfully.",
+        });
+        setIsUpdating(false);
+      },
+      onError: (error) => {
+        toast({
+          title: "Error saving preferences",
+          description: error.message,
+          variant: "destructive"
+        });
+        setIsUpdating(false);
+      }
+    });
   };
 
   return (
@@ -388,6 +420,53 @@ export default function Settings() {
                           <FormDescription>
                             Choose your preferred theme for the application
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Dashboard</h3>
+                    
+                    <FormField
+                      control={preferencesForm.control}
+                      name="statisticsMetrics"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Statistics Metrics</FormLabel>
+                          <FormDescription>
+                            Select the metrics you want to display on your dashboard
+                          </FormDescription>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                            {STATISTICS_METRICS.map((metric) => (
+                              <FormItem
+                                key={metric}
+                                className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(metric)}
+                                    onCheckedChange={(checked) => {
+                                      const currentValue = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentValue, metric]);
+                                      } else {
+                                        field.onChange(
+                                          currentValue.filter((value) => value !== metric)
+                                        );
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">
+                                  {STATISTICS_METRIC_LABELS[metric] || metric}
+                                </FormLabel>
+                              </FormItem>
+                            ))}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
