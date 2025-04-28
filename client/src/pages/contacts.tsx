@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertContactSchema } from "@shared/schema";
@@ -39,6 +40,8 @@ const contactFormSchema = insertContactSchema.extend({
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
+  appointmentDate: z.string().optional(),
+  appointmentTime: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -55,6 +58,7 @@ export default function Contacts() {
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [showSchedulingFields, setShowSchedulingFields] = useState(false);
 
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
@@ -75,6 +79,8 @@ export default function Contacts() {
       email: "",
       status: "not_visited",
       userId: user?.id || 0,
+      appointmentDate: "",
+      appointmentTime: "",
     },
   });
 
@@ -258,6 +264,13 @@ export default function Contacts() {
       return;
     }
 
+    // Format appointment data if scheduling is enabled
+    let appointmentData = null;
+    if (showSchedulingFields && (data.status === 'booked' || data.status === 'check_back') && 
+        data.appointmentDate && data.appointmentTime) {
+      appointmentData = `${data.appointmentDate} ${data.appointmentTime}`;
+    }
+
     // Geocode the address to get coordinates
     try {
       const geocodeResult = await geocodeAddress(data.address);
@@ -269,6 +282,7 @@ export default function Contacts() {
           latitude: geocodeResult.latitude,
           longitude: geocodeResult.longitude,
           address: geocodeResult.address, // Use formatted address from geocoding
+          appointment: appointmentData,
         });
       } else {
         // Create contact without coordinates
@@ -277,11 +291,17 @@ export default function Contacts() {
           description: "Could not find coordinates for this address. Contact will be created without map location.",
           variant: "default",
         });
-        createContactMutation.mutate(data);
+        createContactMutation.mutate({
+          ...data,
+          appointment: appointmentData,
+        });
       }
     } catch (error) {
       console.error("Geocoding error:", error);
-      createContactMutation.mutate(data);
+      createContactMutation.mutate({
+        ...data,
+        appointment: appointmentData,
+      });
     }
   };
 
@@ -678,7 +698,15 @@ export default function Contacts() {
                   <FormItem>
                     <FormLabel>Status</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Show scheduling fields for booked and check_back statuses
+                        if (value === "booked" || value === "check_back") {
+                          setShowSchedulingFields(true);
+                        } else {
+                          setShowSchedulingFields(false);
+                        }
+                      }} 
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -700,6 +728,60 @@ export default function Contacts() {
                   </FormItem>
                 )}
               />
+              
+              {/* Scheduling section only for booked and check_back statuses */}
+              {(form.watch("status") === 'booked' || form.watch("status") === 'check_back') && (
+                <div className="space-y-2 border-t pt-4 mt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="enableScheduling"
+                        checked={showSchedulingFields}
+                        onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
+                      />
+                      <Label htmlFor="enableScheduling" className="ml-2">Set appointment</Label>
+                    </div>
+                  </div>
+                  
+                  {showSchedulingFields && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="appointmentDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="date"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="appointmentTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Time</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="time"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               
               <DialogFooter>
                 <Button 
