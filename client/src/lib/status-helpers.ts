@@ -28,16 +28,21 @@ export function getStatusLabel(status: string, statusLabels?: Record<string, str
  * @returns A Tailwind CSS class for text or background color
  */
 export function getStatusColor(status: string): string {
-  // Map of status to Tailwind color classes
+  // Map of status to Tailwind color classes - matches DEFAULT_PIN_COLORS
   const colorMap: Record<string, string> = {
-    not_visited: 'bg-blue-500',
-    interested: 'bg-yellow-500',
-    not_interested: 'bg-red-500',
-    call_back: 'bg-blue-500',
-    appointment_scheduled: 'bg-orange-500',
-    converted: 'bg-green-500',
-    no_soliciting: 'bg-purple-500',
-    considering: 'bg-purple-500',
+    no_answer: 'bg-pink-500',              // Changed from not_visited to no_answer with pink
+    not_visited: 'bg-pink-500',            // For backward compatibility
+    interested: 'bg-yellow-500',           // Yellow
+    not_interested: 'bg-red-500',          // Red
+    call_back: 'bg-yellow-500',            // Changed to yellow for consistency
+    check_back: 'bg-yellow-500',           // Yellow for follow-ups
+    appointment_scheduled: 'bg-blue-500',  // Changed to blue (same as booked)
+    booked: 'bg-blue-500',                 // Blue for appointments
+    converted: 'bg-green-500',             // Green
+    sold: 'bg-green-500',                  // Green
+    no_soliciting: 'bg-purple-500',        // Purple
+    considering: 'bg-purple-500',          // Purple
+    presented: 'bg-orange-500',            // Orange
   };
   
   return colorMap[status] || 'bg-blue-500';

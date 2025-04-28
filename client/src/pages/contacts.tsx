@@ -195,16 +195,17 @@ export default function Contacts() {
 
     // Color mapping that matches the map pins
     const colorMap: Record<string, { bg: string; text: string }> = {
-      not_visited: { bg: 'bg-blue-100', text: 'text-blue-800' },
+      no_answer: { bg: 'bg-pink-100', text: 'text-pink-800' },        // Changed from not_visited to no_answer with pink
+      not_visited: { bg: 'bg-pink-100', text: 'text-pink-800' },      // For backward compatibility
       interested: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
       not_interested: { bg: 'bg-red-100', text: 'text-red-800' },
-      call_back: { bg: 'bg-blue-100', text: 'text-blue-800' },
-      check_back: { bg: 'bg-blue-100', text: 'text-blue-800' },
-      appointment_scheduled: { bg: 'bg-orange-100', text: 'text-orange-800' },
+      call_back: { bg: 'bg-yellow-100', text: 'text-yellow-800' },    // Changed to yellow to match check_back
+      check_back: { bg: 'bg-yellow-100', text: 'text-yellow-800' },   // Changed to yellow for consistency
+      appointment_scheduled: { bg: 'bg-blue-100', text: 'text-blue-800' }, // Changed to blue to match booked
       converted: { bg: 'bg-green-100', text: 'text-green-800' },
       no_soliciting: { bg: 'bg-purple-100', text: 'text-purple-800' },
       considering: { bg: 'bg-purple-100', text: 'text-purple-800' },
-      booked: { bg: 'bg-green-100', text: 'text-green-800' },
+      booked: { bg: 'bg-blue-100', text: 'text-blue-800' },           // Changed to blue for appointments
       presented: { bg: 'bg-purple-100', text: 'text-purple-800' },
       sold: { bg: 'bg-green-100', text: 'text-green-800' },
     };
