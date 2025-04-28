@@ -279,7 +279,9 @@ export default function SidebarImproved() {
               isActive={isActive("/teams")} 
               badge={user?.role === UserRole.FREE ? "Pro" : undefined}
             />
+            {/* Temporarily hidden until core features are stable 
             <SidebarLink href="/chat" icon="chat" label="Chat" isActive={isActive("/chat")} />
+            */}
             <SidebarLink href="/routes" icon="directions" label="Route Planner" isActive={isActive("/routes")} />
             <SidebarLink 
               href="/reports" 
