@@ -1,12 +1,11 @@
-import sgMail from '@sendgrid/mail';
+
+import twilio from 'twilio';
 import { db } from '../db';
 import { messageTemplates } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
-// Initialize SendGrid if API key is available
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
+// Initialize Twilio client
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 interface AppointmentInfo {
   contactName: string;
@@ -46,7 +45,6 @@ function replaceTokens(template: string, data: Record<string, string>): string {
   let result = template;
   
   for (const [key, value] of Object.entries(data)) {
-    // Replace tokens in format {{token_name}}
     const token = new RegExp(`{{${key}}}`, 'g');
     result = result.replace(token, value || '');
   }
@@ -55,21 +53,15 @@ function replaceTokens(template: string, data: Record<string, string>): string {
 }
 
 /**
- * Sends an email appointment confirmation
+ * Sends an email appointment confirmation using Twilio SendGrid
  */
 export async function sendEmailConfirmation(appointmentInfo: AppointmentInfo): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.error('SendGrid API key not configured');
-    return false;
-  }
-  
   if (!appointmentInfo.contactEmail) {
     console.error('Cannot send email confirmation: contact email is missing');
     return false;
   }
   
   try {
-    // Fetch appropriate email template
     const template = await getMessageTemplate('email', appointmentInfo.userId);
     
     if (!template) {
@@ -77,7 +69,6 @@ export async function sendEmailConfirmation(appointmentInfo: AppointmentInfo): P
       return false;
     }
     
-    // Build token replacement data
     const tokenData = {
       contact_name: appointmentInfo.contactName,
       appointment_date: appointmentInfo.date,
@@ -86,20 +77,18 @@ export async function sendEmailConfirmation(appointmentInfo: AppointmentInfo): P
       notes: appointmentInfo.notes || '',
     };
     
-    // Replace tokens in template
     const subject = template.subject ? replaceTokens(template.subject, tokenData) : 'Appointment Confirmation';
     const htmlContent = replaceTokens(template.body, tokenData);
     
-    // Send email
-    const msg = {
+    // Send email using Twilio SendGrid
+    await twilioClient.messages.create({
+      body: htmlContent.replace(/<[^>]*>?/gm, ''), // Strip HTML for plain text
+      from: process.env.TWILIO_EMAIL_FROM,
       to: appointmentInfo.contactEmail,
-      from: 'noreply@doorpro.app', // This should be your verified sender in SendGrid
       subject: subject,
-      text: htmlContent.replace(/<[^>]*>?/gm, ''), // Plain text version
-      html: htmlContent,
-    };
-    
-    await sgMail.send(msg);
+      contentType: 'text/html',
+    });
+
     console.log(`Email confirmation sent to ${appointmentInfo.contactEmail}`);
     return true;
   } catch (error) {
@@ -109,8 +98,7 @@ export async function sendEmailConfirmation(appointmentInfo: AppointmentInfo): P
 }
 
 /**
- * Sends a text (SMS) appointment confirmation
- * Note: This is a placeholder for a future SMS integration
+ * Sends a text (SMS) appointment confirmation using Twilio
  */
 export async function sendTextConfirmation(appointmentInfo: AppointmentInfo): Promise<boolean> {
   if (!appointmentInfo.contactPhone) {
@@ -119,7 +107,6 @@ export async function sendTextConfirmation(appointmentInfo: AppointmentInfo): Pr
   }
   
   try {
-    // Fetch appropriate text template
     const template = await getMessageTemplate('text', appointmentInfo.userId);
     
     if (!template) {
@@ -127,7 +114,6 @@ export async function sendTextConfirmation(appointmentInfo: AppointmentInfo): Pr
       return false;
     }
     
-    // Build token replacement data
     const tokenData = {
       contact_name: appointmentInfo.contactName,
       appointment_date: appointmentInfo.date,
@@ -136,13 +122,16 @@ export async function sendTextConfirmation(appointmentInfo: AppointmentInfo): Pr
       notes: appointmentInfo.notes || '',
     };
     
-    // Replace tokens in template
     const textContent = replaceTokens(template.body, tokenData);
     
-    // In a real implementation, this would integrate with an SMS service like Twilio
-    // For now, we'll just log the message
-    console.log(`SMS would be sent to ${appointmentInfo.contactPhone}: ${textContent}`);
+    // Send SMS using Twilio
+    await twilioClient.messages.create({
+      body: textContent,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: appointmentInfo.contactPhone
+    });
     
+    console.log(`SMS sent to ${appointmentInfo.contactPhone}`);
     return true;
   } catch (error) {
     console.error('Error sending text confirmation:', error);
