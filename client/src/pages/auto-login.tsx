@@ -81,6 +81,13 @@ export default function AutoLogin() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md p-8 shadow-md">
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/images/doorpro-logo-large.svg" 
+                alt="DoorPro CRM" 
+                className="h-20 w-auto" 
+              />
+            </div>
             <h2 className="text-2xl font-bold mb-4">Logging you in...</h2>
             <p className="text-gray-500 mb-6">Please wait while we authenticate your session.</p>
             <div className="flex justify-center">
@@ -97,6 +104,13 @@ export default function AutoLogin() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md p-8 shadow-md">
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/images/doorpro-logo-large.svg" 
+                alt="DoorPro CRM" 
+                className="h-20 w-auto" 
+              />
+            </div>
             <h2 className="text-2xl font-bold mb-4">Login Issue</h2>
             <p className="text-gray-500 mb-6">{error}</p>
             <div className="flex flex-col gap-3">
