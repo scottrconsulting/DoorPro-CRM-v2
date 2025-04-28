@@ -687,11 +687,13 @@ export default function Contacts() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="not_visited">Not visited</SelectItem>
-                        <SelectItem value="interested">Interested</SelectItem>
-                        <SelectItem value="not_interested">Not interested</SelectItem>
-                        <SelectItem value="considering">Considering</SelectItem>
-                        <SelectItem value="converted">Converted</SelectItem>
+                        <SelectItem value="not_interested">Not Interested</SelectItem>
+                        <SelectItem value="booked">Booked</SelectItem>
+                        <SelectItem value="presented">Presented</SelectItem>
+                        <SelectItem value="no_answer">No Answer</SelectItem>
+                        <SelectItem value="check_back">Check Back</SelectItem>
+                        <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                        <SelectItem value="sold">Sold</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
