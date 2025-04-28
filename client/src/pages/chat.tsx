@@ -343,10 +343,11 @@ export default function ChatPage() {
   // Mutation for deleting conversations (single or multiple)
   const deleteConversationsMutation = useMutation({
     mutationFn: async (conversationIds: number[]) => {
-      const promises = conversationIds.map(id => 
-        apiRequest("DELETE", `/api/chat/conversations/${id}`)
-      );
-      return await Promise.all(promises);
+      // Delete one by one to ensure each deletion completes
+      for (const id of conversationIds) {
+        await apiRequest("DELETE", `/api/chat/conversations/${id}`);
+      }
+      return conversationIds;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -493,6 +494,19 @@ export default function ChatPage() {
                 {/* Toggle multi-select mode */}
                 {isMultiSelectMode ? (
                   <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        const allIds = conversations?.map(c => c.id) || [];
+                        setSelectedConversations(
+                          selectedConversations.length === allIds.length ? [] : allIds
+                        );
+                      }}
+                    >
+                      {selectedConversations.length === (conversations?.length || 0) ? 
+                        "Deselect All" : "Select All"}
+                    </Button>
                     <Button 
                       size="sm" 
                       variant="destructive"
