@@ -1138,6 +1138,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const schedule = await storage.createSchedule(scheduleData);
+      
+      // If there are contactIds associated with this schedule, create visit records
+      if (schedule.contactIds && schedule.contactIds.length > 0) {
+        try {
+          // Format time for display in the visit record
+          const scheduleDate = new Date(schedule.startTime);
+          const formattedTime = scheduleDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          const formattedDate = scheduleDate.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          
+          // Determine visit type based on schedule type
+          let visitType = 'appointment_scheduled';
+          if (schedule.type === 'follow_up' || schedule.type === 'follow-up') {
+            visitType = 'follow_up_scheduled';
+          } else if (schedule.type === 'presentation') {
+            visitType = 'presentation_scheduled';
+          }
+          
+          // Create a visit record for each contact
+          for (const contactId of schedule.contactIds) {
+            const visitData = {
+              contactId,
+              userId: user.id,
+              visitType,
+              notes: `${schedule.type.charAt(0).toUpperCase() + schedule.type.slice(1).replace('_', ' ')} scheduled for ${formattedDate} at ${formattedTime}`,
+              visitDate: new Date()
+            };
+            
+            console.log(`Creating contact visit with data:`, visitData);
+            await storage.createVisit(visitData);
+          }
+        } catch (visitError) {
+          console.error("Error creating visit records for schedule:", visitError);
+          // We don't want to fail the entire schedule creation if visit creation fails
+        }
+      }
+      
       return res.status(201).json(schedule);
     } catch (error) {
       console.error("Schedule creation error:", error);

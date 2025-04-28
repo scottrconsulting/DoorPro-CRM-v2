@@ -306,7 +306,9 @@ export default function SchedulePage() {
       endTimeISO
     });
     
-    const scheduleData: InsertSchedule = {
+    // Need to cast the string type to Date to satisfy the InsertSchedule type
+    // The server side will handle the parsing of these values
+    const scheduleData: any = {
       userId: user?.id || 0,
       title,
       description,
