@@ -109,6 +109,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span className={`material-icons mr-3 ${isActive("/schedule") ? "text-primary" : "text-muted-foreground"}`}>calendar_today</span>
               <span>Schedule</span>
             </Link>
+            {/* Temporarily hidden until core features are stable 
             <Link 
               href="/teams" 
               onClick={onClose}
@@ -122,6 +123,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
               )}
             </Link>
+            */}
             <Link 
               href="/reports" 
               onClick={onClose}

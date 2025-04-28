@@ -908,7 +908,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Work Timer Display - Bottom Left Corner */}
+      {/* Temporarily hidden until core features are stable 
       <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-lg z-10">
         <div className="text-sm font-bold">{formattedTime}</div>
         <div className="flex gap-2 mt-1">
@@ -961,6 +961,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </Button>
         </div>
       </div>
+      */}
       
       {/* New Contact Dialog - appears on long press */}
       <Dialog open={showNewContactDialog} onOpenChange={setShowNewContactDialog}>
