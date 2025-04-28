@@ -349,20 +349,26 @@ export default function ChatPage() {
       }
       return conversationIds;
     },
-    onSuccess: () => {
+    onSuccess: (deletedIds) => {
+      // Invalidate queries to refresh conversation list
       queryClient.invalidateQueries({
         queryKey: ["/api/chat/conversations"],
       });
       
-      // Reset selection state
+      // Clear selection state
       setSelectedConversations([]);
       setIsMultiSelectMode(false);
       setIsDeleteDialogOpen(false);
       
-      // If currently selected conversation was deleted, clear it
-      if (selectedConversation && selectedConversations.includes(selectedConversation)) {
+      // Reset selected conversation if it was deleted
+      if (selectedConversation && deletedIds.includes(selectedConversation)) {
         setSelectedConversation(null);
       }
+      
+      // Refetch conversations immediately
+      queryClient.refetchQueries({
+        queryKey: ["/api/chat/conversations"],
+      });
       
       toast({
         title: "Conversations deleted",

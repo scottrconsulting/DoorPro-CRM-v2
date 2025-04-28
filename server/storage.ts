@@ -1553,19 +1553,21 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChatConversation(id: number): Promise<boolean> {
     try {
-      // Delete all messages in this conversation
-      await db.delete(chatMessages)
-        .where(eq(chatMessages.conversationId, id));
-        
-      // Delete all participants
-      await db.delete(chatParticipants)
-        .where(eq(chatParticipants.conversationId, id));
-        
-      // Delete the conversation
-      const result = await db.delete(chatConversations)
-        .where(eq(chatConversations.id, id))
-        .returning({ id: chatConversations.id });
-      return result.length > 0;
+      await db.transaction(async (tx) => {
+        // Delete all messages first
+        await tx.delete(chatMessages)
+          .where(eq(chatMessages.conversationId, id));
+          
+        // Delete all participants
+        await tx.delete(chatParticipants)
+          .where(eq(chatParticipants.conversationId, id));
+          
+        // Finally delete the conversation
+        await tx.delete(chatConversations)
+          .where(eq(chatConversations.id, id));
+      });
+      
+      return true;
     } catch (error) {
       console.error("Error deleting chat conversation:", error);
       return false;
