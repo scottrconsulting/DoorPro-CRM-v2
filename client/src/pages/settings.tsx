@@ -228,7 +228,6 @@ export default function Settings() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="customize">Customize</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
         
@@ -577,27 +576,6 @@ export default function Settings() {
                   </Button>
                 </form>
               </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Customize Tab */}
-        <TabsContent value="customize">
-          <Card className="pt-6 pb-4">
-            <CardContent>
-              <div className="text-center pb-6">
-                <h3 className="text-xl font-medium mb-2">Dashboard Settings Moved</h3>
-                <p className="text-muted-foreground mb-6">
-                  Dashboard customization options, including statistics metrics, widgets, and layout preferences,
-                  are now available in the dedicated Customize page for a better experience.
-                </p>
-                
-                <Link href="/customize">
-                  <Button>
-                    Go to Customize
-                  </Button>
-                </Link>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
