@@ -1481,6 +1481,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to delete territory" });
     }
   });
+  
+  // Sales API
+  app.get("/api/sales", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { startDate, endDate } = req.query;
+      
+      let sales;
+      
+      // If date range provided, filter by date range
+      if (startDate && endDate) {
+        sales = await storage.getSalesByDateRange(
+          user.id, 
+          new Date(startDate as string), 
+          new Date(endDate as string)
+        );
+      } else {
+        // Otherwise just get all sales for this user
+        sales = await storage.getSalesByUser(user.id);
+      }
+      
+      return res.json(sales);
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+      return res.status(500).json({ message: "Failed to fetch sales data" });
+    }
+  });
 
   // Reports routes (Pro feature)
   // Get all visits for a user
@@ -1598,6 +1625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           dashboardWidgets: DASHBOARD_WIDGETS,
           dashboardWidgetLabels: DASHBOARD_WIDGET_LABELS,
+          statisticsMetrics: ["today_visits", "conversions", "follow_ups", "sales_count"],
           timerSettings: {},
           notificationSettings: {},
           language: "en",
