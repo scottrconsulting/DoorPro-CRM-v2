@@ -90,16 +90,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span>Overview</span>
             </Link>
             <Link 
-              href="/territories" 
-              onClick={onClose}
-              className={`flex items-center px-4 py-2 ${isActive("/territories") 
-                ? "text-foreground bg-muted border-l-4 border-primary" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-            >
-              <span className={`material-icons mr-3 ${isActive("/territories") ? "text-primary" : "text-muted-foreground"}`}>map</span>
-              <span>Territories</span>
-            </Link>
-            <Link 
               href="/contacts" 
               onClick={onClose}
               className={`flex items-center px-4 py-2 ${isActive("/contacts") 
@@ -144,16 +134,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               {user?.role === UserRole.FREE && (
                 <span className="ml-auto bg-muted text-muted-foreground text-xs px-1.5 py-0.5 rounded">Pro</span>
               )}
-            </Link>
-            <Link 
-              href="/chat" 
-              onClick={onClose}
-              className={`flex items-center px-4 py-2 ${isActive("/chat")
-                ? "text-foreground bg-muted border-l-4 border-primary" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-            >
-              <span className={`material-icons mr-3 ${isActive("/chat") ? "text-primary" : "text-muted-foreground"}`}>chat</span>
-              <span>Chat</span>
             </Link>
             <Link 
               href="/routes" 
