@@ -4,7 +4,7 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Contact, InsertContact, InsertVisit } from "@shared/schema";
+import { Contact, InsertContact, InsertVisit, InsertSchedule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -192,6 +192,45 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           followUpNeeded: createdContact.status === "check_back" || createdContact.status === "booked",
           visitDate: new Date()
         });
+        
+        // Create a schedule entry if the contact has appointment/follow-up details
+        if (createdContact.appointmentDate && createdContact.appointmentTime) {
+          const startDateTime = new Date(`${createdContact.appointmentDate}T${createdContact.appointmentTime}`);
+          
+          if (createdContact.status === "booked") {
+            // Create an appointment schedule entry
+            const endDateTime = new Date(startDateTime);
+            endDateTime.setMinutes(endDateTime.getMinutes() + 60); // Default to 1 hour appointment
+            
+            createScheduleEntry({
+              userId: user.id,
+              title: `Appointment with ${createdContact.fullName}`,
+              description: `Sales appointment at ${createdContact.address}`,
+              startTime: startDateTime.toISOString(),
+              endTime: endDateTime.toISOString(),
+              type: "appointment",
+              location: createdContact.address,
+              reminderSent: false,
+              contactIds: [createdContact.id]
+            });
+          } else if (createdContact.status === "check_back") {
+            // Create a follow-up schedule entry
+            const endDateTime = new Date(startDateTime);
+            endDateTime.setMinutes(endDateTime.getMinutes() + 30); // Default to 30 min follow-up
+            
+            createScheduleEntry({
+              userId: user.id,
+              title: `Follow-up with ${createdContact.fullName}`,
+              description: `Check back at ${createdContact.address}`,
+              startTime: startDateTime.toISOString(),
+              endTime: endDateTime.toISOString(),
+              type: "follow_up",
+              location: createdContact.address,
+              reminderSent: false,
+              contactIds: [createdContact.id]
+            });
+          }
+        }
       }
     },
     onError: (error) => {
@@ -242,6 +281,30 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
   });
+  
+  // Create schedule entry mutation
+  const createScheduleMutation = useMutation({
+    mutationFn: async (scheduleData: InsertSchedule) => {
+      const res = await apiRequest("POST", "/api/schedules", scheduleData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+    },
+    onError: (error) => {
+      console.error("Failed to create schedule entry", error);
+      toast({
+        title: "Schedule Creation Failed",
+        description: "There was an error creating the schedule entry",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Helper function to create a schedule entry
+  const createScheduleEntry = (scheduleData: InsertSchedule) => {
+    createScheduleMutation.mutate(scheduleData);
+  };
   
   // Function to handle contact deletion
   const handleContactDelete = useCallback((contact: Contact) => {
