@@ -35,13 +35,13 @@ export default function AppShell({ children }: AppShellProps) {
             <span className="material-icons">menu</span>
           </button>
           <div className="flex items-center">
-            <Link href="/" className="flex items-center font-sans text-lg font-semibold text-primary">
+            <Link href="/" className="flex items-center font-sans text-lg font-semibold">
               <img 
                 src="/images/doorpro-icon.svg" 
                 alt="DoorPro CRM" 
                 className="h-8 w-8 mr-2" 
               />
-              DoorPro CRM
+              <span className="text-primary">DoorPro CRM</span>
             </Link>
             <span className="ml-1 text-xs bg-neutral-200 px-1.5 py-0.5 rounded-md text-neutral-700">
               {getPlanName(user?.role)}

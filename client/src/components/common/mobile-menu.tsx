@@ -51,13 +51,13 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         {/* Header */}
         <div className="p-4 flex items-center justify-between border-b border-border shrink-0">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center font-sans text-xl font-semibold text-primary">
+            <Link href="/" className="flex items-center font-sans text-xl font-semibold">
               <img 
                 src="/images/doorpro-icon.svg" 
                 alt="DoorPro CRM" 
                 className="h-8 w-8 mr-2" 
               />
-              DoorPro CRM
+              <span className="text-primary">DoorPro CRM</span>
             </Link>
             <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
               {getPlanName(user?.role)}
