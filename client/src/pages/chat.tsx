@@ -164,7 +164,7 @@ export default function ChatPage() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedConversations, setSelectedConversations] = useState<number[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isChannelType, setIsChannelType] = useState(false);
+  const [isChannelType, setIsChannelType] = useState(chatType === 'channels');
   const [channelTag, setChannelTag] = useState("");
   const [isPublicChannel, setIsPublicChannel] = useState(false);
 
@@ -173,9 +173,9 @@ export default function ChatPage() {
     resolver: zodResolver(newConversationSchema),
     defaultValues: {
       name: "",
-      isTeamChannel: false,
+      isTeamChannel: chatType === 'channels',
       teamId: null,
-      isChannelType: false,
+      isChannelType: chatType === 'channels',
       channelTag: "",
       isPublic: false,
       creatorId: user?.id,
@@ -562,7 +562,7 @@ export default function ChatPage() {
         <div className="w-full md:w-80 border-r flex flex-col md:h-full h-auto">
           <div className="p-4 border-b">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Messages</h2>
+              <h2 className="text-xl font-bold">{chatType === 'messages' ? 'Messages' : 'Channels'}</h2>
               <div className="flex items-center space-x-2">
                 {unreadCount && unreadCount.count > 0 && (
                   <div className="px-2 py-1 text-xs font-semibold rounded-full bg-red-500 text-white">
@@ -629,9 +629,11 @@ export default function ChatPage() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Create New Conversation</DialogTitle>
+                      <DialogTitle>Create New {chatType === 'channels' ? 'Channel' : 'Conversation'}</DialogTitle>
                       <DialogDescription>
-                        Create a new chat and add participants
+                        {chatType === 'channels' 
+                          ? 'Create a new team channel for group discussions' 
+                          : 'Create a new conversation and add participants'}
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...newConversationForm}>
@@ -658,6 +660,7 @@ export default function ChatPage() {
                             <Checkbox 
                               id="isChannelType" 
                               checked={isChannelType}
+                              disabled={chatType === 'channels'}
                               onCheckedChange={(checked) => {
                                 setIsChannelType(!!checked);
                                 newConversationForm.setValue("isChannelType", !!checked);
@@ -665,9 +668,9 @@ export default function ChatPage() {
                             />
                             <label 
                               htmlFor="isChannelType"
-                              className="text-sm font-medium leading-none"
+                              className={`text-sm font-medium leading-none ${chatType === 'channels' ? 'text-muted-foreground' : ''}`}
                             >
-                              Create as Channel
+                              Create as Channel {chatType === 'channels' && '(required)'}
                             </label>
                           </div>
                             
@@ -784,142 +787,145 @@ export default function ChatPage() {
               </div>
             ) : filteredConversations && filteredConversations.length > 0 ? (
               <div className="py-2">
-                {/* Direct Messages Section */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between px-4 py-2">
-                    <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                      Direct Messages
-                    </button>
-                  </div>
-                  {directMessages.length > 0 ? (
-                    <div>
-                      {directMessages.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            isMultiSelectMode 
-                              ? selectedConversations.includes(conversation.id)
-                                ? "bg-accent/70 text-accent-foreground"
-                                : ""
-                              : selectedConversation === conversation.id 
-                                ? "bg-accent text-accent-foreground" 
-                                : ""
-                          }`}
-                          onClick={() => {
-                            if (isMultiSelectMode) {
-                              setSelectedConversations(prev => 
-                                prev.includes(conversation.id)
-                                  ? prev.filter(id => id !== conversation.id)
-                                  : [...prev, conversation.id]
-                              );
-                            } else {
-                              setSelectedConversation(conversation.id);
-                            }
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setIsMultiSelectMode(true);
-                            setSelectedConversations(prev => 
-                              prev.includes(conversation.id) 
-                                ? prev 
-                                : [...prev, conversation.id]
-                            );
-                          }}
-                        >
-                          {isMultiSelectMode && (
-                            <Checkbox 
-                              className="mr-2 h-4 w-4 flex-shrink-0"
-                              checked={selectedConversations.includes(conversation.id)}
-                              onCheckedChange={(checked) => {
+                {/* Show content based on current tab (messages or channels) */}
+                {chatType === 'messages' ? (
+                  <>
+                    {/* Direct Messages Section */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between px-4 py-2">
+                        <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          Direct Messages
+                        </button>
+                      </div>
+                      {directMessages.length > 0 ? (
+                        <div>
+                          {directMessages.map((conversation) => (
+                            <div
+                              key={conversation.id}
+                              className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                                isMultiSelectMode 
+                                  ? selectedConversations.includes(conversation.id)
+                                    ? "bg-accent/70 text-accent-foreground"
+                                    : ""
+                                  : selectedConversation === conversation.id 
+                                    ? "bg-accent text-accent-foreground" 
+                                    : ""
+                              }`}
+                              onClick={() => {
+                                if (isMultiSelectMode) {
+                                  setSelectedConversations(prev => 
+                                    prev.includes(conversation.id)
+                                      ? prev.filter(id => id !== conversation.id)
+                                      : [...prev, conversation.id]
+                                  );
+                                } else {
+                                  setSelectedConversation(conversation.id);
+                                }
+                              }}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setIsMultiSelectMode(true);
                                 setSelectedConversations(prev => 
-                                  checked 
-                                    ? [...prev, conversation.id]
-                                    : prev.filter(id => id !== conversation.id)
+                                  prev.includes(conversation.id) 
+                                    ? prev 
+                                    : [...prev, conversation.id]
                                 );
                               }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{conversation.name || "Unnamed Conversation"}</span>
+                            >
+                              {isMultiSelectMode && (
+                                <Checkbox 
+                                  className="mr-2 h-4 w-4 flex-shrink-0"
+                                  checked={selectedConversations.includes(conversation.id)}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedConversations(prev => 
+                                      checked 
+                                        ? [...prev, conversation.id]
+                                        : prev.filter(id => id !== conversation.id)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              )}
+                              <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                              <span className="truncate">{conversation.name || "Unnamed Conversation"}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        <p className="px-4 py-2 text-sm text-muted-foreground">No direct messages</p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="px-4 py-2 text-sm text-muted-foreground">No direct messages</p>
-                  )}
-                </div>
-                
-                {/* Channels Section */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between px-4 py-2">
-                    <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                      Channels
-                    </button>
-                  </div>
-                  {groupChats.length > 0 ? (
-                    <div>
-                      {groupChats.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            isMultiSelectMode 
-                              ? selectedConversations.includes(conversation.id)
-                                ? "bg-accent/70 text-accent-foreground"
-                                : ""
-                              : selectedConversation === conversation.id 
-                                ? "bg-accent text-accent-foreground" 
-                                : ""
-                          }`}
-                          onClick={() => {
-                            if (isMultiSelectMode) {
-                              setSelectedConversations(prev => 
-                                prev.includes(conversation.id)
-                                  ? prev.filter(id => id !== conversation.id)
-                                  : [...prev, conversation.id]
-                              );
-                            } else {
-                              setSelectedConversation(conversation.id);
-                            }
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setIsMultiSelectMode(true);
-                            setSelectedConversations(prev => 
-                              prev.includes(conversation.id) 
-                                ? prev 
-                                : [...prev, conversation.id]
-                            );
-                          }}
-                        >
-                          {isMultiSelectMode && (
-                            <Checkbox 
-                              className="mr-2 h-4 w-4 flex-shrink-0"
-                              checked={selectedConversations.includes(conversation.id)}
-                              onCheckedChange={(checked) => {
+                    
+                    {/* Group Chats Section */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between px-4 py-2">
+                        <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          Group Chats
+                        </button>
+                      </div>
+                      {groupChats.length > 0 ? (
+                        <div>
+                          {groupChats.map((conversation) => (
+                            <div
+                              key={conversation.id}
+                              className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                                isMultiSelectMode 
+                                  ? selectedConversations.includes(conversation.id)
+                                    ? "bg-accent/70 text-accent-foreground"
+                                    : ""
+                                  : selectedConversation === conversation.id 
+                                    ? "bg-accent text-accent-foreground" 
+                                    : ""
+                              }`}
+                              onClick={() => {
+                                if (isMultiSelectMode) {
+                                  setSelectedConversations(prev => 
+                                    prev.includes(conversation.id)
+                                      ? prev.filter(id => id !== conversation.id)
+                                      : [...prev, conversation.id]
+                                  );
+                                } else {
+                                  setSelectedConversation(conversation.id);
+                                }
+                              }}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setIsMultiSelectMode(true);
                                 setSelectedConversations(prev => 
-                                  checked 
-                                    ? [...prev, conversation.id]
-                                    : prev.filter(id => id !== conversation.id)
+                                  prev.includes(conversation.id) 
+                                    ? prev 
+                                    : [...prev, conversation.id]
                                 );
                               }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
+                            >
+                              {isMultiSelectMode && (
+                                <Checkbox 
+                                  className="mr-2 h-4 w-4 flex-shrink-0"
+                                  checked={selectedConversations.includes(conversation.id)}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedConversations(prev => 
+                                      checked 
+                                        ? [...prev, conversation.id]
+                                        : prev.filter(id => id !== conversation.id)
+                                    );
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              )}
+                              <Users className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                              <span className="truncate">{conversation.name || "Unnamed Group"}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        <p className="px-4 py-2 text-sm text-muted-foreground">No group chats</p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="px-4 py-2 text-sm text-muted-foreground">No channels</p>
-                  )}
-                </div>
-                
-                {/* Team Channels Section (if any) */}
-                {teamChannels.length > 0 && (
+                  </>
+                ) : (
+                  /* Channels Tab */
                   <div className="mb-4">
                     <div className="flex items-center justify-between px-4 py-2">
                       <button className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground">
@@ -927,59 +933,63 @@ export default function ChatPage() {
                         Team Channels
                       </button>
                     </div>
-                    <div>
-                      {teamChannels.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
-                            isMultiSelectMode 
-                              ? selectedConversations.includes(conversation.id)
-                                ? "bg-accent/70 text-accent-foreground"
-                                : ""
-                              : selectedConversation === conversation.id 
-                                ? "bg-accent text-accent-foreground" 
-                                : ""
-                          }`}
-                          onClick={() => {
-                            if (isMultiSelectMode) {
+                    {teamChannels.length > 0 ? (
+                      <div>
+                        {teamChannels.map((conversation) => (
+                          <div
+                            key={conversation.id}
+                            className={`w-full text-left px-4 py-2 hover:bg-accent/50 transition-colors flex items-center ${
+                              isMultiSelectMode 
+                                ? selectedConversations.includes(conversation.id)
+                                  ? "bg-accent/70 text-accent-foreground"
+                                  : ""
+                                : selectedConversation === conversation.id 
+                                  ? "bg-accent text-accent-foreground" 
+                                  : ""
+                            }`}
+                            onClick={() => {
+                              if (isMultiSelectMode) {
+                                setSelectedConversations(prev => 
+                                  prev.includes(conversation.id)
+                                    ? prev.filter(id => id !== conversation.id)
+                                    : [...prev, conversation.id]
+                                );
+                              } else {
+                                setSelectedConversation(conversation.id);
+                              }
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setIsMultiSelectMode(true);
                               setSelectedConversations(prev => 
-                                prev.includes(conversation.id)
-                                  ? prev.filter(id => id !== conversation.id)
+                                prev.includes(conversation.id) 
+                                  ? prev 
                                   : [...prev, conversation.id]
                               );
-                            } else {
-                              setSelectedConversation(conversation.id);
-                            }
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setIsMultiSelectMode(true);
-                            setSelectedConversations(prev => 
-                              prev.includes(conversation.id) 
-                                ? prev 
-                                : [...prev, conversation.id]
-                            );
-                          }}
-                        >
-                          {isMultiSelectMode && (
-                            <Checkbox 
-                              className="mr-2 h-4 w-4 flex-shrink-0"
-                              checked={selectedConversations.includes(conversation.id)}
-                              onCheckedChange={(checked) => {
-                                setSelectedConversations(prev => 
-                                  checked 
-                                    ? [...prev, conversation.id]
-                                    : prev.filter(id => id !== conversation.id)
-                                );
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
-                        </div>
-                      ))}
-                    </div>
+                            }}
+                          >
+                            {isMultiSelectMode && (
+                              <Checkbox 
+                                className="mr-2 h-4 w-4 flex-shrink-0"
+                                checked={selectedConversations.includes(conversation.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedConversations(prev => 
+                                    checked 
+                                      ? [...prev, conversation.id]
+                                      : prev.filter(id => id !== conversation.id)
+                                  );
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            )}
+                            <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                            <span className="truncate">{conversation.name || "Unnamed Channel"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="px-4 py-2 text-sm text-muted-foreground">No team channels</p>
+                    )}
                   </div>
                 )}
               </div>
