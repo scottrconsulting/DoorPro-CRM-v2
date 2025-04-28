@@ -275,6 +275,7 @@ export const customizations = pgTable("customizations", {
   
   // Dashboard customizations
   dashboardWidgets: text("dashboard_widgets").array(),
+  dashboardWidgetOrder: text("dashboard_widget_order").array(), // Order of widgets on dashboard
   dashboardWidgetLabels: json("dashboard_widget_labels").$type<Record<string, string>>().default({}),
   statisticsMetrics: text("statistics_metrics").array(), // Selected metrics for the statistics widget
   statisticsMetricLabels: json("statistics_metric_labels").$type<Record<string, string>>().default({}), // Custom labels for statistics metrics
