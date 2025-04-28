@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
-import Sidebar from "@/components/common/sidebar";
+import SidebarImproved from "@/components/common/sidebar-improved";
 import MobileMenu from "@/components/common/mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { getPlanName } from "@/lib/auth";
@@ -53,8 +53,8 @@ export default function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {/* Sidebar Navigation - Hidden on mobile */}
-      <Sidebar />
+      {/* Improved Sidebar Navigation - Hidden on mobile */}
+      <SidebarImproved />
 
       {/* Mobile Nav Menu - Slides in */}
       <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
