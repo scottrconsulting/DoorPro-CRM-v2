@@ -45,9 +45,13 @@ export async function apiRequest(
       headers['Content-Type'] = 'application/json';
     }
     
-    // Add auth token if it exists
-    if (token && !url.includes('/api/direct-auth/direct-login')) {
+    // Add auth token if it exists - always send it for all API requests
+    if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      // Log token presence for debugging
+      console.log(`Using auth token for ${url}`);
+    } else {
+      console.warn(`No auth token found for ${url}`);
     }
 
     const res = await fetch(fullUrl, {
@@ -108,6 +112,9 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
       // Add auth token if it exists
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log(`Using auth token for query: ${url}`);
+      } else {
+        console.warn(`No auth token found for query: ${url}`);
       }
       
       const res = await fetch(url, {

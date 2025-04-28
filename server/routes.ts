@@ -179,15 +179,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to ensure the user is authenticated - supports both session and token authentication
   const ensureAuthenticated = async (req: Request, res: Response, next: any) => {
+    console.log(`Auth check for ${req.method} ${req.url}`);
+    
     // First check standard cookie-based authentication
     if (req.isAuthenticated()) {
+      console.log("User authenticated via session");
       return next();
     }
     
     // If not authenticated by cookie, check for bearer token
     const authHeader = req.headers.authorization;
+    console.log(`Authorization header: ${authHeader ? 'present' : 'missing'}`);
+    
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      console.log(`Token received in Authorization header: ${token.substring(0, 5)}...`);
       
       // Use the direct-auth token verification
       try {
@@ -205,13 +211,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           return next();
+        } else {
+          console.log("Token verification failed - invalid token");
         }
       } catch (error) {
         console.error("Token verification error:", error);
       }
+    } else {
+      console.log("No Bearer token found in authorization header");
     }
     
     // Not authenticated by any method
+    console.log("Authentication failed for request");
     return res.status(401).json({ message: "Unauthorized" });
   };
 
