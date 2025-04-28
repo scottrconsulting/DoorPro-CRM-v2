@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, LogIn } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { DoorProLogo } from "@/components/ui/door-pro-logo";
 
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -67,11 +68,7 @@ export default function SimpleLogin() {
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex justify-center mb-2">
-              <img 
-                src="/images/doorpro-logo-large.svg" 
-                alt="DoorPro CRM" 
-                className="h-20 w-auto" 
-              />
+              <DoorProLogo size="large" />
             </div>
             <CardTitle className="text-2xl font-bold text-center text-primary">
               DoorPro CRM
