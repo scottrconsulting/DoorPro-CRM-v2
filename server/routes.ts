@@ -2128,7 +2128,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a message
+  // Delete a conversation
+  app.delete("/api/chat/conversations/:id", ensureAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id, 10);
+      
+      // Get the conversation to check permissions
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Get participants to check if user is a participant or admin
+      const participants = await storage.getChatParticipants(conversationId);
+      const user = req.user as any;
+      const isParticipant = participants.some((p: any) => p.userId === user.id);
+      const isAdmin = user.role === "admin"; 
+      const isTeamOwner = user.role === "team_owner" && conversation.teamId === user.teamId;
+      
+      // Check authorization - user must be an admin, team owner, or a participant with admin rights
+      if (!isAdmin && !isTeamOwner && !(isParticipant && participants.find((p: any) => p.userId === user.id)?.isAdmin)) {
+        return res.status(403).json({ message: "Not authorized to delete this conversation" });
+      }
+      
+      // Delete the conversation
+      const success = await storage.deleteChatConversation(conversationId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete conversation" });
+      }
+      
+      res.status(200).json({ message: "Conversation deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+  });
+
   app.delete("/api/chat/messages/:id", ensureAuthenticated, async (req, res) => {
     try {
       const messageId = parseInt(req.params.id, 10);
