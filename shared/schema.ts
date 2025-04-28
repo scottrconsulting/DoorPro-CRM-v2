@@ -77,7 +77,7 @@ export const STATISTICS_METRIC_ICONS: Record<string, string> = {
 
 export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
   "stats": "Statistics",
-  "map": "Door Knocking Map",
+  "map": "DoorPro Map",
   "contacts": "Recent Contacts",
   "schedule": "Schedule",
   "today_visits": "Today's Visits",
