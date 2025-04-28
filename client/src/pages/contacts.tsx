@@ -148,7 +148,7 @@ export default function Contacts() {
 
   // Get contact status badge
   const getStatusBadge = (status: string) => {
-    // Use a standard gray style for all statuses
+    // Use colored badges that match the map pin colors
     const statusLabels: Record<string, string> = {
       interested: "Interested",
       not_interested: "Not interested",
@@ -163,13 +163,31 @@ export default function Contacts() {
       check_back: "Check Back",
     };
 
+    // Color mapping that matches the map pins
+    const colorMap: Record<string, { bg: string; text: string }> = {
+      not_visited: { bg: 'bg-blue-100', text: 'text-blue-800' },
+      interested: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+      not_interested: { bg: 'bg-red-100', text: 'text-red-800' },
+      call_back: { bg: 'bg-blue-100', text: 'text-blue-800' },
+      check_back: { bg: 'bg-blue-100', text: 'text-blue-800' },
+      appointment_scheduled: { bg: 'bg-orange-100', text: 'text-orange-800' },
+      converted: { bg: 'bg-green-100', text: 'text-green-800' },
+      no_soliciting: { bg: 'bg-purple-100', text: 'text-purple-800' },
+      considering: { bg: 'bg-purple-100', text: 'text-purple-800' },
+      booked: { bg: 'bg-green-100', text: 'text-green-800' },
+      presented: { bg: 'bg-purple-100', text: 'text-purple-800' },
+      sold: { bg: 'bg-green-100', text: 'text-green-800' },
+    };
+
     // Convert snake_case status to label if not in the mapping
     const label = statusLabels[status] || status.split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
+    const { bg, text } = colorMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`}>
         {label}
       </span>
     );
