@@ -5,7 +5,7 @@ import { Contact, Visit, Customization, Sale } from "@shared/schema";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/dashboard/stat-card";
-import EnhancedMapViewer from "@/components/dashboard/enhanced-map-viewer";
+import EnhancedMapViewer from "@/components/dashboard/search-map-viewer";
 import ContactList from "@/components/dashboard/contact-list";
 import ScheduleWidget from "@/components/dashboard/schedule-widget";
 import { PRO_FEATURES } from "@/lib/auth";

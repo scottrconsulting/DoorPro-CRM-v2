@@ -242,7 +242,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setSelectedContact(contact);
     setShowDeleteDialog(true);
   }, []);
-  
+
   // Handle address search
   const handleAddressSearch = async () => {
     if (!searchQuery.trim()) {
@@ -962,184 +962,99 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               </div>
             </div>
             
-            {/* Appointment Section - Only shown when status is "booked" */}
-            {newContactForm.status === "booked" && (
-              <div className="border rounded-md p-4 bg-blue-50">
-                <h4 className="font-semibold text-blue-900 mb-3">Appointment Details</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="appointmentDate" className="text-blue-900">Date</Label>
-                    <Input 
-                      id="appointmentDate" 
-                      type="date"
-                      value={newContactForm.appointmentDate}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
-                      className="border-blue-200 focus:border-blue-400"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="appointmentTime" className="text-blue-900">Time</Label>
-                    <Input 
-                      id="appointmentTime" 
-                      type="time"
-                      value={newContactForm.appointmentTime}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
-                      className="border-blue-200 focus:border-blue-400"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex gap-3 mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendSMS" />
-                    <Label htmlFor="sendSMS" className="text-sm font-medium text-blue-900">
-                      Send Text Reminder
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendEmail" />
-                    <Label htmlFor="sendEmail" className="text-sm font-medium text-blue-900">
-                      Send Email Reminder
-                    </Label>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-blue-700 mt-2">
-                  Appointment reminder will be sent 24 hours before the scheduled time.
-                </div>
-              </div>
-            )}
-            
-            {/* Check Back Section - Only shown when status is "check_back" */}
-            {newContactForm.status === "check_back" && (
-              <div className="border rounded-md p-4 bg-yellow-50">
-                <h4 className="font-semibold text-yellow-900 mb-3">Schedule Check Back</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkBackDate" className="text-yellow-900">Date</Label>
-                    <Input 
-                      id="checkBackDate" 
-                      type="date"
-                      value={newContactForm.appointmentDate}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
-                      className="border-yellow-200 focus:border-yellow-400"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="checkBackTime" className="text-yellow-900">Time</Label>
-                    <Input 
-                      id="checkBackTime" 
-                      type="time"
-                      value={newContactForm.appointmentTime}
-                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
-                      className="border-yellow-200 focus:border-yellow-400"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex gap-3 mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendCheckBackSMS" />
-                    <Label htmlFor="sendCheckBackSMS" className="text-sm font-medium text-yellow-900">
-                      Add to Calendar
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="sendCheckBackEmail" />
-                    <Label htmlFor="sendCheckBackEmail" className="text-sm font-medium text-yellow-900">
-                      Set Reminder
-                    </Label>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-yellow-700 mt-2">
-                  You will be reminded to check back with this contact at the scheduled time.
-                </div>
-              </div>
-            )}
-            
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea 
                 id="notes" 
-                rows={3} 
+                rows={3}
                 value={newContactForm.notes}
                 onChange={(e) => setNewContactForm(prev => ({...prev, notes: e.target.value}))}
               />
             </div>
+            
+            {/* Scheduling section only for booked and check_back statuses */}
+            {(newContactForm.status === 'booked' || newContactForm.status === 'check_back') && (
+              <div className="space-y-2 border-t pt-4 mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-base font-semibold">Scheduling</Label>
+                  <div className="flex items-center">
+                    <Checkbox 
+                      id="enableScheduling"
+                      checked={showSchedulingFields}
+                      onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
+                    />
+                    <Label htmlFor="enableScheduling" className="ml-2">Set appointment</Label>
+                  </div>
+                </div>
+                
+                {showSchedulingFields && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="appointmentDate">Date</Label>
+                      <Input 
+                        id="appointmentDate" 
+                        type="date"
+                        value={newContactForm.appointmentDate}
+                        onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="appointmentTime">Time</Label>
+                      <Input 
+                        id="appointmentTime" 
+                        type="time"
+                        value={newContactForm.appointmentTime}
+                        onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewContactDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowNewContactDialog(false);
+                // Remove the marker if canceling
+                if (newHouseMarker) {
+                  newHouseMarker.setMap(null);
+                  setNewHouseMarker(null);
+                }
+                setIsAddingHouse(false);
+              }}
+            >
               Cancel
             </Button>
             <Button 
               onClick={() => {
-                // Create the contact with all form data
+                // Create the contact with all the gathered information
                 if (newContactCoords) {
-                  // Prepare contact data for submission
-                  const contactData: any = {
+                  createContactMutation.mutate({
                     userId: user?.id || 0,
                     fullName: newContactForm.fullName,
                     address: newContactForm.address,
                     city: newContactForm.city,
                     state: newContactForm.state,
                     zipCode: newContactForm.zipCode,
-                    phone: newContactForm.phone,
                     email: newContactForm.email,
+                    phone: newContactForm.phone,
                     status: newContactForm.status,
+                    notes: newContactForm.notes,
                     latitude: newContactCoords.lat.toString(),
                     longitude: newContactCoords.lng.toString(),
-                    notes: newContactForm.notes
-                  };
-                  
-                  // Handle scheduling fields based on status
-                  if (newContactForm.appointmentDate) {
-                    // Common scheduling data for both booked and check_back
-                    contactData.appointmentDate = newContactForm.appointmentDate;
-                    contactData.appointmentTime = newContactForm.appointmentTime;
-                    
-                    // Handle booked appointments
-                    if (newContactForm.status === "booked") {
-                      // Add appointment details to notes for backward compatibility
-                      const appointmentNotes = `Appointment scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
-                      contactData.notes = contactData.notes 
-                        ? `${contactData.notes}\n\n${appointmentNotes}`
-                        : appointmentNotes;
-                        
-                      toast({
-                        title: "Appointment Scheduled",
-                        description: `Successfully scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
-                      });
-                    }
-                    
-                    // Handle check-back reminders
-                    if (newContactForm.status === "check_back") {
-                      // Add check-back details to notes for backward compatibility
-                      const checkBackNotes = `Check back scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
-                      contactData.notes = contactData.notes 
-                        ? `${contactData.notes}\n\n${checkBackNotes}`
-                        : checkBackNotes;
-                        
-                      toast({
-                        title: "Check Back Scheduled",
-                        description: `Reminder set for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
-                      });
-                    }
-                  }
-                  
-                  // Create the contact
-                  createContactMutation.mutate(contactData);
-                  
-                  setShowNewContactDialog(false);
+                    // Add scheduling info if enabled
+                    appointment: showSchedulingFields && (newContactForm.status === 'booked' || newContactForm.status === 'check_back') ? 
+                      `${newContactForm.appointmentDate} ${newContactForm.appointmentTime}` : null
+                  });
                 }
+                setShowNewContactDialog(false);
               }}
+              disabled={!newContactCoords || !newContactForm.fullName}
             >
-              Create Contact
+              Add Contact
             </Button>
           </DialogFooter>
         </DialogContent>
