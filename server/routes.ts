@@ -923,6 +923,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse startTime and endTime as Date objects if they are strings
       let scheduleData = { ...req.body, userId: user.id };
       
+      // Log the types of startTime and endTime for debugging
+      console.log("Data types in schedule creation:", {
+        startTimeType: typeof scheduleData.startTime,
+        startTimeIsDate: scheduleData.startTime instanceof Date,
+        startTimeValue: scheduleData.startTime,
+        endTimeType: typeof scheduleData.endTime,
+        endTimeIsDate: scheduleData.endTime instanceof Date,
+        endTimeValue: scheduleData.endTime
+      });
+      
+      // If startTime or endTime are strings, try to convert them to Date objects
+      if (typeof scheduleData.startTime === 'string') {
+        try {
+          scheduleData.startTime = new Date(scheduleData.startTime);
+          console.log("Converted startTime string to Date");
+        } catch (err) {
+          console.error("Failed to convert startTime string to Date:", err);
+        }
+      }
+      
+      if (typeof scheduleData.endTime === 'string') {
+        try {
+          scheduleData.endTime = new Date(scheduleData.endTime);
+          console.log("Converted endTime string to Date");
+        } catch (err) {
+          console.error("Failed to convert endTime string to Date:", err);
+        }
+      }
+      
       // Attempt to parse and log any validation errors
       try {
         scheduleData = insertScheduleSchema.parse(scheduleData);

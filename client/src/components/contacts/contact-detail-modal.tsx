@@ -467,8 +467,8 @@ export default function ContactDetailModal({
       userId: contact?.userId || 0,
       title: `Follow-up with ${contact?.fullName}`,
       description: `${followUpReason} at ${contact?.address}`,
-      startTime: startTime.toISOString(), // Convert Date objects to ISO strings
-      endTime: endTime.toISOString(),     // Convert Date objects to ISO strings
+      startTime: startTime, // Use Date objects directly
+      endTime: endTime,     // Use Date objects directly
       type: "follow_up",
       location: contact?.address || "",
       contactIds: [contactId],
