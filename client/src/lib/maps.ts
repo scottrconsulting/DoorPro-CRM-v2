@@ -189,17 +189,17 @@ export function getMarkerIcon(status: string, pinColors?: Record<string, string>
   // Default status to color mapping (based on the user's requirements)
   const defaultStatusColors: Record<string, string> = {
     not_interested: "red",
-    booked: "blue",
+    booked: "blue",           // Booked appointments use blue
     presented: "orange",
-    no_answer: "yellow",
-    check_back: "green",
+    no_answer: "pink",        // No Answer uses pink
+    check_back: "yellow",     // Check Back/Follow-up uses yellow
     converted: "green",
     sold: "green",
     unknown: "blue",
-    not_visited: "blue",
+    not_visited: "pink",      // For backward compatibility, map not_visited to pink as well
     interested: "yellow",
-    appointment_scheduled: "orange",
-    call_back: "purple",
+    appointment_scheduled: "blue", // Match with booked
+    call_back: "yellow",      // Match with check_back
     no_soliciting: "purple"
   };
   

@@ -547,11 +547,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const getStatusColor = (status: string): string => {
     // Default color mapping - updated to match pin colors
     const defaultColorMap: Record<string, string> = {
-      not_visited: 'bg-blue-500',
+      no_answer: 'bg-pink-500',    // Changed from not_visited to no_answer with pink color
       interested: 'bg-yellow-500',
       not_interested: 'bg-red-500',
-      check_back: 'bg-yellow-500',  // Changed from blue to yellow to match requirement
-      booked: 'bg-blue-500',  // Changed from orange to blue to match requirement
+      check_back: 'bg-yellow-500',  // Follow-up uses yellow
+      booked: 'bg-blue-500',       // Booked appointments use blue
       converted: 'bg-green-500',
       no_soliciting: 'bg-purple-500',
       considering: 'bg-purple-500',
@@ -871,7 +871,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <>
             {/* Status buttons with updated colors */}
             {[
-              { status: "not_visited", defaultLabel: "Not Visited" },
+              { status: "no_answer", defaultLabel: "No Answer" },
               { status: "interested", defaultLabel: "Interested" },
               { status: "not_interested", defaultLabel: "Not Interested" },
               { status: "check_back", defaultLabel: "Check Back" },
@@ -1045,7 +1045,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="not_visited">Not Visited</SelectItem>
+                  <SelectItem value="no_answer">No Answer</SelectItem>
                   <SelectItem value="interested">Interested</SelectItem>
                   <SelectItem value="not_interested">Not Interested</SelectItem>
                   <SelectItem value="check_back">Check Back</SelectItem>
