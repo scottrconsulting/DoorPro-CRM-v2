@@ -20,7 +20,7 @@ import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
 import Customize from "@/pages/customize";
 import CustomizeMessageTemplates from "@/pages/customize-message-templates";
-import Chat from "@/pages/chat";
+import Chat from "@/pages/chat-fixed";
 import Routes from "@/pages/routes";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";

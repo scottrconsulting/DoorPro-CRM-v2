@@ -1,41 +1,25 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
-
-// Extend the User type to include isManager
-declare module "@/hooks/use-auth" {
-  interface User {
-    isManager?: boolean;
-  }
-}
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Card } from "@/components/ui/card";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-  DialogClose,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,30 +31,63 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { 
-  Loader2, 
-  SendHorizontal, 
-  PlusCircle, 
-  MoreVertical, 
-  Search, 
-  AlertCircle, 
-  Hash, 
-  MessageSquare, 
-  Bell, 
-  BellOff, 
-  UserPlus, 
-  Users, 
-  ChevronDown,
-  MessageCircle
-} from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ChevronDown,
+  Hash,
+  MessageCircle,
+  MoreVertical,
+  PlusCircle,
+  Search,
+  SendHorizontal,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-// Define the types for our data
+// Define schemas for forms and validations
+const newConversationSchema = z.object({
+  name: z.string().min(1, { message: "Name is required" }),
+  isChannelType: z.boolean().optional(),
+  channelTag: z.string().optional(),
+  isPublic: z.boolean().optional(),
+  creatorId: z.number().optional(),
+  teamId: z.number().optional(),
+});
+
+const sendMessageSchema = z.object({
+  content: z.string().min(1, { message: "Message cannot be empty" }),
+  isUrgent: z.boolean().optional(),
+  attachmentUrl: z.string().optional().nullable(),
+});
+
+const addParticipantSchema = z.object({
+  userId: z.string().or(z.number()),
+  isAdmin: z.boolean().default(false),
+});
+
+// Define types
+interface User {
+  id: number;
+  username: string;
+  fullName: string;
+  isManager?: boolean;
+}
+
 interface Conversation {
   id: number;
   name: string | null;
@@ -123,83 +140,59 @@ interface ChatUser {
   teamId?: number;
 }
 
-// Schema for creating a new conversation
-const newConversationSchema = z.object({
-  name: z.string().min(1, "Conversation name is required"),
-  isTeamChannel: z.boolean().default(false),
-  teamId: z.number().nullable().optional(),
-  isChannelType: z.boolean().default(false),
-  channelTag: z.string().optional(),
-  isPublic: z.boolean().default(false),
-  creatorId: z.number().optional(),
-});
-
-// Schema for sending a message
-const sendMessageSchema = z.object({
-  content: z.string().min(1, "Message cannot be empty"),
-  isUrgent: z.boolean().default(false),
-  attachmentUrl: z.string().nullable().optional(),
-});
-
 export default function ChatPage() {
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
-  const [isAddParticipantOpen, setIsAddParticipantOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
-  const [enableNotifications, setEnableNotifications] = useState(true);
-  const [notificationTarget, setNotificationTarget] = useState<"all" | "mentions" | "urgent" | "none">("all");
-  
-  // Get chat type from URL query parameters (messages or channels)
-  const [location] = useLocation();
-  const queryParams = new URLSearchParams(location.split('?')[1] || '');
-  const chatType = queryParams.get('type') || 'messages';
-  
-  // Multi-select chat conversations functionality
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
-  const [selectedConversations, setSelectedConversations] = useState<number[]>([]);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isChannelType, setIsChannelType] = useState(chatType === 'channels');
-  const [channelTag, setChannelTag] = useState("");
-  const [isPublicChannel, setIsPublicChannel] = useState(false);
-  
-  // WebSocket connection reference
   const wsRef = useRef<WebSocket | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
 
-  // Form for creating a new conversation
+  // State hooks
+  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+  const [selectedConversations, setSelectedConversations] = useState<number[]>([]);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState<boolean>(false);
+  const [isAddParticipantOpen, setIsAddParticipantOpen] = useState<boolean>(false);
+  const [isChannelType, setIsChannelType] = useState<boolean>(false);
+  const [channelTag, setChannelTag] = useState<string>("");
+  const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [newMessage, setNewMessage] = useState<string>("");
+  const [isUrgent, setIsUrgent] = useState<boolean>(false);
+  const [enableNotifications, setEnableNotifications] = useState<boolean>(true);
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+
+  // Forms
   const newConversationForm = useForm<z.infer<typeof newConversationSchema>>({
     resolver: zodResolver(newConversationSchema),
     defaultValues: {
       name: "",
-      isTeamChannel: chatType === 'channels',
-      teamId: null,
-      isChannelType: chatType === 'channels',
+      isChannelType: false,
       channelTag: "",
-      isPublic: false,
-      creatorId: user?.id,
+      isPublic: true,
     },
   });
 
-  // Form for adding a participant to a conversation
-  const addParticipantForm = useForm<{ userId: string | number; isAdmin: boolean }>({
+  const addParticipantForm = useForm<z.infer<typeof addParticipantSchema>>({
+    resolver: zodResolver(addParticipantSchema),
     defaultValues: {
       userId: "",
       isAdmin: false,
     },
   });
 
-  // Queries for fetching data
+  // Get current user
+  const { data: user } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  // Get conversations for the current user
   const { data: conversations, isLoading: conversationsLoading } = useQuery<Conversation[]>({
     queryKey: ["/api/chat/conversations"],
     enabled: !!user,
   });
 
+  // Get participants in the selected conversation
   const { data: participants, isLoading: participantsLoading } = useQuery<Participant[]>({
     queryKey: ["/api/chat/conversations", selectedConversation, "participants"],
     enabled: !!selectedConversation,
@@ -560,11 +553,12 @@ export default function ChatPage() {
     return socket;
   }, [selectedConversation, toast, user]);
   
-  // Set up WebSocket connection when component mounts or user changes
+  // Initialize WebSocket when the component mounts
   useEffect(() => {
     if (user) {
       const socket = setupWebSocket();
       
+      // Cleanup on unmount
       return () => {
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.close();
@@ -873,15 +867,14 @@ export default function ChatPage() {
                                   </FormItem>
                                 )}
                               />
-                                
+                              
                               <div className="flex items-center space-x-2">
                                 <Checkbox 
-                                  id="isPublicChannel" 
-                                  checked={isPublicChannel}
-                                  onCheckedChange={(checked) => {
-                                    setIsPublicChannel(!!checked);
-                                    newConversationForm.setValue("isPublic", !!checked);
-                                  }}
+                                  id="isPublicChannel"
+                                  checked={newConversationForm.watch("isPublic")}
+                                  onCheckedChange={(checked) => 
+                                    newConversationForm.setValue("isPublic", !!checked)
+                                  }
                                 />
                                 <label 
                                   htmlFor="isPublicChannel"
@@ -1086,7 +1079,7 @@ export default function ChatPage() {
                               onClick={(e) => e.stopPropagation()}
                             />
                           )}
-                          <Users className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                          <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="truncate">{conversation.name || "Unnamed Group"}</span>
                         </div>
                       ))}
@@ -1152,7 +1145,7 @@ export default function ChatPage() {
                             />
                           )}
                           <Hash className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{conversation.channelTag || conversation.name || "general"}</span>
+                          <span className="truncate">{conversation.name}</span>
                         </div>
                       ))}
                     </div>
@@ -1160,133 +1153,76 @@ export default function ChatPage() {
                 )}
               </div>
             ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                <p>No conversations found.</p>
+              <div className="flex flex-col items-center justify-center p-8 h-40">
+                <p className="text-center text-muted-foreground mb-4">No conversations yet</p>
                 <Button
-                  variant="link"
-                  className="p-0 h-auto mt-2"
                   onClick={() => setIsNewConversationOpen(true)}
+                  variant="outline"
+                  size="sm"
                 >
-                  Create a new conversation
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Start a conversation
                 </Button>
               </div>
             )}
           </ScrollArea>
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 flex flex-col min-h-[50vh] md:min-h-0">
-          {!selectedConversation ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-4">
-              <div className="text-center space-y-4 max-w-md">
-                <h2 className="text-2xl font-bold">Welcome to Chat</h2>
-                <p className="text-muted-foreground">
-                  Select a conversation from the sidebar or create a new one to start messaging.
-                </p>
-                <Button
-                  onClick={() => setIsNewConversationOpen(true)}
-                  className="mt-4"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Create New Conversation
-                </Button>
-              </div>
-            </div>
-          ) : (
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedConversation ? (
             <>
-              {/* Conversation Header */}
-              <div className="border-b p-4 flex justify-between items-center">
+              {/* Chat Header */}
+              <div className="px-4 py-3 border-b flex items-center justify-between">
                 <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    <AvatarFallback>
-                      {currentConversation?.name
-                        ? currentConversation.name.substring(0, 2).toUpperCase()
-                        : "CH"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="font-semibold">
-                      {currentConversation?.name || "Unnamed Conversation"}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {participants?.length || 0} participants
-                    </p>
-                  </div>
+                  {currentConversation?.isChannelType ? (
+                    <Hash className="h-5 w-5 mr-2 text-muted-foreground" />
+                  ) : (
+                    <MessageCircle className="h-5 w-5 mr-2 text-muted-foreground" />
+                  )}
+                  <h2 className="font-semibold text-lg">{currentConversation?.name}</h2>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        <Bell className="h-4 w-4 mr-1" />
-                        Notifications
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuCheckboxItem 
-                        checked={notificationTarget === "all"}
-                        onCheckedChange={() => setNotificationTarget("all")}
-                      >
-                        All messages
-                      </DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem 
-                        checked={notificationTarget === "mentions"}
-                        onCheckedChange={() => setNotificationTarget("mentions")}
-                      >
-                        Mentions only
-                      </DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem 
-                        checked={notificationTarget === "urgent"}
-                        onCheckedChange={() => setNotificationTarget("urgent")}
-                      >
-                        Urgent messages only
-                      </DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem 
-                        checked={notificationTarget === "none"}
-                        onCheckedChange={() => setNotificationTarget("none")}
-                      >
-                        None
-                      </DropdownMenuCheckboxItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                
                   <Dialog open={isAddParticipantOpen} onOpenChange={setIsAddParticipantOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline">
-                        <UserPlus className="h-4 w-4 mr-1" />
+                        <PlusCircle className="h-4 w-4 mr-1" />
                         Add People
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                       <DialogHeader>
                         <DialogTitle>Add Participant</DialogTitle>
                         <DialogDescription>
-                          Add a user to this conversation
+                          Add a new participant to this conversation
                         </DialogDescription>
                       </DialogHeader>
-                      
                       <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium leading-none" htmlFor="userId">
-                            Select User
-                          </label>
+                          <FormLabel>Select User</FormLabel>
                           <select
-                            id="userId"
-                            className="w-full border rounded-md p-2"
+                            className="w-full p-2 border rounded-md"
                             value={addParticipantForm.watch("userId")}
                             onChange={(e) => addParticipantForm.setValue("userId", e.target.value)}
                           >
                             <option value="">Select a user</option>
-                            {teamMembers?.map((member) => (
-                              <option key={member.id} value={member.id}>
-                                {member.fullName} ({member.username})
-                              </option>
-                            ))}
+                            {teamMembers
+                              ?.filter(
+                                (m) =>
+                                  m.id !== user?.id &&
+                                  !participants?.some((p) => p.userId === m.id)
+                              )
+                              .map((member) => (
+                                <option key={member.id} value={member.id}>
+                                  {member.fullName}
+                                </option>
+                              ))}
                           </select>
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="isAdmin"
+                          <Checkbox 
+                            id="isAdmin" 
                             checked={addParticipantForm.watch("isAdmin")}
                             onCheckedChange={(checked) => 
                               addParticipantForm.setValue("isAdmin", !!checked)
@@ -1363,87 +1299,89 @@ export default function ChatPage() {
                                         {message.sender?.fullName || "Unknown"}
                                       </span>
                                     )}
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(message.createdAt).toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                                {message.isUrgent && (
-                                  <span title="Urgent message">
-                                    <AlertCircle
-                                      className="h-4 w-4 text-red-500 ml-1"
-                                    />
-                                  </span>
-                                )}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>
-                                      Send Push Notification
-                                    </DropdownMenuItem>
-                                    {isSelf && (
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                            Delete Message
-                                          </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Message</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Are you sure you want to delete this message? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() => handleDeleteMessage(message.id)}
-                                            >
-                                              Delete
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(message.createdAt).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                    {message.isUrgent && (
+                                      <span title="Urgent message">
+                                        <AlertCircle
+                                          className="h-4 w-4 text-red-500 ml-1"
+                                        />
+                                      </span>
                                     )}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                              <div
-                                className={`py-2 px-3 rounded-lg ${
-                                  isSelf
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted"
-                                } ${message.isUrgent ? "border-2 border-red-500" : ""}`}
-                              >
-                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                                {message.attachmentUrl && (
-                                  <a
-                                    href={message.attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:underline block mt-1"
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem>
+                                          Send Push Notification
+                                        </DropdownMenuItem>
+                                        {isSelf && (
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                Delete Message
+                                              </DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Are you sure you want to delete this message? This action cannot be undone.
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() => handleDeleteMessage(message.id)}
+                                                >
+                                                  Delete
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                  <div
+                                    className={`py-2 px-3 rounded-lg ${
+                                      isSelf
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted"
+                                    } ${message.isUrgent ? "border-2 border-red-500" : ""}`}
                                   >
-                                    View Attachment
-                                  </a>
-                                )}
+                                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                    {message.attachmentUrl && (
+                                      <a
+                                        href={message.attachmentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:underline block mt-1"
+                                      >
+                                        View Attachment
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </div>
-                ) : (
-                  <div className="text-center p-4 text-muted-foreground h-full flex items-center justify-center">
-                    <p>No messages yet. Be the first to send a message!</p>
-                  </div>
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 text-muted-foreground h-full flex items-center justify-center">
+                        <p>No messages yet. Be the first to send a message!</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </ScrollArea>
 
@@ -1505,6 +1443,23 @@ export default function ChatPage() {
                 </div>
               </div>
             </>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <MessageCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
+                <p className="text-muted-foreground mb-4">
+                  Choose an existing conversation or start a new one
+                </p>
+                <Button
+                  onClick={() => setIsNewConversationOpen(true)}
+                  variant="outline"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  New Conversation
+                </Button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -1580,16 +1535,15 @@ export default function ChatPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {selectedConversations.length > 1 ? "Conversations" : "Conversation"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedConversations.length > 1 
-                ? `${selectedConversations.length} conversations` 
-                : "this conversation"}? This action cannot be undone.
+              Are you sure you want to delete {selectedConversations.length > 1 ? `these ${selectedConversations.length} conversations` : "this conversation"}? 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => deleteConversationsMutation.mutate(selectedConversations)}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-red-500 hover:bg-red-600"
             >
               {deleteConversationsMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
