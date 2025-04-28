@@ -146,10 +146,19 @@ export default function SchedulePage() {
   // Create schedule mutation
   const createScheduleMutation = useMutation({
     mutationFn: async (scheduleData: InsertSchedule) => {
-      const res = await apiRequest("POST", "/api/schedules", scheduleData);
-      return res.json();
+      console.log("Sending schedule data to API:", scheduleData);
+      try {
+        const res = await apiRequest("POST", "/api/schedules", scheduleData);
+        const data = await res.json();
+        console.log("API response:", data);
+        return data;
+      } catch (err) {
+        console.error("Failed to create schedule:", err);
+        throw err;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Schedule created successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
       toast({
         title: "Schedule created",
@@ -158,6 +167,7 @@ export default function SchedulePage() {
       clearForm();
     },
     onError: (error) => {
+      console.error("Schedule creation error:", error);
       toast({
         title: "Error creating schedule",
         description: "There was an error creating your schedule. Please try again.",
@@ -209,15 +219,16 @@ export default function SchedulePage() {
       endDateTime.setMinutes(startDateTime.getMinutes() + 30);
     }
     
-    // Log the date values for debugging
-    console.log('Schedule Page - Dates:', { 
+    // Log more detailed date values for debugging
+    console.log('Schedule Page - Detailed Date Debug:', { 
       selectedDate: selectedDate.toString(),
       startTime,
       endTime,
       startDateTime: startDateTime.toString(),
       startDateTimeISO: startDateTime.toISOString(),
       endDateTime: endDateTime.toString(),
-      endDateTimeISO: endDateTime.toISOString()
+      endDateTimeISO: endDateTime.toISOString(),
+      userId: user?.id || 0
     });
     
     // Calculate reminder time (if enabled)
