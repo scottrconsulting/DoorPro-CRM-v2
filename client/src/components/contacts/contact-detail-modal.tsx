@@ -903,8 +903,8 @@ export default function ContactDetailModal({
                               className={cn(
                                 "border-l-4 px-3 py-2 rounded-r-md relative shadow-sm",
                                 schedule.type === "route" && "border-blue-500 bg-blue-50",
-                                (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-green-500 bg-green-50",
-                                schedule.type === "appointment" && "border-yellow-500 bg-yellow-50",
+                                (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-yellow-500 bg-yellow-50",
+                                schedule.type === "appointment" && "border-blue-500 bg-blue-50",
                                 schedule.type === "presentation" && "border-purple-500 bg-purple-50"
                               )}
                             >

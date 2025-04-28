@@ -52,9 +52,9 @@ export default function ScheduleWidget({ title = "Today's Schedule" }: ScheduleW
       case "route":
         return "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-primary";
       case "follow_up":
-        return "bg-green-50 dark:bg-green-950/30 border-l-4 border-success";
+        return "bg-yellow-50 dark:bg-yellow-950/30 border-l-4 border-yellow-500";
       case "appointment":
-        return "bg-yellow-50 dark:bg-yellow-950/30 border-l-4 border-warning";
+        return "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500";
       default:
         return "bg-muted/50 border-l-4 border-muted-foreground";
     }
