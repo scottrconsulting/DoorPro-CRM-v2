@@ -22,7 +22,7 @@ export const DASHBOARD_WIDGETS = [
   "map", 
   "contacts",
   "schedule",
-  "territory_coverage",
+  // "territory_coverage", - temporarily hidden until core features are stable
   "contacts_added_today",
   "appointments_today",
   "recent_sales",
