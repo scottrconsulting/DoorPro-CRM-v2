@@ -99,12 +99,27 @@ export default function SchedulePage() {
       title: schedule.title,
       rawStartTime: schedule.startTime,
       isoString: new Date(schedule.startTime).toISOString(),
-      localDate: new Date(schedule.startTime).toString() 
+      localDate: new Date(schedule.startTime).toString(),
+      fixedIsoLocalDate: new Date(schedule.startTime).toLocaleDateString()
     });
     
-    // Extract the date in local timezone instead of UTC
-    const scheduleDate = new Date(schedule.startTime);
-    const dateString = format(scheduleDate, "yyyy-MM-dd");
+    // Extract the date directly from the ISO string but preserving the intended date
+    // This is critical to handle timezone shifts correctly
+    const scheduleDateStr = schedule.startTime.toString();
+    
+    // First try to extract the date part from an ISO string if it has the format
+    let intendedDate;
+    if (typeof scheduleDateStr === 'string' && scheduleDateStr.includes('T')) {
+      // Extract YYYY-MM-DD from ISO string to ensure we display the proper date
+      const datePart = scheduleDateStr.split('T')[0];
+      intendedDate = new Date(datePart + 'T00:00:00');
+    } else {
+      // Fallback if not in expected format
+      intendedDate = new Date(schedule.startTime);
+    }
+    
+    const dateString = format(intendedDate, "yyyy-MM-dd");
+    console.log(`Schedule ${schedule.id} (${schedule.title}) - Using date: ${dateString}`);
     
     if (!acc[dateString]) {
       acc[dateString] = [];
@@ -275,12 +290,29 @@ export default function SchedulePage() {
       reminderTimeValue = calculateReminderTime(startDateTime);
     }
     
+    // Create ISO strings that preserve the actual date parts (not timezone-adjusted)
+    // This ensures the server sees the date as the user selected it
+    const dateFormatted = format(selectedDate, "yyyy-MM-dd");
+    const startTimeFormatted = startTime.split(':').map(Number);
+    const endTimeFormatted = endTime.split(':').map(Number);
+    
+    // Create the ISO strings preserving the date and time as selected
+    const startTimeISO = `${dateFormatted}T${startTimeFormatted[0].toString().padStart(2, '0')}:${startTimeFormatted[1].toString().padStart(2, '0')}:00.000Z`;
+    const endTimeISO = `${dateFormatted}T${endTimeFormatted[0].toString().padStart(2, '0')}:${endTimeFormatted[1].toString().padStart(2, '0')}:00.000Z`;
+    
+    console.log('Using formatted ISO dates to preserve intended date:', {
+      dateFormatted,
+      startTimeISO,
+      endTimeISO
+    });
+    
     const scheduleData: InsertSchedule = {
       userId: user?.id || 0,
       title,
       description,
-      startTime: startDateTime,
-      endTime: endDateTime,
+      // Use the ISO strings directly to ensure the server gets the exact date/time
+      startTime: startTimeISO,
+      endTime: endTimeISO,
       type: scheduleType,
       location,
       contactIds: selectedContacts.length > 0 ? selectedContacts : undefined,
@@ -777,7 +809,7 @@ export default function SchedulePage() {
           sortedDates.map((date) => (
             <Card key={date} className="shadow-md">
               <CardHeader className="bg-neutral-50 border-b pb-3">
-                <CardTitle className="text-lg">{format(new Date(date), "EEEE, MMMM d, yyyy")}</CardTitle>
+                <CardTitle className="text-lg">{format(new Date(date + 'T12:00:00'), "EEEE, MMMM d, yyyy")}</CardTitle>
                 <CardDescription>
                   {schedulesByDate[date].length} item{schedulesByDate[date].length !== 1 && 's'}
                 </CardDescription>
