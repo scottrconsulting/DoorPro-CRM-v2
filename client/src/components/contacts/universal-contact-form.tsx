@@ -179,8 +179,8 @@ export default function UniversalContactForm({
           ? `Appointment with ${contact.fullName}`
           : `Follow-up with ${contact.fullName}`,
         description: `${contact.status === 'booked' ? 'Appointment' : 'Follow-up'} at ${contact.address}`,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: startTime,
+        endTime: endTime,
         type: contact.status === 'booked' ? 'appointment' : 'follow_up',
         location: contact.address,
         contactIds: [contact.id],

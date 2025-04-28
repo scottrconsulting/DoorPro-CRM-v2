@@ -918,14 +918,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/schedules", ensureAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const scheduleData = insertScheduleSchema.parse({ ...req.body, userId: user.id });
+      console.log("Schedule creation request body:", req.body);
+      
+      // Parse startTime and endTime as Date objects if they are strings
+      let scheduleData = { ...req.body, userId: user.id };
+      
+      // Attempt to parse and log any validation errors
+      try {
+        scheduleData = insertScheduleSchema.parse(scheduleData);
+      } catch (validationError) {
+        if (validationError instanceof ZodError) {
+          console.error("Schedule validation errors:", JSON.stringify(validationError.errors));
+          return res.status(400).json({ message: "Invalid data", errors: validationError.errors });
+        }
+        throw validationError;
+      }
+      
       const schedule = await storage.createSchedule(scheduleData);
       return res.status(201).json(schedule);
     } catch (error) {
+      console.error("Schedule creation error:", error);
       if (error instanceof ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      return res.status(500).json({ message: "Failed to create schedule" });
+      return res.status(500).json({ message: "Failed to create schedule", error: String(error) });
     }
   });
 
