@@ -36,12 +36,7 @@ export default function Sidebar() {
     <nav className="hidden md:flex md:w-64 flex-shrink-0 flex-col bg-background border-r border-border h-full">
       <div className="p-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center">
-          <Link href="/" className="flex items-center font-sans text-xl font-semibold text-primary">
-            <img 
-              src="/src/assets/doorpro-icon.svg" 
-              alt="DoorPro CRM" 
-              className="h-8 w-8 mr-2" 
-            />
+          <Link href="/" className="font-sans text-xl font-semibold text-primary">
             DoorPro CRM
           </Link>
           <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
