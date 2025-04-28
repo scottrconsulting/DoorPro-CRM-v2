@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { WebSocketServer, WebSocket } from "ws";
 import { 
   insertUserSchema, 
   insertContactSchema, 
