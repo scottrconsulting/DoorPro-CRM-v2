@@ -242,6 +242,48 @@ export default function SchedulePage() {
     createScheduleMutation.mutate(scheduleData);
   };
 
+  // Delete schedule
+  const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Delete mutation
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (scheduleId: number) => {
+      const res = await apiRequest("DELETE", `/api/schedules/${scheduleId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Schedule deleted",
+        description: "The schedule item has been deleted",
+      });
+      setShowDeleteDialog(false);
+      setScheduleToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting schedule",
+        description: "There was an error deleting the schedule. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle delete button click
+  const handleDeleteSchedule = (e: React.MouseEvent, scheduleId: number) => {
+    e.stopPropagation();
+    setScheduleToDelete(scheduleId);
+    setShowDeleteDialog(true);
+  };
+  
+  // Confirm delete
+  const confirmDeleteSchedule = () => {
+    if (scheduleToDelete) {
+      deleteScheduleMutation.mutate(scheduleToDelete);
+    }
+  };
+  
   // Toggle contact selection
   const toggleContactSelection = (contactId: number) => {
     setSelectedContacts((prev) => {
@@ -639,7 +681,7 @@ export default function SchedulePage() {
                       <div 
                         key={schedule.id}
                         className={cn(
-                          "border-l-4 px-3 py-2 rounded-r-md cursor-pointer hover:shadow-md transition-shadow",
+                          "border-l-4 px-3 py-2 rounded-r-md cursor-pointer hover:shadow-md transition-shadow relative",
                           schedule.type === "route" && "border-blue-500 bg-blue-50",
                           (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-green-500 bg-green-50",
                           schedule.type === "appointment" && "border-yellow-500 bg-yellow-50",
@@ -647,8 +689,20 @@ export default function SchedulePage() {
                         )}
                         onClick={() => handleScheduleItemClick(schedule)}
                       >
+                        {/* Delete button */}
+                        <button 
+                          className="absolute top-2 right-2 text-neutral-400 hover:text-red-500 focus:outline-none z-10"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the parent click
+                            handleDeleteSchedule(e, schedule.id);
+                          }}
+                          aria-label="Delete schedule item"
+                        >
+                          <span className="material-icons text-sm">delete</span>
+                        </button>
+                        
                         <div className="flex items-center">
-                          <div className="flex-1">
+                          <div className="flex-1 pr-6"> {/* Added padding right to make room for delete button */}
                             <div className="font-medium">{schedule.title}</div>
                             <div className="text-xs text-neutral-600">
                               {format(new Date(schedule.startTime), "h:mm a")} - {format(new Date(schedule.endTime), "h:mm a")}
@@ -728,6 +782,34 @@ export default function SchedulePage() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setNavigationAddress(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={openMapNavigation}>Navigate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete Schedule Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this schedule item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setScheduleToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteSchedule}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deleteScheduleMutation.isPending ? (
+                <span className="flex items-center">
+                  <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-r-transparent rounded-full"></span>
+                  Deleting...
+                </span>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

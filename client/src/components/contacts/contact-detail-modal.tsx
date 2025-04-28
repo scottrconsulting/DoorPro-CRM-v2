@@ -183,6 +183,19 @@ export default function ContactDetailModal({
     queryKey: [`/api/contacts/${contactId}/documents`],
     enabled: isOpen && activeTab === "documents",
   });
+  
+  // Fetch schedules for this contact
+  const { data: contactSchedules = [], isLoading: isLoadingSchedules } = useQuery<Schedule[]>({
+    queryKey: ["/api/schedules"],
+    enabled: isOpen && activeTab === "schedule",
+    select: (data) => {
+      // Filter schedules with contactIds including this contact
+      return data.filter(schedule => 
+        schedule.contactIds && 
+        schedule.contactIds.includes(contactId)
+      );
+    }
+  });
 
   // Add visit mutation
   const addVisitMutation = useMutation({
@@ -308,6 +321,46 @@ export default function ContactDetailModal({
       });
     },
   });
+  
+  // Delete schedule mutation
+  const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
+  const [showDeleteScheduleDialog, setShowDeleteScheduleDialog] = useState(false);
+  
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (scheduleId: number) => {
+      const res = await apiRequest("DELETE", `/api/schedules/${scheduleId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Schedule deleted",
+        description: "The schedule item has been deleted",
+      });
+      setShowDeleteScheduleDialog(false);
+      setScheduleToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting schedule",
+        description: "There was an error deleting the schedule. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle delete schedule
+  const handleDeleteSchedule = (scheduleId: number) => {
+    setScheduleToDelete(scheduleId);
+    setShowDeleteScheduleDialog(true);
+  };
+  
+  // Confirm delete schedule
+  const confirmDeleteSchedule = () => {
+    if (scheduleToDelete) {
+      deleteScheduleMutation.mutate(scheduleToDelete);
+    }
+  };
   
   // Upload document mutation (placeholder for now)
   const uploadDocumentMutation = useMutation({
