@@ -695,9 +695,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contactData = insertContactSchema.parse({ ...req.body, userId: user.id });
       const contact = await storage.createContact(contactData);
       
-      // Check if there's an appointment to schedule
-      if ((contact.appointment || (req.body.appointmentDate && req.body.appointmentTime)) && 
-          (contact.status === 'booked' || contact.status === 'check_back')) {
+      // Log entire contact and request data for debugging
+      console.log("Contact created:", JSON.stringify(contact, null, 2));
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
+      // Check if there's an appointment to schedule - handle all possible appointment data formats
+      if ((contact.status === 'booked' || contact.status === 'check_back')) {
         try {
           // Get user's notification preferences
           const userCustomization = await storage.getCustomizationByUser(user.id);
@@ -709,16 +712,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reminderTime: 60 // minutes before appointment
           };
           
-          // Parse appointment string into date and time - handle both formats
+          // Parse appointment string into date and time - handle all possible formats
           let appointmentDate, appointmentTime;
           
-          if (contact.appointment) {
-            // If using the standard appointment string format
+          // Check all possible ways the appointment might be stored
+          if (contact.appointment && contact.appointment.includes(' ')) {
+            // If using the standard appointment string format "YYYY-MM-DD HH:MM"
             [appointmentDate, appointmentTime] = contact.appointment.split(' ');
+            console.log("Found appointment from contact.appointment:", appointmentDate, appointmentTime);
+          } else if (req.body.appointment && req.body.appointment.includes(' ')) {
+            // If appointment is in the request body
+            [appointmentDate, appointmentTime] = req.body.appointment.split(' ');
+            console.log("Found appointment from req.body.appointment:", appointmentDate, appointmentTime);
           } else if (req.body.appointmentDate && req.body.appointmentTime) {
-            // If using separate date and time fields (from map)
+            // If using separate date and time fields
             appointmentDate = req.body.appointmentDate;
             appointmentTime = req.body.appointmentTime;
+            console.log("Found appointment from separate fields:", appointmentDate, appointmentTime);
+          } else if (contact.notes && contact.notes.includes("Appointment scheduled for")) {
+            // Try to extract from notes as a last resort
+            const match = contact.notes.match(/Appointment scheduled for (\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2})/);
+            if (match) {
+              appointmentDate = match[1];
+              appointmentTime = match[2];
+              console.log("Extracted appointment from notes:", appointmentDate, appointmentTime);
+            }
           }
           
           if (appointmentDate && appointmentTime) {

@@ -1236,12 +1236,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   // Handle scheduling fields based on status
                   if (newContactForm.appointmentDate) {
                     // Common scheduling data for both booked and check_back
-                    // Format appointment as needed for server-side processing
-                    contactData.appointment = `${newContactForm.appointmentDate} ${newContactForm.appointmentTime}`;
-                    
-                    // Also keep the separate fields for more detailed processing
-                    contactData.appointmentDate = newContactForm.appointmentDate;
-                    contactData.appointmentTime = newContactForm.appointmentTime;
+                    // Format appointment string - important to include this properly
+                  contactData.appointment = `${newContactForm.appointmentDate} ${newContactForm.appointmentTime}`;
+                  
+                  // Also include the separate fields
+                  contactData.appointmentDate = newContactForm.appointmentDate;
+                  contactData.appointmentTime = newContactForm.appointmentTime;
+                  
+                  console.log("Adding appointment data:", {
+                    appointment: contactData.appointment,
+                    appointmentDate: contactData.appointmentDate,
+                    appointmentTime: contactData.appointmentTime,
+                    status: contactData.status
+                  });
                     
                     // Handle booked appointments
                     if (newContactForm.status === "booked") {
@@ -1272,7 +1279,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     }
                   }
                   
-                  // Create the contact
+                  // Create the contact with all data
+                  console.log("Creating contact with data:", contactData);
                   createContactMutation.mutate(contactData);
                   
                   setShowNewContactDialog(false);
