@@ -18,6 +18,17 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import ContactDetailModal from "@/components/contacts/contact-detail-modal";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SchedulePage() {
   const { toast } = useToast();
@@ -34,6 +45,12 @@ export default function SchedulePage() {
   const [sendReminder, setSendReminder] = useState(false);
   const [reminderTime, setReminderTime] = useState("1_hour");
   const [confirmationMethod, setConfirmationMethod] = useState("email");
+  
+  // Added for contact details and navigation
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [showContactDetail, setShowContactDetail] = useState(false);
+  const [navigationAddress, setNavigationAddress] = useState<string | null>(null);
+  const [showNavigationDialog, setShowNavigationDialog] = useState(false);
   
   // Clear form function
   const clearForm = () => {
@@ -206,6 +223,45 @@ export default function SchedulePage() {
       case "pending":
       default:
         return "bg-blue-100 text-blue-800 border-blue-300";
+    }
+  };
+  
+  // Handle clicking a schedule item to view contact details
+  const handleScheduleItemClick = (schedule: Schedule) => {
+    // If there's a contact associated with this schedule item
+    if (schedule.contactIds && schedule.contactIds.length > 0) {
+      // Get the first associated contact
+      setSelectedContactId(schedule.contactIds[0]);
+      setShowContactDetail(true);
+    } else {
+      toast({
+        title: "No associated contact",
+        description: "This schedule item doesn't have any associated contacts.",
+      });
+    }
+  };
+  
+  // Handle clicking on an address to open navigation
+  const handleAddressClick = (event: React.MouseEvent, address: string) => {
+    event.stopPropagation(); // Prevent triggering the parent click handler
+    if (address) {
+      setNavigationAddress(address);
+      setShowNavigationDialog(true);
+    }
+  };
+  
+  // Open map with the selected address
+  const openMapNavigation = () => {
+    if (navigationAddress) {
+      // Create a properly encoded URI for the address
+      const encodedAddress = encodeURIComponent(navigationAddress);
+      
+      // Open in default map application
+      window.open(`https://maps.google.com/maps?q=${encodedAddress}`, '_blank');
+      
+      // Close the dialog
+      setShowNavigationDialog(false);
+      setNavigationAddress(null);
     }
   };
 
@@ -455,12 +511,13 @@ export default function SchedulePage() {
                       <div 
                         key={schedule.id}
                         className={cn(
-                          "border-l-4 px-3 py-2 rounded-r-md",
+                          "border-l-4 px-3 py-2 rounded-r-md cursor-pointer hover:shadow-md transition-shadow",
                           schedule.type === "route" && "border-blue-500 bg-blue-50",
                           (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-green-500 bg-green-50",
                           schedule.type === "appointment" && "border-yellow-500 bg-yellow-50",
                           schedule.type === "presentation" && "border-purple-500 bg-purple-50"
                         )}
+                        onClick={() => handleScheduleItemClick(schedule)}
                       >
                         <div className="flex items-center">
                           <div className="flex-1">
@@ -469,9 +526,12 @@ export default function SchedulePage() {
                               {format(new Date(schedule.startTime), "h:mm a")} - {format(new Date(schedule.endTime), "h:mm a")}
                             </div>
                             {schedule.location && (
-                              <div className="text-sm mt-1 flex items-center text-neutral-600">
+                              <div 
+                                className="text-sm mt-1 flex items-center text-neutral-600 hover:text-primary"
+                                onClick={(e) => handleAddressClick(e, schedule.location || "")}
+                              >
                                 <span className="material-icons text-xs mr-1">location_on</span>
-                                {schedule.location}
+                                <span className="underline hover:text-primary">{schedule.location}</span>
                               </div>
                             )}
                           </div>
@@ -512,6 +572,37 @@ export default function SchedulePage() {
           ))
         )}
       </div>
+    
+      {/* Contact Detail Modal */}
+      {showContactDetail && selectedContactId && (
+        <ContactDetailModal
+          isOpen={showContactDetail}
+          contactId={selectedContactId}
+          onClose={() => {
+            setShowContactDetail(false);
+            setSelectedContactId(null);
+          }}
+        />
+      )}
+      
+      {/* Navigation Dialog */}
+      <AlertDialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Open Map Navigation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Would you like to navigate to this address using your default maps application?
+              <div className="mt-2 p-2 bg-gray-100 rounded text-sm">
+                {navigationAddress}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setNavigationAddress(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={openMapNavigation}>Navigate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
