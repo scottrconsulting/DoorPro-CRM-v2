@@ -2150,9 +2150,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = user.role === "admin"; 
       const isTeamOwner = user.role === "team_owner" && conversation.teamId === user.teamId;
       
-      // Check authorization - user must be an admin, team owner, or a participant with admin rights
-      if (!isAdmin && !isTeamOwner && !(isParticipant && participants.find((p: any) => p.userId === user.id)?.isAdmin)) {
-        return res.status(403).json({ message: "Not authorized to delete this conversation" });
+      // New rules: 
+      // 1. Group chats can only be deleted by creator, admins, or team owners
+      // 2. Direct messages can be deleted by either participant
+      // 3. Channel-type conversations have special rules
+      
+      let canDelete = false;
+      
+      // Always allow admins and team owners to delete any conversation
+      if (isAdmin || isTeamOwner) {
+        canDelete = true;
+      }
+      // For direct messages (conversations with exactly 2 participants), either participant can remove
+      else if (participants.length === 2 && isParticipant) {
+        canDelete = true;
+      }
+      // Check if user is the creator (allow even if the creatorId field is not yet populated)
+      else if (
+        (conversation.creatorId === user.id) || 
+        // If creatorId is null (for old records) but user is participant with admin rights
+        (conversation.creatorId === null && isParticipant && participants.find((p: any) => p.userId === user.id)?.isAdmin)
+      ) {
+        canDelete = true;
+      }
+      
+      if (!canDelete) {
+        return res.status(403).json({ 
+          message: "Not authorized to delete this conversation. Only conversation creators or administrators can delete group conversations."
+        });
       }
       
       // Delete the conversation
