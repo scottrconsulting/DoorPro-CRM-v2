@@ -844,8 +844,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Work Timer Display - Top Left Corner */}
-      <div className="absolute top-4 left-4 bg-white p-2 rounded-lg shadow-lg z-10">
+      {/* Work Timer Display - Bottom Left Corner */}
+      <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-lg z-10">
         <div className="text-sm font-bold">{formattedTime}</div>
         <div className="flex gap-2 mt-1">
           <Button
