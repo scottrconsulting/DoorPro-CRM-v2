@@ -654,6 +654,7 @@ useEffect(() => {
                 )}
               </div>
               
+              {/* Confirmation settings temporarily hidden until needed
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Confirmation Settings</h3>
                 
@@ -693,6 +694,7 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
+              */}
             </CardContent>
           </Card>
         </TabsContent>

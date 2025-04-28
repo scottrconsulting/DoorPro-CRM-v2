@@ -702,6 +702,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Parse appointment string into date and time
             const [appointmentDate, appointmentTime] = contact.appointment.split(' ');
             
+            // Notification features temporarily disabled
+            /* 
             // Import notifications utility
             const { sendAppointmentConfirmations } = await import('./utils/notifications');
             
@@ -719,6 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               email: confirmOptions.email && !!contact.email,
               text: confirmOptions.sms && !!contact.phone
             });
+            */
             
             // If this is an actual appointment (not just check-back), add to schedule
             if (contact.status === 'booked') {
@@ -852,6 +855,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Creating contact visit with data:", visitData);
       const visit = await storage.createVisit(visitData);
+      
+      // If a follow-up date is set, add it to the schedule
+      if (visitData.followUpDate) {
+        try {
+          // Create a default end time 30 minutes after start time
+          const followUpDate = new Date(visitData.followUpDate);
+          const endDateTime = new Date(followUpDate.getTime() + 30 * 60 * 1000); // 30 minutes follow-up
+          
+          // Add to schedule
+          await storage.createSchedule({
+            userId: user.id,
+            title: `Follow-up with ${contact.fullName}`,
+            description: visitData.notes || `Check back with ${contact.fullName}`,
+            startTime: followUpDate,
+            endTime: endDateTime,
+            type: 'follow-up',
+            location: contact.address,
+            contactIds: [contact.id],
+            reminderTime: new Date(followUpDate.getTime() - (60 * 60 * 1000)), // 1 hour reminder
+            confirmationMethod: 'none',
+            confirmationStatus: 'pending'
+          });
+          
+          console.log("Added follow-up to schedule:", followUpDate);
+        } catch (scheduleError) {
+          console.error("Failed to add follow-up to schedule:", scheduleError);
+          // Don't return an error, as the visit was still created successfully
+        }
+      }
+      
       return res.status(201).json(visit);
     } catch (error) {
       console.error("Error creating contact visit:", error);
