@@ -346,6 +346,7 @@ export default function SchedulePage() {
                 </div>
               )}
               
+              {/* Confirmation method temporarily hidden until needed
               {scheduleType === "appointment" && (
                 <div className="md:col-span-2">
                   <Label htmlFor="confirmationMethod" className="mb-2 block">Confirmation Method</Label>
@@ -368,6 +369,7 @@ export default function SchedulePage() {
                   </p>
                 </div>
               )}
+              */}
               
               {(scheduleType === "route" || scheduleType === "follow_up") && (
                 <div className="md:col-span-2">
@@ -486,6 +488,7 @@ export default function SchedulePage() {
                           </div>
                         )}
                         
+                        {/* Confirmation status temporarily hidden until needed
                         {schedule.type === "appointment" && schedule.confirmationStatus && (
                           <div className="mt-2">
                             <Badge 
@@ -500,6 +503,7 @@ export default function SchedulePage() {
                             </Badge>
                           </div>
                         )}
+                        */}
                       </div>
                     ))}
                 </div>
