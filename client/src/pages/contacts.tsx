@@ -1,50 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Contact, InsertContact } from "@shared/schema";
+import { Contact, InsertContact, CONTACT_STATUSES } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage 
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertContactSchema } from "@shared/schema";
-import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
-import { geocodeAddress } from "@/lib/maps";
 import ContactDetailModal from "@/components/contacts/contact-detail-modal";
-
-// Extended schema with validation
-const contactFormSchema = insertContactSchema.extend({
-  address: z.string().min(5, "Address must be at least 5 characters"),
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  appointmentDate: z.string().optional(),
-  appointmentTime: z.string().optional(),
-});
-
-type ContactFormValues = z.infer<typeof contactFormSchema>;
+import UniversalContactForm from "@/components/contacts/universal-contact-form";
 
 export default function Contacts() {
   console.log("Contacts component is rendering");
@@ -58,54 +24,11 @@ export default function Contacts() {
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [showSchedulingFields, setShowSchedulingFields] = useState(false);
 
   // Get contacts
   const { data: contacts = [], isLoading } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
     enabled: !!user, // Only fetch if user is authenticated
-  });
-
-  // Create contact form
-  const form = useForm<ContactFormValues>({
-    resolver: zodResolver(contactFormSchema),
-    defaultValues: {
-      fullName: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      phone: "",
-      email: "",
-      status: "not_visited",
-      userId: user?.id || 0,
-      appointmentDate: "",
-      appointmentTime: "",
-    },
-  });
-
-  // Create contact mutation
-  const createContactMutation = useMutation({
-    mutationFn: async (contact: InsertContact) => {
-      const res = await apiRequest("POST", "/api/contacts", contact);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      setIsCreateModalOpen(false);
-      form.reset();
-      toast({
-        title: "Contact created",
-        description: "Your contact was successfully created",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to create contact",
-        description: error.message || "There was an error creating your contact",
-        variant: "destructive",
-      });
-    },
   });
 
   // Delete contact mutation
@@ -252,70 +175,16 @@ export default function Contacts() {
     );
   };
 
-  // Handle form submit
-  const onSubmit = async (data: ContactFormValues) => {
-    // Check if at free plan limit
-    if (user?.role === UserRole.FREE && contacts.length >= FREE_PLAN_LIMITS.contacts) {
-      toast({
-        title: "Contact limit reached",
-        description: `Free plan is limited to ${FREE_PLAN_LIMITS.contacts} contacts. Please upgrade to Pro for unlimited contacts.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Format appointment data if scheduling is enabled
-    let appointmentData = null;
-    if (showSchedulingFields && (data.status === 'booked' || data.status === 'check_back') && 
-        data.appointmentDate && data.appointmentTime) {
-      appointmentData = `${data.appointmentDate} ${data.appointmentTime}`;
-    }
-
-    // Geocode the address to get coordinates
-    try {
-      const geocodeResult = await geocodeAddress(data.address);
-      
-      if (geocodeResult) {
-        // Create contact with coordinates
-        createContactMutation.mutate({
-          ...data,
-          latitude: geocodeResult.latitude,
-          longitude: geocodeResult.longitude,
-          address: geocodeResult.address, // Use formatted address from geocoding
-          appointment: appointmentData,
-        });
-      } else {
-        // Create contact without coordinates
-        toast({
-          title: "Address not found",
-          description: "Could not find coordinates for this address. Contact will be created without map location.",
-          variant: "default",
-        });
-        createContactMutation.mutate({
-          ...data,
-          appointment: appointmentData,
-        });
-      }
-    } catch (error) {
-      console.error("Geocoding error:", error);
-      createContactMutation.mutate({
-        ...data,
-        appointment: appointmentData,
-      });
-    }
-  };
-
   // Check if at contact limit
   const isAtContactLimit = user?.role === UserRole.FREE && contacts.length >= FREE_PLAN_LIMITS.contacts;
 
   // Get status filter options
-  const statusOptions = [
-    { value: "interested", label: "Interested" },
-    { value: "not_interested", label: "Not interested" },
-    { value: "converted", label: "Converted" },
-    { value: "considering", label: "Considering" },
-    { value: "not_visited", label: "Not visited" },
-  ];
+  const statusOptions = CONTACT_STATUSES.map(status => ({
+    value: status,
+    label: status.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }));
 
   return (
     <div className="p-4 md:p-6">
@@ -352,220 +221,204 @@ export default function Contacts() {
             <Input
               type="text"
               placeholder="Search contacts..."
-              className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
             />
-            <span className="material-icons absolute left-3 top-2.5 text-neutral-400">search</span>
+            <span className="material-icons absolute left-3 top-2 text-neutral-400">search</span>
           </div>
-          <div className="w-full md:w-48">
-            <Select value={filterStatus || ""} onValueChange={(value) => setFilterStatus(value || null)}>
+          
+          <div className="w-full md:w-64">
+            <Select
+              value={filterStatus || ""}
+              onValueChange={(value) => setFilterStatus(value || null)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="">All Statuses</SelectItem>
                 {statusOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-        {/* Mass actions */}
-        <div className="flex flex-wrap gap-2 mt-4 items-center">
-          <span className="text-sm text-neutral-600">{selectedContacts.length} selected</span>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleMassDelete}
-            disabled={selectedContacts.length === 0}
-          >
-            <span className="material-icons text-sm mr-1">delete</span>
-            Delete Selected
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-          >
-            <span className="material-icons text-sm mr-1">download</span>
-            Export CSV
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV} 
+              className="flex items-center"
+              disabled={filteredContacts.length === 0}
+            >
+              <span className="material-icons text-sm mr-1">download</span>
+              Export CSV
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleMassDelete} 
+              className="flex items-center"
+              disabled={selectedContacts.length === 0}
+            >
+              <span className="material-icons text-sm mr-1">delete</span>
+              Delete ({selectedContacts.length})
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Contacts List */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : filteredContacts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-8 text-center">
-          <span className="material-icons text-6xl text-neutral-300 mb-4">people</span>
-          <h3 className="text-xl font-medium text-neutral-700 mb-2">No contacts found</h3>
-          <p className="text-neutral-500 mb-6">
-            {searchQuery || filterStatus 
-              ? "Try changing your search or filter criteria"
-              : "Add your first contact to get started"}
-          </p>
-          <Button
-            onClick={() => {
-              setSearchQuery("");
-              setFilterStatus(null);
-              if (contacts.length === 0) {
-                setIsCreateModalOpen(true);
-              }
-            }}
-          >
-            {searchQuery || filterStatus 
-              ? "Clear Filters"
-              : "Add Your First Contact"}
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+      {/* Contact List */}
+      <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+        {filteredContacts.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-neutral-500">No contacts found matching your criteria.</p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery("");
+                setFilterStatus(null);
+              }}
+              className="mt-4"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-2">
+            <table className="min-w-full divide-y divide-neutral-200">
+              <thead className="bg-neutral-50">
+                <tr>
+                  <th className="p-3 text-left">
                     <Checkbox
-                      checked={selectedContacts.length === filteredContacts.length}
+                      checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
                       onCheckedChange={(checked) => {
-                        setSelectedContacts(checked 
-                          ? filteredContacts.map(c => c.id)
-                          : []
-                        );
+                        if (checked) {
+                          setSelectedContacts(filteredContacts.map(c => c.id));
+                        } else {
+                          setSelectedContacts([]);
+                        }
                       }}
                     />
                   </th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
-                    <div 
-                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "fullName" ? "text-primary" : ""}`} 
-                      onClick={() => handleSort("fullName")}
-                    >
+                  <th 
+                    className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort("fullName")}
+                  >
+                    <div className="flex items-center">
                       Name
-                      {sortField === "fullName" ? (
-                        sortDirection === "asc" ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
-                        )
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      {sortField === "fullName" && (
+                        <span className="material-icons text-sm ml-1">
+                          {sortDirection === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
-                    <div 
-                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "address" ? "text-primary" : ""}`} 
-                      onClick={() => handleSort("address")}
-                    >
+                  <th 
+                    className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort("address")}
+                  >
+                    <div className="flex items-center">
                       Address
-                      {sortField === "address" ? (
-                        sortDirection === "asc" ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
-                        )
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      {sortField === "address" && (
+                        <span className="material-icons text-sm ml-1">
+                          {sortDirection === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-600">City/State</th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-600">Contact Info</th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-600">
-                    <div 
-                      className={`flex items-center gap-1 cursor-pointer hover:text-primary ${sortField === "status" ? "text-primary" : ""}`} 
-                      onClick={() => handleSort("status")}
-                    >
+                  <th className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    Phone
+                  </th>
+                  <th className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th 
+                    className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort("status")}
+                  >
+                    <div className="flex items-center">
                       Status
-                      {sortField === "status" ? (
-                        sortDirection === "asc" ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 9 5-5 5 5"/></svg>
-                        )
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+                      {sortField === "status" && (
+                        <span className="material-icons text-sm ml-1">
+                          {sortDirection === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
                       )}
                     </div>
                   </th>
-                  <th className="px-4 py-2 text-right font-medium text-neutral-600">Actions</th>
+                  <th className="p-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-neutral-200">
                 {filteredContacts.map((contact) => (
-                  <tr 
-                    key={contact.id}
-                    className="border-b border-neutral-200 hover:bg-neutral-50 cursor-pointer"
-                  >
-                    <td className="px-4 py-2">
+                  <tr key={contact.id} className="hover:bg-neutral-50">
+                    <td className="p-3">
                       <Checkbox
                         checked={selectedContacts.includes(contact.id)}
                         onCheckedChange={(checked) => {
-                          setSelectedContacts(prev => 
-                            checked 
-                              ? [...prev, contact.id]
-                              : prev.filter(id => id !== contact.id)
-                          );
+                          if (checked) {
+                            setSelectedContacts([...selectedContacts, contact.id]);
+                          } else {
+                            setSelectedContacts(selectedContacts.filter(id => id !== contact.id));
+                          }
                         }}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </td>
-                    <td className="px-4 py-2 font-medium">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold">{contact.fullName}</span>
-                        <span className="text-xs text-neutral-500">Last updated: {new Date(contact.updatedAt).toLocaleDateString()}</span>
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="font-medium text-neutral-900">
+                        {contact.fullName}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-neutral-600">
-                      <div className="flex flex-col">
-                        <span className="text-sm truncate max-w-[250px]">{contact.address}</span>
-                        {(contact.latitude && contact.longitude) ? (
-                          <span className="text-xs text-green-600">✓ Mapped</span>
-                        ) : (
-                          <span className="text-xs text-orange-500">Not on map</span>
-                        )}
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="text-neutral-600">
+                        {contact.address}
                       </div>
-                    </td>
-                    <td className="px-4 py-2 text-neutral-600">
-                      {contact.city || contact.state ? (
-                        <div className="flex flex-col">
-                          {contact.city && <span className="text-sm">{contact.city}</span>}
-                          {contact.state && <span className="text-xs text-neutral-500">{contact.state}{contact.zipCode ? ` ${contact.zipCode}` : ''}</span>}
+                      {contact.city && contact.state && (
+                        <div className="text-neutral-500 text-xs">
+                          {contact.city}, {contact.state} {contact.zipCode}
                         </div>
-                      ) : (
-                        <span className="text-xs text-neutral-400">No location data</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-neutral-600">
-                      {contact.phone || contact.email ? (
-                        <div className="flex flex-col">
-                          {contact.phone && <span className="text-sm">{contact.phone}</span>}
-                          {contact.email && <span className="text-xs text-neutral-500 truncate max-w-[150px]">{contact.email}</span>}
+                    <td className="p-3 whitespace-nowrap text-neutral-600">
+                      {contact.phone || "-"}
+                    </td>
+                    <td className="p-3 whitespace-nowrap text-neutral-600">
+                      {contact.email || "-"}
+                    </td>
+                    <td className="p-3 whitespace-nowrap">
+                      {getStatusBadge(contact.status)}
+                      {contact.appointment && (
+                        <div className="text-xs text-neutral-500 mt-1">
+                          <span className="material-icons text-xs mr-1 align-text-top">event</span>
+                          {contact.appointment}
                         </div>
-                      ) : (
-                        <span className="text-xs text-neutral-400">No contact info</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">{getStatusBadge(contact.status)}</td>
-                    <td className="px-4 py-2 text-right">
-                      <div className="flex justify-end">
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="flex space-x-2">
                         <Button
-                          variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm("Are you sure you want to delete this contact?")) {
+                          variant="ghost"
+                          onClick={() => setSelectedContactId(contact.id)}
+                          title="View Details"
+                        >
+                          <span className="material-icons text-sm">visibility</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete ${contact.fullName}?`)) {
                               deleteContactMutation.mutate(contact.id);
                             }
                           }}
+                          title="Delete Contact"
                         >
-                          <span className="material-icons text-neutral-500 text-sm">delete</span>
+                          <span className="material-icons text-sm">delete</span>
                         </Button>
                       </div>
                     </td>
@@ -574,234 +427,21 @@ export default function Contacts() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Create Contact Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Contact</DialogTitle>
-            <DialogDescription>
-              Enter the contact details below to add a new potential customer.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Street Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State</FormLabel>
-                      <FormControl>
-                        <Input placeholder="State" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="zipCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Zip Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Zip Code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(555) 123-4567" value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="john.doe@example.com" value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Show scheduling fields for booked and check_back statuses
-                        if (value === "booked" || value === "check_back") {
-                          setShowSchedulingFields(true);
-                        } else {
-                          setShowSchedulingFields(false);
-                        }
-                      }} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="not_interested">Not Interested</SelectItem>
-                        <SelectItem value="booked">Booked</SelectItem>
-                        <SelectItem value="presented">Presented</SelectItem>
-                        <SelectItem value="no_answer">No Answer</SelectItem>
-                        <SelectItem value="check_back">Check Back</SelectItem>
-                        <SelectItem value="no_soliciting">No Soliciting</SelectItem>
-                        <SelectItem value="sold">Sold</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Scheduling section only for booked and check_back statuses */}
-              {(form.watch("status") === 'booked' || form.watch("status") === 'check_back') && (
-                <div className="space-y-2 border-t pt-4 mt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="enableScheduling"
-                        checked={showSchedulingFields}
-                        onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
-                      />
-                      <Label htmlFor="enableScheduling" className="ml-2">Set appointment</Label>
-                    </div>
-                  </div>
-                  
-                  {showSchedulingFields && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="appointmentDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="date"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="appointmentTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Time</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="time"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={createContactMutation.isPending}
-                >
-                  {createContactMutation.isPending ? "Adding..." : "Add Contact"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <UniversalContactForm
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(newContact) => {
+          toast({
+            title: "Contact created",
+            description: "Your contact was successfully created"
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+        }}
+      />
 
       {/* Contact Detail Modal */}
       {selectedContactId && (
