@@ -166,13 +166,27 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const res = await apiRequest("POST", "/api/contacts", contactData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (createdContact) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       if (newHouseMarker) {
         newHouseMarker.setMap(null);
         setNewHouseMarker(null);
       }
       setIsAddingHouse(false);
+      
+      // Create a visit record for this contact interaction
+      if (createdContact?.id && user?.id) {
+        createVisitMutation.mutate({
+          contactId: createdContact.id,
+          userId: user.id,
+          visitType: "initial",
+          notes: `Initial contact - Status: ${createdContact.status}`,
+          outcome: createdContact.status === "booked" ? "positive" : 
+                   createdContact.status === "not_interested" ? "negative" : "neutral",
+          followUpNeeded: createdContact.status === "check_back" || createdContact.status === "booked",
+          visitDate: new Date()
+        });
+      }
     },
     onError: (error) => {
       console.error("Failed to create contact", error);
@@ -1017,6 +1031,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     }
                   }
                   
+                  // Create the contact
                   createContactMutation.mutate(contactData);
                   
                   setShowNewContactDialog(false);
