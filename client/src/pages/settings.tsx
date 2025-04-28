@@ -78,7 +78,7 @@ const passwordSchema = z.object({
 // Preferences schema
 const preferencesSchema = z.object({
   theme: z.enum(["light", "dark", "system"]),
-  defaultMapType: z.enum(["roadmap", "satellite"]),
+  defaultMapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]),
   notificationEmail: z.boolean(),
   notificationPush: z.boolean(),
   defaultScheduleView: z.enum(["day", "week", "month"]),
@@ -132,7 +132,7 @@ export default function Settings() {
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
       theme: mounted ? (theme as "light" | "dark" | "system") : "light",
-      defaultMapType: customization?.mapDefaultView || "roadmap",
+      defaultMapType: (customization?.mapDefaultView as "roadmap" | "satellite" | "hybrid" | "terrain") || "roadmap",
       notificationEmail: true,
       notificationPush: true,
       defaultScheduleView: "week",
@@ -547,6 +547,22 @@ export default function Settings() {
                                 </FormControl>
                                 <FormLabel className="font-normal">
                                   Satellite
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="hybrid" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Hybrid
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="terrain" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Terrain
                                 </FormLabel>
                               </FormItem>
                             </RadioGroup>
