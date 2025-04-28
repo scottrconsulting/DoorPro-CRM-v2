@@ -897,6 +897,56 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               </div>
             )}
             
+            {/* Check Back Section - Only shown when status is "check_back" */}
+            {newContactForm.status === "check_back" && (
+              <div className="border rounded-md p-4 bg-yellow-50">
+                <h4 className="font-semibold text-yellow-900 mb-3">Schedule Check Back</h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="checkBackDate" className="text-yellow-900">Date</Label>
+                    <Input 
+                      id="checkBackDate" 
+                      type="date"
+                      value={newContactForm.appointmentDate}
+                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
+                      className="border-yellow-200 focus:border-yellow-400"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="checkBackTime" className="text-yellow-900">Time</Label>
+                    <Input 
+                      id="checkBackTime" 
+                      type="time"
+                      value={newContactForm.appointmentTime}
+                      onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
+                      className="border-yellow-200 focus:border-yellow-400"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="sendCheckBackSMS" />
+                    <Label htmlFor="sendCheckBackSMS" className="text-sm font-medium text-yellow-900">
+                      Add to Calendar
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="sendCheckBackEmail" />
+                    <Label htmlFor="sendCheckBackEmail" className="text-sm font-medium text-yellow-900">
+                      Set Reminder
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-yellow-700 mt-2">
+                  You will be reminded to check back with this contact at the scheduled time.
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea 
@@ -932,21 +982,39 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                     notes: newContactForm.notes
                   };
                   
-                  // If this is a booked appointment, include the appointment details
-                  if (newContactForm.status === "booked" && newContactForm.appointmentDate) {
+                  // Handle scheduling fields based on status
+                  if (newContactForm.appointmentDate) {
+                    // Common scheduling data for both booked and check_back
                     contactData.appointmentDate = newContactForm.appointmentDate;
                     contactData.appointmentTime = newContactForm.appointmentTime;
                     
-                    // Add appointment details to notes for backward compatibility
-                    const appointmentNotes = `Appointment scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
-                    contactData.notes = contactData.notes 
-                      ? `${contactData.notes}\n\n${appointmentNotes}`
-                      : appointmentNotes;
-                      
-                    toast({
-                      title: "Appointment Scheduled",
-                      description: `Successfully scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
-                    });
+                    // Handle booked appointments
+                    if (newContactForm.status === "booked") {
+                      // Add appointment details to notes for backward compatibility
+                      const appointmentNotes = `Appointment scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
+                      contactData.notes = contactData.notes 
+                        ? `${contactData.notes}\n\n${appointmentNotes}`
+                        : appointmentNotes;
+                        
+                      toast({
+                        title: "Appointment Scheduled",
+                        description: `Successfully scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
+                      });
+                    }
+                    
+                    // Handle check-back reminders
+                    if (newContactForm.status === "check_back") {
+                      // Add check-back details to notes for backward compatibility
+                      const checkBackNotes = `Check back scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
+                      contactData.notes = contactData.notes 
+                        ? `${contactData.notes}\n\n${checkBackNotes}`
+                        : checkBackNotes;
+                        
+                      toast({
+                        title: "Check Back Scheduled",
+                        description: `Reminder set for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
+                      });
+                    }
                   }
                   
                   createContactMutation.mutate(contactData);
