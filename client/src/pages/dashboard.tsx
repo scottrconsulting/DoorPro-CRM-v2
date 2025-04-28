@@ -48,6 +48,7 @@ export default function Dashboard() {
   const enabledWidgets = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
   const widgetOrder = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
   const widgetLabels = customization?.dashboardWidgetLabels || {};
+  const metricLabels = customization?.statisticsMetricLabels || {};
   
   // Get selected statistics metrics or use defaults
   const selectedStatistics = customization?.statisticsMetrics || 
@@ -278,7 +279,7 @@ export default function Dashboard() {
                 return (
                   <StatCard
                     key={metricId}
-                    title={widgetLabels[metricId] || STATISTICS_METRIC_LABELS[metricId] || metricId}
+                    title={metricLabels[metricId] || STATISTICS_METRIC_LABELS[metricId] || metricId}
                     value={metricData.value}
                     icon={STATISTICS_METRIC_ICONS[metricId] || "analytics"}
                     iconBgColor={iconBgColor}
