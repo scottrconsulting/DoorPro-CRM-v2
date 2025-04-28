@@ -115,6 +115,9 @@ export const users = pgTable("users", {
   isManager: boolean("is_manager").default(false),
   status: text("status").default("active").notNull(), // active, pending, inactive
   title: text("title"), // job title for team members
+  profilePictureUrl: text("profile_picture_url"), // URL to user's profile picture
+  lastActive: timestamp("last_active"), // Timestamp of user's last activity
+  isOnline: boolean("is_online").default(false), // User's online status
   stripeCustomerId: text("stripe_customer_id"), // Individual customer ID (if not part of a team)
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for individual subscriptions
   subscriptionStatus: text("subscription_status"), // active, past_due, unpaid, canceled, etc.
