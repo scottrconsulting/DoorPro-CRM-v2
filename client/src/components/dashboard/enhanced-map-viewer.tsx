@@ -479,6 +479,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  // Get user's location on map load
+  useEffect(() => {
+    if (isLoaded && map) {
+      // Auto-center map to user's location when it loads
+      handleMyLocationClick();
+    }
+  }, [isLoaded, map, handleMyLocationClick]);
+
   // Update markers when contacts or customization changes
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
