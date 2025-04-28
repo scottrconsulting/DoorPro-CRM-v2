@@ -45,6 +45,9 @@ export default function SchedulePage() {
   const [sendReminder, setSendReminder] = useState(false);
   const [reminderTime, setReminderTime] = useState("1_hour");
   const [confirmationMethod, setConfirmationMethod] = useState("email");
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [contactSortField, setContactSortField] = useState<string>("fullName");
+  const [contactSortDirection, setContactSortDirection] = useState<"asc" | "desc">("asc");
   
   // Added for contact details and navigation
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
@@ -427,39 +430,121 @@ export default function SchedulePage() {
               )}
               */}
               
-              {(scheduleType === "route" || scheduleType === "follow_up") && (
-                <div className="md:col-span-2">
-                  <Label className="mb-2 block">Select Contacts</Label>
-                  <div className="border rounded-md p-4 h-48 overflow-y-auto">
-                    {contacts.length === 0 ? (
-                      <div className="text-neutral-500 text-center py-4">
-                        No contacts available
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {contacts.map((contact) => (
+              {/* Contact Selection - Available for all schedule types now */}
+              <div className="md:col-span-2">
+                <Label className="mb-2 block">Select Contacts</Label>
+                
+                {/* Search and Sorting Controls */}
+                <div className="flex flex-col md:flex-row gap-2 mb-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search contacts..."
+                      value={contactSearchQuery}
+                      onChange={(e) => setContactSearchQuery(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="sortField" className="whitespace-nowrap">Sort by:</Label>
+                    <Select value={contactSortField} onValueChange={setContactSortField}>
+                      <SelectTrigger id="sortField" className="w-[150px]">
+                        <SelectValue placeholder="Sort field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fullName">Name</SelectItem>
+                        <SelectItem value="address">Address</SelectItem>
+                        <SelectItem value="city">City</SelectItem>
+                        <SelectItem value="state">State</SelectItem>
+                        <SelectItem value="status">Status</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setContactSortDirection(dir => dir === "asc" ? "desc" : "asc")}
+                      title={`Sort ${contactSortDirection === "asc" ? "ascending" : "descending"}`}
+                      type="button"
+                    >
+                      <span className="material-icons text-sm">
+                        {contactSortDirection === "asc" ? "arrow_upward" : "arrow_downward"}
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Contact List */}
+                <div className="border rounded-md p-4 h-64 overflow-y-auto">
+                  {contacts.length === 0 ? (
+                    <div className="text-neutral-500 text-center py-4">
+                      No contacts available
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {contacts
+                        // Filter contacts based on search query
+                        .filter(contact => {
+                          if (!contactSearchQuery.trim()) return true;
+                          const searchLower = contactSearchQuery.toLowerCase();
+                          return (
+                            (contact.fullName || '').toLowerCase().includes(searchLower) ||
+                            (contact.address || '').toLowerCase().includes(searchLower) ||
+                            (contact.city || '').toLowerCase().includes(searchLower) ||
+                            (contact.state || '').toLowerCase().includes(searchLower) ||
+                            (contact.status || '').toLowerCase().includes(searchLower)
+                          );
+                        })
+                        // Sort contacts based on selected field and direction
+                        .sort((a, b) => {
+                          // Default values for null properties
+                          const aValue = a[contactSortField as keyof Contact] || "";
+                          const bValue = b[contactSortField as keyof Contact] || "";
+                          
+                          // Compare values based on sort direction
+                          if (contactSortDirection === "asc") {
+                            return String(aValue).localeCompare(String(bValue));
+                          } else {
+                            return String(bValue).localeCompare(String(aValue));
+                          }
+                        })
+                        .map((contact) => (
                           <div 
                             key={contact.id}
-                            className="flex items-center space-x-2"
+                            className="flex items-center p-2 hover:bg-gray-50 rounded"
                           >
                             <Checkbox 
                               id={`contact-${contact.id}`}
                               checked={selectedContacts.includes(contact.id)}
                               onCheckedChange={() => toggleContactSelection(contact.id)}
+                              className="mr-2"
                             />
-                            <Label 
-                              htmlFor={`contact-${contact.id}`}
-                              className="font-normal cursor-pointer"
-                            >
-                              {contact.fullName} ({contact.address})
-                            </Label>
+                            <div className="flex-1">
+                              <Label 
+                                htmlFor={`contact-${contact.id}`}
+                                className="font-medium cursor-pointer"
+                              >
+                                {contact.fullName}
+                              </Label>
+                              <div className="text-sm text-neutral-600">
+                                {contact.address}
+                                {contact.city && `, ${contact.city}`}
+                                {contact.state && `, ${contact.state}`}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {(contact.status || '').replace(/_/g, " ")}
+                            </Badge>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        ))
+                      }
+                    </div>
+                  )}
                 </div>
-              )}
+                
+                {/* Selected Contacts Count */}
+                <div className="mt-2 text-sm text-neutral-500">
+                  {selectedContacts.length} contact{selectedContacts.length !== 1 && 's'} selected
+                </div>
+              </div>
             </div>
             
             <div className="mt-6 flex justify-end">
