@@ -110,6 +110,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const firstHouseRecordedRef = useRef<boolean>(false);
   const sessionsRef = useRef<{startTime: string; duration: number}[]>([]);
   
+  // Track if we've already attempted to locate the user
+  const hasLocatedUser = useRef<boolean>(false);
+  
   // Set up timer interval
   useEffect(() => {
     // Timer update interval - every second
@@ -549,13 +552,48 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  // Get user's location on map load
-  useEffect(() => {
-    if (isLoaded && map) {
-      // Auto-center map to user's location when it loads
-      handleMyLocationClick();
+  // Function to silently locate the user without showing toast notifications
+  const locateUserSilently = useCallback(async () => {
+    if (!map) return;
+    
+    const position = await getCurrentLocation();
+    if (position && map) {
+      panTo(position);
+      map.setZoom(15);
+      
+      // Remove previous user location marker if it exists
+      if (userMarker) {
+        userMarker.setMap(null);
+      }
+      
+      // Create a blue dot marker for user's current location
+      const newUserMarker = new window.google.maps.Marker({
+        position: position,
+        map: map,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#4285F4", // Google blue
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#FFFFFF",
+        },
+        title: "Your Location",
+        zIndex: 1000 // Ensure it's above other markers
+      });
+      
+      setUserMarker(newUserMarker);
     }
-  }, [isLoaded, map, handleMyLocationClick]);
+  }, [map, panTo, userMarker]);
+  
+  // Get user's location on map load - but only once when the component first mounts
+  useEffect(() => {
+    if (isLoaded && map && !hasLocatedUser.current) {
+      hasLocatedUser.current = true;
+      // Silently locate user without showing toast notification
+      locateUserSilently();
+    }
+  }, [isLoaded, map, locateUserSilently]);
 
   // Update markers when contacts or customization changes
   useEffect(() => {
@@ -666,32 +704,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         >
           Terrain
         </button>
-      </div>
-      
-      {/* Address Search Bar - Top Center */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 w-64 md:w-80">
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Search address..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8 h-9 shadow-lg rounded-md"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleAddressSearch();
-              }
-            }}
-          />
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-0 top-0 h-9 w-9"
-            onClick={handleAddressSearch}
-          >
-            <span className="material-icons text-base">search</span>
-          </Button>
-        </div>
       </div>
       
       {/* Address Search Bar - Top Center */}
