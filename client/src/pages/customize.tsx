@@ -353,10 +353,7 @@ useEffect(() => {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             Map Pins
           </TabsTrigger>
-          <TabsTrigger value="quick-actions" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="m8 3 4 8 5-5 5 15H2L8 3z"></path></svg>
-            Quick Actions
-          </TabsTrigger>
+
         </TabsList>
         
         {/* Appearance Tab */}
@@ -998,88 +995,7 @@ useEffect(() => {
           </Card>
         </TabsContent>
         
-        {/* Quick Actions Tab */}
-        <TabsContent value="quick-actions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Action Settings</CardTitle>
-              <CardDescription>
-                Configure quick actions for easy status updates when clicking on houses.
-                {isPro ? ' Pro users can fully customize quick actions.' : ' Upgrade to Pro for more customization options.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted p-4 rounded-lg mb-4">
-                <h3 className="font-medium mb-2 flex items-center">
-                  <Info className="h-4 w-4 mr-2" />
-                  How Quick Actions Work
-                </h3>
-                <ul className="list-disc ml-6 space-y-1 text-sm text-muted-foreground">
-                  <li>Click a house to instantly apply the selected quick action status (no form opens)</li>
-                  <li>Press and hold on a house to open the full contact form</li>
-                  <li>Quick actions allow for faster data entry during door-to-door sales</li>
-                </ul>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Selected Quick Actions</h3>
-                <p className="text-sm text-muted-foreground">
-                  Choose which statuses can be applied with a quick click (max {isPro ? 8 : 4})
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {[...CONTACT_STATUSES, ...customStatuses].map(status => (
-                    <div key={status} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`quick-${status}`} 
-                        checked={quickActions.includes(status)}
-                        onCheckedChange={(checked: boolean | "indeterminate") => {
-                          if (checked === true) {
-                            if ((!isPro && quickActions.length >= 4) || quickActions.length >= 8) {
-                              toast({
-                                title: `Maximum ${isPro ? 8 : 4} quick actions`,
-                                description: `${isPro ? 'You can select up to 8 quick actions.' : 'Free users can select up to 4 quick actions. Upgrade to Pro for more.'}`,
-                                variant: "destructive"
-                              });
-                              return;
-                            }
-                            setQuickActions([...quickActions, status]);
-                          } else {
-                            setQuickActions(quickActions.filter(s => s !== status));
-                          }
-                        }}
-                      />
-                      <Label 
-                        htmlFor={`quick-${status}`}
-                        className="text-sm font-normal"
-                      >
-                        {status.replace(/_/g, ' ')}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="default-quick-action">Default quick action</Label>
-                  <Select disabled={!isPro} defaultValue="no_answer">
-                    <SelectTrigger id="default-quick-action" className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {quickActions.map(action => (
-                        <SelectItem key={action} value={action}>
-                          {action.replace(/_/g, ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
     </div>
   );
