@@ -88,6 +88,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [showLegend, setShowLegend] = useState(true); // For legend toggle
   const [inStreetView, setInStreetView] = useState(false); // Track street view state
   
+
+  
   const [newContactForm, setNewContactForm] = useState({
     fullName: "",
     address: "",
@@ -312,11 +314,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     createScheduleMutation.mutate(scheduleData);
   };
   
-  // Function to handle contact deletion
-  const handleContactDelete = useCallback((contact: Contact) => {
-    setSelectedContact(contact);
-    setShowDeleteDialog(true);
-  }, []);
+
   
   // Handle address search
   const handleAddressSearch = async () => {
@@ -1292,6 +1290,30 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Contact Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this contact? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (selectedContact) {
+                deleteContactMutation.mutate(selectedContact.id);
+                setSelectedContact(null);
+              }
+              setShowDeleteDialog(false);
+            }}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
