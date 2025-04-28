@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogIn } from "lucide-react";
-import { DoorProLogo } from "@/components/ui/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function DirectLogin() {
@@ -59,7 +58,11 @@ export default function DirectLogin() {
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex justify-center mb-2">
-              <DoorProLogo className="h-20 w-auto" />
+              <img 
+                src="/images/doorpro-logo-large.png" 
+                alt="DoorPro CRM" 
+                className="h-20 w-auto" 
+              />
             </div>
             <CardTitle className="text-2xl font-bold text-center text-primary">
               DoorPro CRM
