@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useGoogleMaps } from "@/hooks/use-maps";
 import { useLongPress } from "@/hooks/use-long-press";
 import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
@@ -549,11 +549,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  // Get user's location on map load
+  // Track if we've already attempted to locate the user
+  const hasLocatedUser = useRef(false);
+  
+  // Get user's location on map load - but only once when the component first mounts
   useEffect(() => {
-    if (isLoaded && map) {
-      // Auto-center map to user's location when it loads
+    if (isLoaded && map && !hasLocatedUser.current) {
+      // Auto-center map to user's location only the first time
       handleMyLocationClick();
+      hasLocatedUser.current = true;
     }
   }, [isLoaded, map, handleMyLocationClick]);
 

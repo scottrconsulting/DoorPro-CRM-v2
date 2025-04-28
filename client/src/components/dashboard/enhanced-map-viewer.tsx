@@ -693,6 +693,32 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </Button>
         </div>
       </div>
+      
+      {/* Address Search Bar - Top Center */}
+      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 w-64 md:w-80">
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="Search address..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-8 h-9 shadow-lg rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleAddressSearch();
+              }
+            }}
+          />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute right-0 top-0 h-9 w-9"
+            onClick={handleAddressSearch}
+          >
+            <span className="material-icons text-base">search</span>
+          </Button>
+        </div>
+      </div>
 
       {/* Other Controls - Right side */}
       <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
