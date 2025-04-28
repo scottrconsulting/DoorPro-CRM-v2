@@ -71,7 +71,7 @@ useEffect(() => {
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState(30); // minutes
   const [theme, setTheme] = useState<string>("light");
-  const [primaryColor, setPrimaryColor] = useState<string>("blue");
+
   
   // Dashboard widgets state
   const [enabledWidgets, setEnabledWidgets] = useState<string[]>(DASHBOARD_WIDGETS);
@@ -166,9 +166,8 @@ useEffect(() => {
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
       
-      // Set theme and primary color
+      // Set theme
       setTheme(customization.theme || "light");
-      setPrimaryColor(customization.primaryColor || "blue");
       
       // Initialize status labels for default statuses
       const initialStatusLabels: Record<string, string> = {
@@ -276,7 +275,6 @@ useEffect(() => {
     saveCustomizationMutation.mutate({
       userId: user?.id,
       theme,
-      primaryColor,
       pinColors: editedPinColors,
       quickActions,
       customStatuses,
@@ -404,7 +402,7 @@ useEffect(() => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
                 <div className="space-y-2">
                   <Label htmlFor="theme">Theme</Label>
                   <Select 
@@ -412,38 +410,13 @@ useEffect(() => {
                     onValueChange={setTheme} 
                     disabled={!isPro}
                   >
-                    <SelectTrigger id="theme">
+                    <SelectTrigger id="theme" className="w-full md:w-80">
                       <SelectValue placeholder="Light" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="light">Light</SelectItem>
                       <SelectItem value="dark">Dark</SelectItem>
                       <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {!isPro && (
-                    <p className="text-xs text-muted-foreground flex items-center mt-1">
-                      <Lock className="h-3 w-3 mr-1" /> Available with Pro plan
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="primary-color">Primary Color</Label>
-                  <Select 
-                    value={primaryColor} 
-                    onValueChange={setPrimaryColor} 
-                    disabled={!isPro}
-                  >
-                    <SelectTrigger id="primary-color">
-                      <SelectValue placeholder="Blue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="blue">Blue</SelectItem>
-                      <SelectItem value="green">Green</SelectItem>
-                      <SelectItem value="purple">Purple</SelectItem>
-                      <SelectItem value="orange">Orange</SelectItem>
-                      <SelectItem value="red">Red</SelectItem>
                     </SelectContent>
                   </Select>
                   {!isPro && (
