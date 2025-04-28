@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Contact, Visit, Customization } from "@shared/schema";
+import { Contact, Visit, Customization, Sale } from "@shared/schema";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/dashboard/stat-card";
@@ -10,8 +10,14 @@ import ContactList from "@/components/dashboard/contact-list";
 import ScheduleWidget from "@/components/dashboard/schedule-widget";
 import { PRO_FEATURES } from "@/lib/auth";
 import ContactDetailModal from "@/components/contacts/contact-detail-modal";
-import { format } from "date-fns";
-import { DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS } from "@shared/schema";
+import { format, differenceInHours, differenceInMinutes } from "date-fns";
+import { 
+  DASHBOARD_WIDGETS, 
+  DASHBOARD_WIDGET_LABELS, 
+  STATISTICS_METRICS, 
+  STATISTICS_METRIC_LABELS,
+  STATISTICS_METRIC_ICONS 
+} from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();

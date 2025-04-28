@@ -29,6 +29,52 @@ export const DASHBOARD_WIDGETS = [
   "weekly_goal_progress"
 ];
 
+// Available statistics metrics for the Statistics widget
+export const STATISTICS_METRICS = [
+  "today_visits",
+  "conversions",
+  "follow_ups",
+  "sales_count",
+  "sales_amount",
+  "doors_knocked",
+  "time_worked",
+  "appointments",
+  "not_interested",
+  "no_soliciting",
+  "check_back",
+  "presented"
+];
+
+export const STATISTICS_METRIC_LABELS: Record<string, string> = {
+  "today_visits": "Today's Visits",
+  "conversions": "Conversions",
+  "follow_ups": "Follow-ups",
+  "sales_count": "Sales Count",
+  "sales_amount": "Sales Amount",
+  "doors_knocked": "Doors Knocked",
+  "time_worked": "Time Worked",
+  "appointments": "Appointments",
+  "not_interested": "Not Interested",
+  "no_soliciting": "No Soliciting",
+  "check_back": "Check Back",
+  "presented": "Presented"
+};
+
+export const STATISTICS_METRIC_ICONS: Record<string, string> = {
+  "today_visits": "door_front",
+  "conversions": "check_circle",
+  "follow_ups": "schedule",
+  "sales_count": "monetization_on",
+  "sales_amount": "attach_money",
+  "doors_knocked": "door_front",
+  "time_worked": "timer",
+  "appointments": "event",
+  "not_interested": "thumb_down",
+  "no_soliciting": "do_not_disturb",
+  "check_back": "update",
+  "presented": "present_to_all"
+};
+
 export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
   "stats": "Statistics",
   "map": "Territory Map",
@@ -230,6 +276,7 @@ export const customizations = pgTable("customizations", {
   // Dashboard customizations
   dashboardWidgets: text("dashboard_widgets").array(),
   dashboardWidgetLabels: json("dashboard_widget_labels").$type<Record<string, string>>().default({}),
+  statisticsMetrics: text("statistics_metrics").array(), // Selected metrics for the statistics widget
   
   // Other settings
   timerSettings: json("timer_settings").$type<Record<string, any>>().default({}),
