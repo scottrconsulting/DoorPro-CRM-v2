@@ -49,6 +49,7 @@ export default function SchedulePage() {
   const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [contactSortField, setContactSortField] = useState<string>("fullName");
   const [contactSortDirection, setContactSortDirection] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<'today' | 'upcoming' | 'all'>('upcoming');
   
   // Debug info - log auth status and user object
   useEffect(() => {
@@ -128,9 +129,31 @@ export default function SchedulePage() {
     return acc;
   }, {} as Record<string, Schedule[]>);
   
-  // Sort dates
+  // Today's date in YYYY-MM-DD format
+  const today = new Date();
+  const todayString = format(today, "yyyy-MM-dd");
+  
+  // Function to check if a date is upcoming (today or future)
+  const isDateUpcoming = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
+  };
+  
+  // Sort dates chronologically
   const sortedDates = Object.keys(schedulesByDate).sort((a, b) => {
     return new Date(a).getTime() - new Date(b).getTime();
+  });
+  
+  // Filter dates based on view mode
+  const filteredDates = sortedDates.filter(date => {
+    if (viewMode === 'today') {
+      return date === todayString;
+    } else if (viewMode === 'upcoming') {
+      return isDateUpcoming(date);
+    }
+    return true; // 'all' view shows everything
   });
 
   // Calculate reminder time using local time
@@ -496,15 +519,49 @@ export default function SchedulePage() {
         </div>
       )}
     
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Task & Appointment Schedule</h1>
-        <Button 
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center"
-        >
-          <span className="material-icons text-sm mr-1">{showAddForm ? "close" : "add"}</span>
-          {showAddForm ? "Cancel" : "Add Task/Appointment"}
-        </Button>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
+          {/* View mode selector */}
+          <div className="flex bg-gray-100 rounded-md p-1">
+            <button 
+              type="button"
+              onClick={() => setViewMode('today')} 
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'today' 
+                ? 'bg-white shadow-sm text-primary-700' 
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('upcoming')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'upcoming' 
+                ? 'bg-white shadow-sm text-primary-700' 
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Upcoming
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('all')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'all' 
+                ? 'bg-white shadow-sm text-primary-700' 
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              All
+            </button>
+          </div>
+          
+          <Button 
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="flex items-center"
+          >
+            <span className="material-icons text-sm mr-1">{showAddForm ? "close" : "add"}</span>
+            {showAddForm ? "Cancel" : "Add Task/Appointment"}
+          </Button>
+        </div>
       </div>
       
       {showAddForm && (
