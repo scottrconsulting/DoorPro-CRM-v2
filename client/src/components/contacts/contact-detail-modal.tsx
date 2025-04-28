@@ -12,7 +12,8 @@ import {
   Task,
   InsertTask,
   Document,
-  InsertDocument
+  InsertDocument,
+  InsertSchedule
 } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -208,7 +209,7 @@ export default function ContactDetailModal({
 
   // Schedule follow-up mutation
   const scheduleFollowUpMutation = useMutation({
-    mutationFn: async (scheduleData: any) => {
+    mutationFn: async (scheduleData: any) => { // Using any temporarily until we fix imports
       const res = await apiRequest("POST", "/api/schedules", scheduleData);
       return res.json();
     },
@@ -461,14 +462,18 @@ export default function ContactDetailModal({
     const endTime = new Date(startTime);
     endTime.setMinutes(endTime.getMinutes() + 30);
 
+    // Create schedule data in the expected format
     scheduleFollowUpMutation.mutate({
       userId: contact?.userId || 0,
       title: `Follow-up with ${contact?.fullName}`,
       description: `${followUpReason} at ${contact?.address}`,
-      startTime,
-      endTime,
+      startTime: startTime.toISOString(), // Convert Date objects to ISO strings
+      endTime: endTime.toISOString(),     // Convert Date objects to ISO strings
       type: "follow_up",
+      location: contact?.address || "",
       contactIds: [contactId],
+      reminderSent: false,
+      // We're not setting reminder time or confirmation methods as those features are hidden
     });
   };
   
