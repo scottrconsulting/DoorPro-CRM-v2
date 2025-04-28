@@ -626,7 +626,7 @@ export default function SchedulePage() {
           sortedDates.map((date) => (
             <Card key={date} className="shadow-md">
               <CardHeader className="bg-neutral-50 border-b pb-3">
-                <CardTitle className="text-lg">{format(new Date(date), "EEEE, MMMM d")}</CardTitle>
+                <CardTitle className="text-lg">{format(new Date(date), "EEEE, MMMM d, yyyy")}</CardTitle>
                 <CardDescription>
                   {schedulesByDate[date].length} item{schedulesByDate[date].length !== 1 && 's'}
                 </CardDescription>
