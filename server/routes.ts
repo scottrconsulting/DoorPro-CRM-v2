@@ -766,27 +766,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               visitDate: new Date()
             });
             
-            // If this is an actual appointment (not just check-back), add to schedule
-            if (contact.status === 'booked') {
-              // Add a schedule entry for this appointment
-              const endDateTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour appointment
-              
-              await storage.createSchedule({
-                userId: user.id,
-                title: `Appointment with ${contact.fullName}`,
-                description: contact.notes || `Scheduled appointment with ${contact.fullName}`,
-                startTime: appointmentDateTime,
-                endTime: endDateTime,
-                type: 'appointment',
-                location: contact.address,
-                contactIds: [contact.id],
-                reminderTime: new Date(appointmentDateTime.getTime() - (confirmOptions.reminderTime * 60 * 1000)),
-                confirmationMethod: confirmOptions.email && confirmOptions.sms ? 'both' : 
-                                   confirmOptions.email ? 'email' : 
-                                   confirmOptions.sms ? 'sms' : 'none',
-                confirmationStatus: 'pending'
-              });
-            }
+            console.log(`Creating schedule for ${contact.status} contact: ${contact.fullName} at ${appointmentDateTime}`);
+            
+            // Always create a schedule entry for booked or check_back status
+            // Add a schedule entry for this appointment
+            const endDateTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour appointment
+            
+            const scheduleData = {
+              userId: user.id,
+              title: contact.status === 'booked' ? `Appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`,
+              description: contact.notes || 
+                (contact.status === 'booked' ? `Scheduled appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`),
+              startTime: appointmentDateTime,
+              endTime: endDateTime,
+              type: contact.status === 'booked' ? 'appointment' : 'follow_up',
+              location: contact.address,
+              contactIds: [contact.id],
+              reminderTime: new Date(appointmentDateTime.getTime() - (confirmOptions.reminderTime * 60 * 1000)),
+              confirmationMethod: confirmOptions.email && confirmOptions.sms ? 'both' : 
+                                confirmOptions.email ? 'email' : 
+                                confirmOptions.sms ? 'sms' : 'none',
+              confirmationStatus: 'pending'
+            };
+            
+            console.log("Creating schedule with data:", JSON.stringify(scheduleData, null, 2));
+            const schedule = await storage.createSchedule(scheduleData);
+            console.log("Schedule created:", JSON.stringify(schedule, null, 2));
           }
         } catch (appointmentError) {
           console.error("Failed to process appointment:", appointmentError);
