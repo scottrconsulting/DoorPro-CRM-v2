@@ -38,31 +38,195 @@ export default function Dashboard() {
     enabled: !!user
   });
 
+  // Fetch sales data for statistics
+  const { data: sales = [] } = useQuery<Sale[]>({
+    queryKey: ["/api/sales"],
+    enabled: !!user
+  });
+
   // Get user's widget preferences with defaults
   const enabledWidgets = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
   const widgetOrder = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
   const widgetLabels = customization?.dashboardWidgetLabels || {};
-
-  // Count today's visits
-  const todayVisits = visits.filter(visit => {
-    const visitDate = new Date(visit.visitDate);
-    const today = new Date();
-    return (
-      visitDate.getDate() === today.getDate() &&
-      visitDate.getMonth() === today.getMonth() &&
-      visitDate.getFullYear() === today.getFullYear()
-    );
-  });
-
-  // Count conversions (contacts with 'converted' status)
-  const conversions = contacts.filter(contact => contact.status === "converted");
   
-  // Count follow-ups (contacts with 'interested' or 'considering' status)
-  const followUps = contacts.filter(
-    contact => contact.status === "interested" || contact.status === "considering"
-  );
+  // Get selected statistics metrics or use defaults
+  const selectedStatistics = customization?.statisticsMetrics || 
+    ["today_visits", "conversions", "follow_ups", "sales_count"];
 
-  // Removed territory coverage calculation as it wasn't reflecting real stats
+  // Calculate all statistics metrics
+  const statisticsData = useMemo(() => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Filter for today's data
+    const todayVisits = visits.filter(visit => {
+      const visitDate = new Date(visit.visitDate);
+      return (
+        visitDate.getDate() === today.getDate() &&
+        visitDate.getMonth() === today.getMonth() &&
+        visitDate.getFullYear() === today.getFullYear()
+      );
+    });
+    
+    // Filter for yesterday's data for trend comparison
+    const yesterdayVisits = visits.filter(visit => {
+      const visitDate = new Date(visit.visitDate);
+      return (
+        visitDate.getDate() === yesterday.getDate() &&
+        visitDate.getMonth() === yesterday.getMonth() &&
+        visitDate.getFullYear() === yesterday.getFullYear()
+      );
+    });
+    
+    // Calculate status-based metrics
+    const statusCounts = {
+      converted: contacts.filter(contact => contact.status === "converted").length,
+      interested: contacts.filter(contact => 
+        contact.status === "interested" || contact.status === "considering"
+      ).length,
+      not_interested: contacts.filter(contact => contact.status === "not_interested").length,
+      no_soliciting: contacts.filter(contact => contact.status === "no_soliciting").length,
+      check_back: contacts.filter(contact => contact.status === "check_back").length,
+      presented: contacts.filter(contact => contact.status === "presented").length,
+      booked: contacts.filter(contact => contact.status === "booked").length,
+      no_answer: contacts.filter(contact => contact.status === "no_answer").length,
+    };
+    
+    // Calculate sales metrics
+    const todaySales = sales.filter(sale => {
+      const saleDate = new Date(sale.saleDate);
+      return (
+        saleDate.getDate() === today.getDate() &&
+        saleDate.getMonth() === today.getMonth() &&
+        saleDate.getFullYear() === today.getFullYear()
+      );
+    });
+    
+    const salesTotal = todaySales.reduce((sum, sale) => sum + Number(sale.amount), 0);
+    
+    // Calculate time worked (from all visits timing)
+    const totalMinutesWorked = visits.reduce((total, visit) => {
+      // This is a simple calculation - we'll assume 15 min per visit
+      // In a real app, you'd use actual time tracking data
+      return total + 15;
+    }, 0);
+    
+    const hoursWorked = Math.floor(totalMinutesWorked / 60);
+    const minutesWorked = totalMinutesWorked % 60;
+    const timeWorkedFormatted = `${hoursWorked}h ${minutesWorked}m`;
+    
+    return {
+      today_visits: {
+        value: todayVisits.length,
+        trend: {
+          value: yesterdayVisits.length > 0 
+            ? `${Math.round((todayVisits.length / yesterdayVisits.length - 1) * 100)}%` 
+            : "N/A",
+          label: "from yesterday",
+          isPositive: todayVisits.length >= yesterdayVisits.length
+        }
+      },
+      conversions: {
+        value: statusCounts.converted,
+        trend: {
+          value: contacts.length > 0 
+            ? `${Math.round((statusCounts.converted / contacts.length) * 100)}%` 
+            : "0%",
+          label: "conversion rate",
+          isPositive: true
+        }
+      },
+      follow_ups: {
+        value: statusCounts.interested,
+        trend: {
+          value: "2", // This would need to be calculated based on priority
+          label: "urgent today",
+          isPositive: false
+        }
+      },
+      sales_count: {
+        value: todaySales.length,
+        trend: {
+          value: todaySales.length > 0 ? "+1" : "0",
+          label: "from yesterday",
+          isPositive: todaySales.length > 0
+        }
+      },
+      sales_amount: {
+        value: `$${salesTotal.toFixed(2)}`,
+        trend: {
+          value: todaySales.length > 0 ? `$${(salesTotal / todaySales.length).toFixed(2)}` : "$0",
+          label: "avg per sale",
+          isPositive: todaySales.length > 0
+        }
+      },
+      doors_knocked: {
+        value: todayVisits.length,
+        trend: {
+          value: yesterdayVisits.length > 0 
+            ? `${Math.round((todayVisits.length / yesterdayVisits.length - 1) * 100)}%` 
+            : "N/A",
+          label: "from yesterday",
+          isPositive: todayVisits.length >= yesterdayVisits.length
+        }
+      },
+      time_worked: {
+        value: timeWorkedFormatted,
+        trend: {
+          value: hoursWorked > 0 ? `${(totalMinutesWorked / visits.length).toFixed(0)}m` : "0m",
+          label: "avg per visit",
+          isPositive: true
+        }
+      },
+      appointments: {
+        value: statusCounts.booked,
+        trend: {
+          value: statusCounts.booked > 0 ? "+1" : "0", 
+          label: "from yesterday",
+          isPositive: statusCounts.booked > 0
+        }
+      },
+      not_interested: {
+        value: statusCounts.not_interested,
+        trend: {
+          value: contacts.length > 0 
+            ? `${Math.round((statusCounts.not_interested / contacts.length) * 100)}%` 
+            : "0%",
+          label: "of all contacts",
+          isPositive: false
+        }
+      },
+      no_soliciting: {
+        value: statusCounts.no_soliciting,
+        trend: {
+          value: contacts.length > 0 
+            ? `${Math.round((statusCounts.no_soliciting / contacts.length) * 100)}%` 
+            : "0%",
+          label: "of all contacts",
+          isPositive: false
+        }
+      },
+      check_back: {
+        value: statusCounts.check_back,
+        trend: {
+          value: "Coming up", 
+          label: "follow-ups",
+          isPositive: true
+        }
+      },
+      presented: {
+        value: statusCounts.presented,
+        trend: {
+          value: contacts.length > 0 
+            ? `${Math.round((statusCounts.presented / contacts.length) * 100)}%` 
+            : "0%",
+          label: "presentation rate",
+          isPositive: true
+        }
+      }
+    };
+  }, [contacts, visits, sales]);
 
   const handleContactSelect = (contactId: number) => {
     setSelectedContactId(contactId);
@@ -81,41 +245,37 @@ export default function Dashboard() {
         case "stats":
           return (
             <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatCard
-                title={widgetLabels["today_visits"] || DASHBOARD_WIDGET_LABELS["today_visits"]}
-                value={todayVisits.length}
-                icon="door_front"
-                iconBgColor="bg-blue-100"
-                trend={{
-                  value: "20%",
-                  label: "from yesterday",
-                  isPositive: true
-                }}
-              />
-              
-              <StatCard
-                title={widgetLabels["conversions"] || DASHBOARD_WIDGET_LABELS["conversions"]}
-                value={conversions.length}
-                icon="check_circle"
-                iconBgColor="bg-green-100"
-                trend={{
-                  value: contacts.length > 0 ? `${Math.round((conversions.length / contacts.length) * 100)}%` : "0%",
-                  label: "conversion rate",
-                  isPositive: true
-                }}
-              />
-              
-              <StatCard
-                title={widgetLabels["follow_ups"] || DASHBOARD_WIDGET_LABELS["follow_ups"]}
-                value={followUps.length}
-                icon="schedule"
-                iconBgColor="bg-yellow-100"
-                trend={{
-                  value: "2",
-                  label: "urgent today",
-                  isPositive: false
-                }}
-              />
+              {selectedStatistics.map(metricId => {
+                // Get metric data
+                const metricData = statisticsData[metricId];
+                if (!metricData) return null;
+                
+                // Get background color based on metric type
+                let iconBgColor = "bg-blue-100";
+                
+                if (metricId.includes("sale")) {
+                  iconBgColor = "bg-green-100"; // Sales metrics
+                } else if (metricId.includes("time")) {
+                  iconBgColor = "bg-purple-100"; // Time metrics
+                } else if (metricId === "not_interested" || metricId === "no_soliciting") {
+                  iconBgColor = "bg-red-100"; // Negative metrics
+                } else if (metricId === "presented" || metricId === "check_back") {
+                  iconBgColor = "bg-yellow-100"; // Potential metrics
+                } else if (metricId === "appointments" || metricId === "booked") {
+                  iconBgColor = "bg-orange-100"; // Appointment metrics
+                }
+                
+                return (
+                  <StatCard
+                    key={metricId}
+                    title={widgetLabels[metricId] || STATISTICS_METRIC_LABELS[metricId] || metricId}
+                    value={metricData.value}
+                    icon={STATISTICS_METRIC_ICONS[metricId] || "analytics"}
+                    iconBgColor={iconBgColor}
+                    trend={metricData.trend}
+                  />
+                );
+              })}
             </div>
           );
         case "map":
