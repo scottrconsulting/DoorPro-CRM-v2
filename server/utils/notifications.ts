@@ -59,8 +59,12 @@ export const sendAppointmentEmail = async (
     to: contact.email,
     from: 'noreply@doorprocrm.com', // Use your verified sender
     subject: template.subject?.replace(/{{customerName}}/g, contact.fullName) || 'Your Appointment Confirmation',
-    text: template.isHtml ? undefined : processedBody,
-    html: template.isHtml ? processedBody : undefined,
+    content: [
+      {
+        type: template.isHtml ? 'text/html' : 'text/plain',
+        value: processedBody
+      }
+    ]
   };
   
   try {

@@ -566,6 +566,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch contacts" });
     }
   });
+  
+  // Send appointment confirmation to contact
+  app.post("/api/contacts/:id/send-confirmation", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id, 10);
+      const { method, appointmentDate, appointmentTime } = req.body;
+      const user = req.user as any;
+      
+      // Get the contact
+      const contact = await storage.getContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Check authorization - user can only send confirmations for their own contacts
+      if (contact.userId !== user.id && user.role !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to send confirmation for this contact" });
+      }
+      
+      // Get the default templates
+      let emailTemplate = null;
+      let smsTemplate = null;
+      
+      if (method === 'email' || method === 'both') {
+        emailTemplate = await storage.getDefaultMessageTemplate(user.id, 'email');
+        if (!emailTemplate) {
+          // If no default template, get the first available email template
+          const emailTemplates = await storage.getMessageTemplatesByType(user.id, 'email');
+          if (emailTemplates.length > 0) {
+            emailTemplate = emailTemplates[0];
+          }
+        }
+      }
+      
+      if (method === 'sms' || method === 'both') {
+        smsTemplate = await storage.getDefaultMessageTemplate(user.id, 'text');
+        if (!smsTemplate) {
+          // If no default template, get the first available SMS template
+          const smsTemplates = await storage.getMessageTemplatesByType(user.id, 'text');
+          if (smsTemplates.length > 0) {
+            smsTemplate = smsTemplates[0];
+          }
+        }
+      }
+      
+      // Check if we have the necessary templates
+      if ((method === 'email' || method === 'both') && !emailTemplate) {
+        return res.status(400).json({ 
+          message: "No email template found. Please create a template in Settings > Message Templates" 
+        });
+      }
+      
+      if ((method === 'sms' || method === 'both') && !smsTemplate) {
+        return res.status(400).json({ 
+          message: "No SMS template found. Please create a template in Settings > Message Templates" 
+        });
+      }
+      
+      // Import the notifications utility here to avoid circular dependencies
+      const { sendAppointmentConfirmation } = await import('./utils/notifications');
+      
+      // Send the confirmation
+      const result = await sendAppointmentConfirmation(
+        contact,
+        emailTemplate,
+        smsTemplate,
+        appointmentDate,
+        appointmentTime,
+        method as 'email' | 'sms' | 'both'
+      );
+      
+      return res.json(result);
+    } catch (error) {
+      console.error("Error sending confirmation:", error);
+      return res.status(500).json({ message: "Failed to send confirmation" });
+    }
+  });
 
   app.get("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
     try {

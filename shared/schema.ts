@@ -149,6 +149,7 @@ export const contacts = pgTable("contacts", {
   tags: json("tags").$type<string[]>(), // tags for categorizing contacts
   customerSince: timestamp("customer_since"), // when they became a customer (if converted)
   preferredContactMethod: text("preferred_contact_method"), // email, phone, in-person
+  appointment: text("appointment"), // appointment time stored as string "YYYY-MM-DD HH:MM"
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
