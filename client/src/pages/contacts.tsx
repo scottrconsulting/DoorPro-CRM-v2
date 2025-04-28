@@ -206,7 +206,7 @@ export default function Contacts() {
       no_soliciting: { bg: 'bg-purple-100', text: 'text-purple-800' },
       considering: { bg: 'bg-purple-100', text: 'text-purple-800' },
       booked: { bg: 'bg-blue-100', text: 'text-blue-800' },           // Changed to blue for appointments
-      presented: { bg: 'bg-purple-100', text: 'text-purple-800' },
+      presented: { bg: 'bg-orange-100', text: 'text-orange-800' },   // Changed to orange to match map pins
       sold: { bg: 'bg-green-100', text: 'text-green-800' },
     };
 
