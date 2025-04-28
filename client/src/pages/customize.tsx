@@ -46,7 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AlertCircle, Check, Info, Lock, Plus, Settings, Trash2, UserPlus, X } from "lucide-react";
+import { AlertCircle, Check, Info, Lock, Palette, Plus, Settings, Trash2, UserPlus, X } from "lucide-react";
 
 export default function Customize() {
   const { toast } = useToast();
@@ -374,7 +374,7 @@ useEffect(() => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-2 md:grid-cols-none h-auto">
           <TabsTrigger value="appearance" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-            <Settings className="mr-2 h-4 w-4" />
+            <Palette className="mr-2 h-4 w-4" />
             Appearance
           </TabsTrigger>
           <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-white">
