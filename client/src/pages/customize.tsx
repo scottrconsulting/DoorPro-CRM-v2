@@ -7,7 +7,7 @@ import { useLocation, Link } from "wouter";
 import { Customization, CONTACT_STATUSES, PIN_COLORS, DEFAULT_PIN_COLORS, QUICK_ACTIONS, DASHBOARD_WIDGETS, DASHBOARD_WIDGET_LABELS, STATISTICS_METRICS, STATISTICS_METRIC_LABELS } from "@shared/schema";
 
 // Define widgets to hide temporarily until core functionality is stable
-const HIDDEN_WIDGETS = ["territory_coverage"];
+const HIDDEN_WIDGETS = ["territory_coverage", "teams", "time_worked"];
 
 import {
   Card,
@@ -931,7 +931,7 @@ useEffect(() => {
                   <p className="text-sm text-muted-foreground">Select which statistics metrics to display on your dashboard.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {STATISTICS_METRICS.map(metric => (
+                    {STATISTICS_METRICS.filter(metric => !HIDDEN_WIDGETS.includes(metric)).map(metric => (
                       <div key={metric} className="flex items-center space-x-2 p-2 border rounded">
                         <Checkbox 
                           id={`metric-${metric}`} 
