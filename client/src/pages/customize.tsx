@@ -212,7 +212,7 @@ useEffect(() => {
       
       // Initialize custom statistics metric labels if present
       if (customization.statisticsMetricLabels) {
-        setStatisticsMetricLabels(customization.statisticsMetricLabels || {});
+        setStatisticsMetricLabels(customization.statisticsMetricLabels as Record<string, string>);
       }
     }
   }, [customization]);
@@ -274,7 +274,7 @@ useEffect(() => {
       dashboardWidgets: enabledWidgets,
       dashboardWidgetLabels: customWidgetLabels,
       statisticsMetrics: enabledStatisticsMetrics,
-      statisticsMetricLabels
+      statisticsMetricLabels: statisticsMetricLabels as Record<string, string>
     });
   };
   
