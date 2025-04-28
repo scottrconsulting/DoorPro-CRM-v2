@@ -69,26 +69,27 @@ export default function SidebarImproved() {
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
-      <div className={`px-4 py-3 flex items-center ${collapsed ? 'justify-center' : 'justify-between'} border-b border-border`}>
-        {!collapsed && (
-          <div className="flex items-center overflow-hidden">
-            <Link href="/" className="flex items-center font-sans text-xl font-semibold whitespace-nowrap">
-              <DoorProLogo className="mr-2 flex-shrink-0" />
-              <span className="text-primary">DoorPro CRM</span>
-            </Link>
-            <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
-              {getPlanName(user?.role)}
-            </span>
-          </div>
-        )}
-        
-        {collapsed && (
+      <div className={`px-4 py-3 flex flex-col ${collapsed ? 'items-center' : ''} border-b border-border`}>
+        {!collapsed ? (
+          <>
+            <div className="flex items-center justify-between w-full">
+              <Link href="/" className="flex items-center font-sans text-xl font-semibold whitespace-nowrap">
+                <DoorProLogo className="mr-2 flex-shrink-0" />
+                <span className="text-primary">DoorPro CRM</span>
+              </Link>
+              <ThemeToggle />
+            </div>
+            <div className="flex items-center mt-1">
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
+                {getPlanName(user?.role)}
+              </span>
+            </div>
+          </>
+        ) : (
           <Link href="/" aria-label="Home" className="flex justify-center">
             <DoorProLogo className="h-6 w-6" />
           </Link>
         )}
-        
-        {!collapsed && <ThemeToggle />}
       </div>
       
       <div className="flex flex-col flex-grow overflow-y-auto">
@@ -247,17 +248,19 @@ export default function SidebarImproved() {
       {/* Expanded sidebar on hover when collapsed */}
       {collapsed && hovered && (
         <div className="absolute top-0 left-16 w-64 h-full bg-background border-r border-border shadow-lg z-20 overflow-y-auto">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-border">
-            <div className="flex items-center overflow-hidden">
+          <div className="px-4 py-3 flex flex-col border-b border-border">
+            <div className="flex items-center justify-between w-full">
               <Link href="/" className="flex items-center font-sans text-xl font-semibold whitespace-nowrap">
                 <DoorProLogo className="mr-2 flex-shrink-0" />
                 <span className="text-primary">DoorPro CRM</span>
               </Link>
-              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
+              <ThemeToggle />
+            </div>
+            <div className="flex items-center mt-1">
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground whitespace-nowrap flex-shrink-0">
                 {getPlanName(user?.role)}
               </span>
             </div>
-            <ThemeToggle />
           </div>
           
           <div className="py-2">
