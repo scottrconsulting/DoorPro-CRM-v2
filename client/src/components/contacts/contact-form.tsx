@@ -36,6 +36,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -44,6 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -67,6 +69,8 @@ const contactFormSchema = z.object({
   ]).optional(),
   status: z.string(),
   notes: z.string().optional(),
+  // Add schedule follow-up checkbox
+  scheduleFollowUp: z.boolean().default(false),
   // Add appointment fields
   appointmentDate: z.string().optional(),
   appointmentTime: z.string().optional(),
@@ -116,6 +120,8 @@ export default function ContactForm({
       email: initialContact?.email || "",
       status: initialContact?.status || "not_visited",
       notes: initialContact?.notes || "",
+      // Add scheduling checkbox
+      scheduleFollowUp: false,
       // Add appointment fields with default empty values
       appointmentDate: "",
       appointmentTime: "",
@@ -136,6 +142,9 @@ export default function ContactForm({
       const formValues = form.getValues();
       const hasInitialized = formValues.fullName !== "";
       
+      // Check if there's an appointment in the initial contact
+      const hasAppointment = initialContact?.appointment ? true : false;
+      
       if (!hasInitialized) {
         // Only reset once when dialog first opens
         form.reset({
@@ -148,6 +157,7 @@ export default function ContactForm({
           email: initialContact?.email || "",
           status: initialContact?.status || "not_visited",
           notes: initialContact?.notes || "",
+          scheduleFollowUp: hasAppointment,
           appointmentDate: "",
           appointmentTime: "",
           saleAmount: "",
@@ -157,12 +167,14 @@ export default function ContactForm({
       }
       
       const currentStatus = initialContact?.status || "not_visited";
-      // Set visibility flags based on status
-      setShowAppointmentFields(currentStatus === "booked" || currentStatus === "check_back");
+      // Set visibility flag for sales fields based on status
       setShowSaleFields(currentStatus === "sold");
       
+      // Set appointment visibility based on the scheduleFollowUp checkbox or existing appointment
+      setShowAppointmentFields(hasAppointment);
+      
       console.log("Dialog opened with status:", currentStatus, 
-        "- Shows appointment fields:", currentStatus === "booked" || currentStatus === "check_back",
+        "- Has appointment:", hasAppointment,
         "- Shows sale fields:", currentStatus === "sold");
     }
   }, [isOpen, initialContact, form]);
@@ -278,9 +290,9 @@ export default function ContactForm({
         notes: formData.notes || null,
       };
       
-      // Add appointment data if it's available
+      // Add appointment data if checkbox is checked and fields are filled
       if (
-        (formData.status === "booked" || formData.status === "check_back") &&
+        formData.scheduleFollowUp && 
         formData.appointmentDate && 
         formData.appointmentTime
       ) {
@@ -566,15 +578,11 @@ export default function ContactForm({
                       // First update the form field
                       field.onChange(value);
                       
-                      // Then check if we need to show the appointment fields
-                      const needsAppointment = value === "booked" || value === "check_back";
+                      // Show sale fields if status is "sold"
                       const needsSale = value === "sold";
-                      
-                      setShowAppointmentFields(needsAppointment);
                       setShowSaleFields(needsSale);
                       
                       console.log("Status changed to:", value, 
-                        "- Now showing appointment fields:", needsAppointment,
                         "- Now showing sale fields:", needsSale);
                       
                       // If switching to sold status, pre-set the sale date to today
@@ -605,7 +613,34 @@ export default function ContactForm({
               )}
             />
 
-            {/* Show appointment fields if status is booked or check_back */}
+            {/* Schedule Follow-up Checkbox */}
+            <FormField
+              control={form.control}
+              name="scheduleFollowUp"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        setShowAppointmentFields(!!checked);
+                      }}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Schedule a follow-up or appointment
+                    </FormLabel>
+                    <FormDescription>
+                      Check this box to set a date and time for follow-up
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {/* Show appointment fields if checkbox is selected */}
             {showAppointmentFields && (
               <div className="space-y-4 border border-blue-200 bg-blue-50 p-4 rounded-md">
                 <h3 className="text-md font-semibold text-blue-700">
