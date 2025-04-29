@@ -788,6 +788,10 @@ export default function ContactDetailModal({
                     <File className="h-4 w-4 mr-1 sm:mr-2" />
                     <span className="sm:inline">Files</span>
                   </TabsTrigger>
+                  <TabsTrigger value="edit" className="flex-shrink-0 ml-auto">
+                    <span className="material-icons text-base mr-1 sm:mr-2">edit</span>
+                    <span className="sm:inline">Edit Contact</span>
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="notes">
@@ -1488,36 +1492,166 @@ export default function ContactDetailModal({
                     </CardContent>
                   </Card>
                 </TabsContent>
+
+                {/* Edit Contact Tab */}
+                <TabsContent value="edit">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Edit Contact</CardTitle>
+                      <CardDescription>Update contact information</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Contact Name */}
+                      <div className="space-y-1">
+                        <Label htmlFor="editName">Full Name</Label>
+                        <Input 
+                          id="editName"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Contact's full name"
+                        />
+                      </div>
+
+                      {/* Contact Address - Full width */}
+                      <div className="space-y-1">
+                        <Label htmlFor="editAddress">Street Address</Label>
+                        <Input 
+                          id="editAddress"
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          placeholder="Street address"
+                        />
+                      </div>
+                      
+                      {/* City, State and Zip in a responsive grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="editCity">City</Label>
+                          <Input 
+                            id="editCity"
+                            value={editCity}
+                            onChange={(e) => setEditCity(e.target.value)}
+                            placeholder="City"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="editState">State</Label>
+                          <Select 
+                            value={editState} 
+                            onValueChange={setEditState}
+                          >
+                            <SelectTrigger id="editState">
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {US_STATES.map((state) => (
+                                <SelectItem key={state.value} value={state.value}>
+                                  {state.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="editZipCode">Zip Code</Label>
+                          <Input 
+                            id="editZipCode"
+                            value={editZipCode}
+                            onChange={(e) => setEditZipCode(e.target.value)}
+                            placeholder="Zip Code"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Contact Phone and Email in a responsive grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="editPhone">Phone</Label>
+                          <Input 
+                            id="editPhone"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            placeholder="Phone number"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="editEmail">Email</Label>
+                          <Input 
+                            id="editEmail"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="Email address"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div className="space-y-1 pt-2">
+                        <Label htmlFor="editStatus">Contact Status</Label>
+                        <Select 
+                          value={editStatus} 
+                          onValueChange={setEditStatus}
+                        >
+                          <SelectTrigger id="editStatus">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="no_contact">No Contact Yet</SelectItem>
+                            <SelectItem value="contacted">Contacted</SelectItem>
+                            <SelectItem value="interested">Interested</SelectItem>
+                            <SelectItem value="not_interested">Not Interested</SelectItem>
+                            <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                            <SelectItem value="check_back">Check Back Later</SelectItem>
+                            <SelectItem value="presented">Presented</SelectItem>
+                            <SelectItem value="booked">Booked</SelectItem>
+                            <SelectItem value="sold">Sold</SelectItem>
+                            <SelectItem value="no_answer">No Answer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Button Group */}
+                      <div className="flex justify-between pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleEditContactSubmit}
+                          disabled={!editName || !editAddress || editContactMutation.isPending}
+                        >
+                          {editContactMutation.isPending ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </div>
           </div>
         </div>
 
-        {/* Dialog footer - conditionally rendered based on view */}
-        {!isEditMode && (
-          <div className="flex flex-wrap justify-between gap-2 mt-8">
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setIsEditMode(true)}
-              >
-                Edit Contact
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={() => {
-                  if (contact) {
-                    handleContactDelete(contact);
-                    onClose();
-                  }
-                }}
-              >
-                Delete Contact
-              </Button>
-            </div>
-            <Button className="h-10" onClick={onClose}>Close</Button>
+        {/* Dialog footer for basic actions */}
+        <div className="flex flex-wrap justify-between gap-2 mt-8">
+          <div className="flex gap-2">
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (contact) {
+                  handleContactDelete(contact);
+                  onClose();
+                }
+              }}
+            >
+              Delete Contact
+            </Button>
           </div>
-        )}
+          <Button className="h-10" onClick={onClose}>Close</Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
