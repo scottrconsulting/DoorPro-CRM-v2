@@ -398,16 +398,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       setUserMarker(newUserMarker);
       
-      toast({
-        title: "Location Found",
-        description: "Map centered to your current location",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
     } else {
-      toast({
-        title: "Location Error",
-        description: "Unable to get your current location. Please ensure location services are enabled.",
-        variant: "destructive",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
     }
   };
   
@@ -520,19 +515,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               notes: `Quick add: ${new Date().toLocaleString()}`
             });
             
-            // Simplified status display to prevent errors
-            toast({
-              title: "Contact added",
-              description: `Added pin with status: ${activeStatus === 'not_visited' ? 'No Answer' : activeStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`,
-            });
+            // Toast notification removed per user request
+            // No notification will be shown
           }
         } else {
           // Could not get the address
-          toast({
-            title: "Pin added",
-            description: "Address could not be determined",
-            variant: "destructive",
-          });
+          // Toast notification removed per user request
+          // No notification will be shown
         }
       });
     });
@@ -713,11 +702,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             if (onSelectContact) {
               onSelectContact(contact.id);
               
-              // Provide consistent user feedback
-              toast({
-                title: "Contact selected",
-                description: `${contact.fullName || "Unknown"} - ${getStatusLabel(contact.status)}`,
-              });
+              // Toast notification removed per user request
+              // No notification will be shown
             }
           }
         });
