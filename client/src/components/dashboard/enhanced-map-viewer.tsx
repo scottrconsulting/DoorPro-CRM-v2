@@ -522,7 +522,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             
             toast({
               title: "Contact added",
-              description: `Added pin with status: ${getStatusLabel(activeStatus)}`,
+              description: `Added pin with status: ${activeStatus === 'presented' && customization?.statusLabels?.presented ? customization.statusLabels.presented : getStatusLabel(activeStatus)}`,
             });
           }
         } else {
