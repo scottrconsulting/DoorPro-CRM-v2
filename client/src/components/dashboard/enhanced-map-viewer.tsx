@@ -375,8 +375,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Handle my location button click
   const handleMyLocationClick = async () => {
+    console.log("Getting current location...");
     const position = await getCurrentLocation();
+    console.log("Current location:", position);
+    
     if (position && map) {
+      // Animate to the user's location smoothly
       panTo(position);
       map.setZoom(15);
       
@@ -385,29 +389,54 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         userMarker.setMap(null);
       }
       
-      // Create a blue dot marker for user's current location
+      // Create a blue dot marker for user's current location with a distinct appearance
       const newUserMarker = new window.google.maps.Marker({
         position: position,
         map: map,
         icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: "#4285F4", // Google blue
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#FFFFFF",
+          // Use a standard blue dot icon for reliability
+          url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          scaledSize: new window.google.maps.Size(38, 38), // Larger size for better visibility
         },
         title: "Your Location",
+        animation: window.google.maps.Animation.BOUNCE, // Use animation for better visibility
         zIndex: 1000 // Ensure it's above other markers
       });
       
+      // Stop the bounce animation after 2 seconds
+      setTimeout(() => {
+        if (newUserMarker) {
+          newUserMarker.setAnimation(null);
+        }
+      }, 2000);
+      
+      // Add a small accuracy circle around the user's location
+      const accuracyCircle = new window.google.maps.Circle({
+        map: map,
+        center: position,
+        radius: 100, // 100 meters accuracy radius
+        fillColor: "#4285F4",
+        fillOpacity: 0.15,
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.4,
+        strokeWeight: 1,
+      });
+      
+      // Store the new marker reference
       setUserMarker(newUserMarker);
       
-      // Toast notification removed per user request
-      // No notification will be shown
+      // Show a toast notification now that we're adding them back
+      toast({
+        title: "Location Found",
+        description: "Map centered on your current location",
+      });
     } else {
-      // Toast notification removed per user request
-      // No notification will be shown
+      // Show a toast notification for errors
+      toast({
+        title: "Location Error",
+        description: "Using fallback location",
+        variant: "destructive",
+      });
     }
   };
   
@@ -615,9 +644,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const locateUserSilently = useCallback(async () => {
     if (!map) return;
     
-    // With our updated getCurrentLocation function, it will always return a position
-    // (either actual location or fallback)
+    console.log("Silently getting current location...");
     const position = await getCurrentLocation();
+    console.log("Auto-locate position:", position);
     
     panTo(position);
     map.setZoom(15);
@@ -632,15 +661,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       position: position,
       map: map,
       icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: "#4285F4", // Google blue
-        fillOpacity: 1,
-        strokeWeight: 2,
-        strokeColor: "#FFFFFF",
+        // Use a standard blue dot icon for reliability
+        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        scaledSize: new window.google.maps.Size(38, 38),
       },
       title: "Your Location",
       zIndex: 1000 // Ensure it's above other markers
+    });
+    
+    // Add a small accuracy circle around the user's location
+    const accuracyCircle = new window.google.maps.Circle({
+      map: map,
+      center: position,
+      radius: 100, // 100 meters accuracy radius
+      fillColor: "#4285F4",
+      fillOpacity: 0.15,
+      strokeColor: "#4285F4",
+      strokeOpacity: 0.4,
+      strokeWeight: 1,
     });
     
     setUserMarker(newUserMarker);

@@ -74,27 +74,35 @@ function isMobileDevice(): boolean {
 // Get user's current location with improved fallback strategy
 export async function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve) => {
-    // Check if in Replit preview or if geolocation is available
-    const isReplit = window.location.hostname.includes('replit');
+    // Always make the geolocation attempts, even in Replit preview
     const isMobile = isMobileDevice();
     
-    // Use a shorter timeout for mobile devices to improve responsiveness
-    const timeoutDuration = isMobile ? 5000 : 3000;
+    // Determine if we're in a demo mode
+    const isDemoMode = window.location.hostname.includes('replit.dev');
     
-    // Use higher accuracy for mobile devices
+    // For demo purposes to ensure it works in Replit preview, provide a fallback location
+    const REPLIT_DEMO_LOCATION = { lat: 44.9778, lng: -93.2650 }; // Minneapolis
+    
+    // Use higher accuracy options in all environments
     const options = {
-      enableHighAccuracy: isMobile,
-      timeout: isMobile ? 10000 : 5000,
-      maximumAge: isMobile ? 30000 : 60000
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 30000
     };
     
-    if (navigator.geolocation && !isReplit) {
+    if (navigator.geolocation) {
       // Set a timeout to handle slow geolocation responses
       const timeoutId = setTimeout(() => {
         console.log('Geolocation timed out, using fallback location');
-        // Use last known location if available, otherwise use default
-        resolve(lastKnownLocation || DEFAULT_LOCATION);
-      }, timeoutDuration);
+        // In demo mode, use the demo location
+        if (isDemoMode) {
+          console.log('Using demo location for Replit preview');
+          resolve(REPLIT_DEMO_LOCATION);
+        } else {
+          // Use last known location if available, otherwise use default
+          resolve(lastKnownLocation || DEFAULT_LOCATION);
+        }
+      }, 3000);
       
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -106,25 +114,38 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
             lng: position.coords.longitude,
           };
           
+          console.log('Got current location:', lastKnownLocation);
           resolve(lastKnownLocation);
         },
         (error) => {
           clearTimeout(timeoutId);
           console.log('Geolocation error:', error.message);
           
-          // For PERMISSION_DENIED on mobile, show a more helpful message in console
-          if (error.code === 1 && isMobile) {
-            console.log('Location permission denied. On mobile, please enable location services in your device settings and browser permissions.');
+          // For PERMISSION_DENIED, show a more helpful message in console
+          if (error.code === 1) {
+            console.log('Location permission denied. Please enable location services in your device settings and browser permissions.');
           }
           
-          // Use last known location if available, otherwise use default
-          resolve(lastKnownLocation || DEFAULT_LOCATION);
+          // In demo mode, use the demo location
+          if (isDemoMode) {
+            console.log('Using demo location for Replit preview');
+            resolve(REPLIT_DEMO_LOCATION);
+          } else {
+            // Use last known location if available, otherwise use default
+            resolve(lastKnownLocation || DEFAULT_LOCATION);
+          }
         },
         options
       );
     } else {
-      console.log('Geolocation not available or in Replit preview, using fallback location');
-      resolve(lastKnownLocation || DEFAULT_LOCATION);
+      console.log('Geolocation not available, using fallback location');
+      // In demo mode, use the demo location
+      if (isDemoMode) {
+        console.log('Using demo location for Replit preview');
+        resolve(REPLIT_DEMO_LOCATION);
+      } else {
+        resolve(lastKnownLocation || DEFAULT_LOCATION);
+      }
     }
   });
 }
