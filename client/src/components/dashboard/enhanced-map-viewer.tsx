@@ -358,9 +358,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         setNewContactAddress(result.address);
         setNewContactCoords(position);
         
-        // Prefill the contact form with address details
+        // Prefill the contact form with address details but reset the name field
         setNewContactForm(prev => ({
           ...prev,
+          fullName: "", // Explicitly reset name to prevent it showing previous contact's name
           address: result.address,
           city: result.city || '',
           state: result.state || '',
@@ -1091,7 +1092,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           
           // Reset form completely to prevent data persisting to next contact
           setNewContactForm({
-            fullName: "",
+            fullName: "", // Make sure name is cleared for the next new contact
             address: "",
             phone: "",
             email: "",
