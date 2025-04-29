@@ -902,15 +902,16 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       {/* Search Controls and Map Options in a single bar at the top */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2">
-        <div className="bg-white p-2 rounded-lg shadow-lg flex items-stretch gap-2 w-full">
-          {/* Left side - Search and My Location */}
+        {/* Main search bar and controls - Responsive layout */}
+        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
+          {/* Search input and button - Always visible */}
           <div className="flex-grow flex items-stretch gap-2">
             <Input
               type="text"
               placeholder="Search for an address..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="min-w-[200px] flex-1"
+              className="min-w-[150px] flex-1"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddressSearch();
               }}
@@ -919,79 +920,106 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               onClick={handleAddressSearch}
               variant="secondary"
               size="sm"
+              className="whitespace-nowrap"
             >
               Search
             </Button>
-            
-            {/* My Location button */}
+          </div>
+          
+          {/* My Location button - Always visible */}
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleMyLocationClick}
-              className="text-xs"
+              className="text-xs whitespace-nowrap flex-shrink-0"
             >
               My Location
             </Button>
-          </div>
           
-          {/* Right side - Map Type Controls */}
-          <div className="flex items-stretch gap-1 ml-2 border-l pl-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
-              onClick={() => {
-                if (inStreetView) {
-                  exitStreetView();
-                  setInStreetView(false);
-                }
-                setMapType('roadmap');
-              }}
-            >
-              Map
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
-              onClick={() => {
-                if (inStreetView) {
-                  exitStreetView();
-                  setInStreetView(false);
-                }
-                setMapType('satellite');
-              }}
-            >
-              Satellite
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
-              onClick={() => {
-                if (inStreetView) {
-                  exitStreetView();
-                  setInStreetView(false);
-                }
-                setMapType('hybrid');
-              }}
-            >
-              Hybrid
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
-              onClick={() => {
-                if (inStreetView) {
-                  exitStreetView();
-                  setInStreetView(false);
-                }
-                setMapType('terrain');
-              }}
-            >
-              Terrain
-            </Button>
+            {/* Map Type Controls - Responsive handling */}
+            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('roadmap');
+                }}
+              >
+                Map
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('satellite');
+                }}
+              >
+                Satellite
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('hybrid');
+                }}
+              >
+                Hybrid
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('terrain');
+                }}
+              >
+                Terrain
+              </Button>
+            </div>
+            
+            {/* Mobile dropdown for map type */}
+            <div className="flex sm:hidden items-center border-l pl-2">
+              <Select 
+                value={mapType}
+                onValueChange={(value: 'roadmap' | 'satellite' | 'hybrid' | 'terrain') => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType(value);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[110px]">
+                  <SelectValue placeholder="Map Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="roadmap">Map</SelectItem>
+                  <SelectItem value="satellite">Satellite</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                  <SelectItem value="terrain">Terrain</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
