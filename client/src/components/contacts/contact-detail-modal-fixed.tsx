@@ -61,7 +61,7 @@ import {
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import SimpleContactEdit from "./simple-contact-edit";
+import ContactEditDialog from "./contact-edit-dialog";
 
 // US States for dropdown
 const US_STATES = [
@@ -134,7 +134,7 @@ export default function ContactDetailModal({
   const [followUpDate, setFollowUpDate] = useState(format(addDays(new Date(), 2), "yyyy-MM-dd"));
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("follow_up");
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Active tab state - ensure it's initialized with a valid value
   const [activeTab, setActiveTab] = useState<string>("notes");
@@ -423,13 +423,13 @@ export default function ContactDetailModal({
     },
   });
 
-  // Handle toggling edit mode
-  const handleEnterEditMode = () => {
-    setIsEditMode(true);
+  // Handle edit dialog
+  const handleOpenEditDialog = () => {
+    setShowEditDialog(true);
   };
   
-  const handleExitEditMode = () => {
-    setIsEditMode(false);
+  const handleCloseEditDialog = () => {
+    setShowEditDialog(false);
   };
 
   // Handle note form submission
@@ -557,7 +557,7 @@ export default function ContactDetailModal({
 
   // Handle contact edit success
   const handleEditSuccess = (updatedContact: Contact) => {
-    setIsEditMode(false);
+    setShowEditDialog(false);
     // Invalidate queries to ensure updated data is shown
     queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
@@ -669,21 +669,23 @@ export default function ContactDetailModal({
                     variant="ghost" 
                     size="sm" 
                     className="h-8 w-8 p-0"
-                    onClick={() => setIsEditMode(true)}
+                    onClick={handleOpenEditDialog}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                  {isEditMode && contact ? (
-                    <div>
-                      <SimpleContactEdit
-                        contact={contact}
-                        onCancel={() => setIsEditMode(false)}
-                        onSuccess={handleEditSuccess}
-                      />
-                    </div>
-                  ) : (
+                  {/* Edit Dialog */}
+                  {contact && (
+                    <ContactEditDialog
+                      contact={contact}
+                      isOpen={showEditDialog}
+                      onClose={handleCloseEditDialog}
+                      isAdding={false}
+                    />
+                  )}
+                  
+                  {/* Regular Display Mode */}
                     <div className="p-3 space-y-3">
                       <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
@@ -1467,7 +1469,7 @@ export default function ContactDetailModal({
                   </Card>
                 </TabsContent>
 
-                {/* Edit Contact Tab */}
+                {/* Edit Contact Tab - Using button to open the same edit dialog */}
                 <TabsContent value="edit">
                   {contact && (
                     <Card>
@@ -1475,12 +1477,17 @@ export default function ContactDetailModal({
                         <CardTitle>Edit Contact</CardTitle>
                         <CardDescription>Update contact information</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <SimpleContactEdit
-                          contact={contact}
-                          onCancel={() => setActiveTab("notes")}
-                          onSuccess={handleEditSuccess}
-                        />
+                      <CardContent className="flex flex-col items-center justify-center py-6">
+                        <p className="text-center text-muted-foreground mb-4">
+                          Click the button below to edit this contact's information
+                        </p>
+                        <Button 
+                          onClick={handleOpenEditDialog}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit Contact Information
+                        </Button>
                       </CardContent>
                     </Card>
                   )}
