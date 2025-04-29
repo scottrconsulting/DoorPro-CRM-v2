@@ -872,7 +872,7 @@ export default function ContactDetailModal({
                                     {visit.visitType === "call" && "Phone Call"}
                                     {visit.visitType === "email" && "Email Sent"}
                                     {visit.visitType === "follow_up_scheduled" && "Follow-up Scheduled"}
-                                    {visit.visitType === "sale" && "Sale Completed")
+                                    {visit.visitType === "sale" && "Sale Completed"}
                                   </div>
                                   {visit.notes && <div className="text-neutral-700">{visit.notes}</div>}
                                 </div>
