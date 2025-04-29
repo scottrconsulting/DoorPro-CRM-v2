@@ -61,7 +61,7 @@ import {
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import DirectContactEdit from "./direct-contact-edit";
+import SimpleContactEdit from "./simple-contact-edit";
 
 // US States for dropdown
 const US_STATES = [
@@ -676,8 +676,8 @@ export default function ContactDetailModal({
                 </CardHeader>
                 <CardContent className="p-0">
                   {isEditMode && contact ? (
-                    <div className="p-3">
-                      <DirectContactEdit
+                    <div>
+                      <SimpleContactEdit
                         contact={contact}
                         onCancel={() => setIsEditMode(false)}
                         onSuccess={handleEditSuccess}
@@ -1476,7 +1476,7 @@ export default function ContactDetailModal({
                         <CardDescription>Update contact information</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <DirectContactEdit
+                        <SimpleContactEdit
                           contact={contact}
                           onCancel={() => setActiveTab("notes")}
                           onSuccess={handleEditSuccess}
