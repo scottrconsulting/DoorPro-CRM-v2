@@ -598,8 +598,9 @@ export default function ContactDetailModal({
 
   // Enable cancel edit mode
   const handleCancelEdit = () => {
-    setIsEditMode(false);
-
+    // Switch back to notes tab
+    setActiveTab("notes");
+    
     // Reset form to original values
     if (contact) {
       setEditName(contact.fullName);
