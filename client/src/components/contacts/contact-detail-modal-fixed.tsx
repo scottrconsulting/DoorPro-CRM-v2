@@ -667,43 +667,33 @@ export default function ContactDetailModal({
                   </div>
                   <Button 
                     variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0"
+                    size="icon"
                     onClick={handleOpenEditDialog}
+                    className="h-8 w-8 rounded-full"
                   >
                     <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit contact</span>
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                  {/* Edit Dialog */}
-                  {contact && (
-                    <ContactEditDialog
-                      contact={contact}
-                      isOpen={showEditDialog}
-                      onClose={handleCloseEditDialog}
-                      isAdding={false}
-                    />
-                  )}
-                  
-                  {/* Regular Display Mode */}
-                    <div className="p-3 space-y-3">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-neutral-700 mb-0.5">Address</p>
-                          <a 
-                            href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline block text-sm break-words"
-                          >
-                            {contact.address}
-                            {contact.city && `, ${contact.city}`}
-                            {contact.state && `, ${contact.state}`}
-                            {contact.zipCode && ` ${contact.zipCode}`}
-                          </a>
-                        </div>
+                  <div className="p-3 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-neutral-700 mb-0.5">Address</p>
+                        <a 
+                          href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline block text-sm break-words"
+                        >
+                          {contact.address}
+                          {contact.city && `, ${contact.city}`}
+                          {contact.state && `, ${contact.state}`}
+                          {contact.zipCode && ` ${contact.zipCode}`}
+                        </a>
                       </div>
+                    </div>
 
                     {contact.phone && (
                       <div className="flex items-start gap-2">
@@ -738,6 +728,16 @@ export default function ContactDetailModal({
                   )}
                 </CardContent>
               </Card>
+              
+              {/* We'll place the edit dialog outside the card to avoid nested Dialog issues */}
+              {contact && (
+                <ContactEditDialog
+                  contact={contact}
+                  isOpen={showEditDialog}
+                  onClose={handleCloseEditDialog}
+                  isAdding={false}
+                />
+              )}
             </div>
 
             {/* Main content area - 2/3 width on large screens, full width on small */}
