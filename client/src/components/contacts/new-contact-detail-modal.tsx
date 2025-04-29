@@ -216,6 +216,7 @@ export default function NewContactDetailModal({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
+          <DialogTitle className="sr-only">Loading Contact</DialogTitle>
           <div className="flex justify-center items-center flex-grow">
             <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
           </div>
@@ -228,6 +229,7 @@ export default function NewContactDetailModal({
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl">
+          <DialogTitle className="sr-only">Contact Not Found</DialogTitle>
           <div className="flex flex-col items-center justify-center py-8">
             <div className="text-xl font-semibold mb-2">Contact Not Found</div>
             <p className="text-neutral-600">The contact you're looking for could not be found.</p>
@@ -241,14 +243,11 @@ export default function NewContactDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-        {/* Header with close button */}
-        <div className="flex justify-between items-center p-4 border-b">
+        {/* Header with title (no close button, using the default one from Dialog) */}
+        <div className="flex items-center p-4 border-b pr-10">
           <DialogTitle className="text-xl sm:text-2xl font-bold break-words">
             {contact.fullName}
           </DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
-          </Button>
         </div>
         
         {/* Status badge */}
@@ -266,17 +265,8 @@ export default function NewContactDetailModal({
         <div className="flex flex-col lg:flex-row">
           {/* Left side - contact info */}
           <div className="lg:w-1/3 border-r lg:min-h-[500px] p-4">
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4">
               <h2 className="font-semibold text-lg">Address</h2>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleOpenEditDialog}
-                className="h-8 w-8 rounded-full"
-              >
-                <Edit className="h-4 w-4" />
-                <span className="sr-only">Edit contact</span>
-              </Button>
             </div>
             
             <div className="mb-6">
@@ -487,19 +477,29 @@ export default function NewContactDetailModal({
           </div>
         </div>
 
-        {/* Dialog footer with delete button */}
+        {/* Dialog footer with edit and delete buttons */}
         <div className="flex justify-between items-center p-4 border-t">
-          <Button 
-            variant="destructive"
-            onClick={() => {
-              if (contact) {
-                handleContactDelete(contact);
-                onClose();
-              }
-            }}
-          >
-            Delete Contact
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (contact) {
+                  handleContactDelete(contact);
+                  onClose();
+                }
+              }}
+            >
+              Delete Contact
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleOpenEditDialog}
+              className="flex items-center"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Contact
+            </Button>
+          </div>
           <Button onClick={onClose}>Close</Button>
         </div>
         
