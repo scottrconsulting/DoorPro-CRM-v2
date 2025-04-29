@@ -84,6 +84,7 @@ export function useGoogleMaps(options: MapOptions): UseMapResult & {
         fullscreenControl: false,
         streetViewControl: true,
         mapTypeControl: false,
+        gestureHandling: 'greedy', // Allow single-finger panning on all devices
       };
       
       // Add mapId if provided (needed for Advanced Markers)
