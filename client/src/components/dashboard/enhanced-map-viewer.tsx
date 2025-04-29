@@ -900,58 +900,117 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       )}
       
-      {/* Search Controls - Top */}
-      <div className="absolute top-4 left-4 right-4 md:left-1/2 md:right-auto md:transform md:-translate-x-1/2 flex flex-col gap-2 z-10">
-        <div className="bg-white p-2 rounded-lg shadow-lg flex items-stretch gap-2">
-          <Input
-            type="text"
-            placeholder="Search for an address..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="min-w-[200px] flex-1"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddressSearch();
-            }}
-          />
-          <Button 
-            onClick={handleAddressSearch}
-            variant="secondary"
-            size="sm"
-          >
-            Search
-          </Button>
+      {/* Search Controls and Map Options in a single bar at the top */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2">
+        <div className="bg-white p-2 rounded-lg shadow-lg flex items-stretch gap-2 w-full">
+          {/* Left side - Search and My Location */}
+          <div className="flex-grow flex items-stretch gap-2">
+            <Input
+              type="text"
+              placeholder="Search for an address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="min-w-[200px] flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddressSearch();
+              }}
+            />
+            <Button 
+              onClick={handleAddressSearch}
+              variant="secondary"
+              size="sm"
+            >
+              Search
+            </Button>
+            
+            {/* My Location button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMyLocationClick}
+              className="text-xs"
+            >
+              My Location
+            </Button>
+          </div>
           
-          {/* My Location button moved parallel with search */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMyLocationClick}
-            className="text-xs"
-          >
-            My Location
-          </Button>
+          {/* Right side - Map Type Controls */}
+          <div className="flex items-stretch gap-1 ml-2 border-l pl-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
+              onClick={() => {
+                if (inStreetView) {
+                  exitStreetView();
+                  setInStreetView(false);
+                }
+                setMapType('roadmap');
+              }}
+            >
+              Map
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
+              onClick={() => {
+                if (inStreetView) {
+                  exitStreetView();
+                  setInStreetView(false);
+                }
+                setMapType('satellite');
+              }}
+            >
+              Satellite
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
+              onClick={() => {
+                if (inStreetView) {
+                  exitStreetView();
+                  setInStreetView(false);
+                }
+                setMapType('hybrid');
+              }}
+            >
+              Hybrid
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
+              onClick={() => {
+                if (inStreetView) {
+                  exitStreetView();
+                  setInStreetView(false);
+                }
+                setMapType('terrain');
+              }}
+            >
+              Terrain
+            </Button>
+          </div>
         </div>
       </div>
       
-      {/* Other Controls - Right side */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-        
-        {/* Street View Exit Button - Only shown when in street view */}
-        {inStreetView && (
-          <div className="bg-white p-1.5 rounded-lg shadow-lg">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => {
-                exitStreetView();
-                setInStreetView(false);
-              }}
-            >
-              Exit Street View
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Street View Exit Button - Only shown when in street view */}
+      {inStreetView && (
+        <div className="absolute top-20 right-4 z-10 bg-white p-1.5 rounded-lg shadow-lg">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => {
+              exitStreetView();
+              setInStreetView(false);
+            }}
+          >
+            Exit Street View
+          </Button>
+        </div>
+      )}
       
       {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10">
@@ -999,68 +1058,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         )}
       </div>
       
-      {/* Map Type Controls - Moved to top right */}
-      <div className="absolute top-20 right-4 z-10">
-        <div className="bg-white rounded-lg shadow-lg flex flex-row p-1 gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
-            onClick={() => {
-              // Only exit Street View if we're in it and clicked a different map type
-              if (inStreetView) {
-                exitStreetView();
-                setInStreetView(false);
-              }
-              setMapType('roadmap');
-            }}
-          >
-            Map
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
-            onClick={() => {
-              if (inStreetView) {
-                exitStreetView();
-                setInStreetView(false);
-              }
-              setMapType('satellite');
-            }}
-          >
-            Sat
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
-            onClick={() => {
-              if (inStreetView) {
-                exitStreetView();
-                setInStreetView(false);
-              }
-              setMapType('hybrid');
-            }}
-          >
-            Hyb
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
-            onClick={() => {
-              if (inStreetView) {
-                exitStreetView();
-                setInStreetView(false);
-              }
-              setMapType('terrain');
-            }}
-          >
-            Ter
-          </Button>
-        </div>
-      </div>
+      {/* Map Type Controls have been moved to the main search bar at the top */}
       
       {/* New Contact Dialog - Using our new consolidated Form Component */}
       <ContactForm
