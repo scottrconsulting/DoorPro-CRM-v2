@@ -55,12 +55,13 @@ import {
   Upload,
   ArrowRight,
   ClipboardList,
-  MapPin
+  MapPin,
+  Edit
 } from "lucide-react";
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import EditContactView from "./edit-contact-view";
+import DirectContactEdit from "./direct-contact-edit";
 
 // US States for dropdown
 const US_STATES = [
@@ -674,10 +675,10 @@ export default function ContactDetailModal({
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                  {isEditMode ? (
+                  {isEditMode && contact ? (
                     <div className="p-3">
-                      <EditContactView
-                        contactId={contactId}
+                      <DirectContactEdit
+                        contact={contact}
                         onCancel={() => setIsEditMode(false)}
                         onSuccess={handleEditSuccess}
                       />
@@ -1468,11 +1469,21 @@ export default function ContactDetailModal({
 
                 {/* Edit Contact Tab */}
                 <TabsContent value="edit">
-                  <EditContactView
-                    contactId={contactId}
-                    onCancel={() => setActiveTab("notes")}
-                    onSuccess={handleEditSuccess}
-                  />
+                  {contact && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Edit Contact</CardTitle>
+                        <CardDescription>Update contact information</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <DirectContactEdit
+                          contact={contact}
+                          onCancel={() => setActiveTab("notes")}
+                          onSuccess={handleEditSuccess}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
