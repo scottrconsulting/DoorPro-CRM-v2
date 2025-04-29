@@ -61,7 +61,7 @@ export async function geocodeAddress(address: string): Promise<IGeocodingResult 
 }
 
 // Default location (Nebraska, USA) as fallback
-const DEFAULT_LOCATION = { lat: 41.5, lng: -99.5 };
+const DEFAULT_LOCATION = { lat: 44.9778, lng: -93.2650 }; // Minneapolis, matching demo location
 
 // Store previous known location to use as fallback before default
 let lastKnownLocation: { lat: number; lng: number } | null = null;
@@ -113,15 +113,24 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
         console.log('Geolocation error:', error.message);
         
         if (error.code === 1) {
-          console.log('Location permission denied. Please enable location services for this site.');
+          console.log('Location permission denied. Please enable location services in your device settings and browser permissions.');
         } else if (error.code === 2) {
           console.log('Position unavailable. Your device may not have GPS or it failed to acquire position.');
         } else if (error.code === 3) {
-          console.log('Location request timed out. Please try again in an area with better GPS reception.');
+          console.log('Location request timed out. Please try again in an area with better GPS reception or WiFi connection.');
         }
         
+        // Check if we're in a Replit environment
+        const isReplitEnv = window.location.hostname.includes('replit') || 
+                           window.location.hostname.includes('repl.co');
+        
+        if (isReplitEnv) {
+          // Use Minneapolis coordinates for Replit preview
+          console.log('Using demo location for Replit preview');
+          resolve(DEFAULT_LOCATION);
+        }
         // Fall back to last known location if available
-        if (lastKnownLocation) {
+        else if (lastKnownLocation) {
           console.log('Using previously known location:', lastKnownLocation);
           resolve(lastKnownLocation);
         } else {

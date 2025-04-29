@@ -389,21 +389,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         userMarker.setMap(null);
       }
       
-      // Create a special My Location marker that looks distinctly different from contact pins
+      // Create a special My Location marker exactly matching the Google Maps style
       const newUserMarker = new window.google.maps.Marker({
         position: position,
         map: map,
         icon: {
-          // Use a much larger blue dot with white border to make it distinctive
+          // Create a pulsing blue dot like the one in Google Maps mobile app
           path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: "#3b82f6", // Bright blue 
-          fillOpacity: 1.0,
-          strokeColor: "#FFFFFF",
-          strokeWeight: 3,
-          scale: 16 // Make it significantly larger for visibility
+          fillColor: "#4285F4", // Google Maps blue 
+          fillOpacity: 0.8,
+          strokeColor: "#FFFFFF", 
+          strokeWeight: 2,
+          scale: 12 // Not too large, not too small
         },
         title: "Your Location",
-        animation: window.google.maps.Animation.BOUNCE, // Use animation for better visibility
+        // No animation - stable dot is better for visibility
         zIndex: 1000 // Ensure it's above other markers
       });
       
@@ -660,18 +660,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       userMarker.setMap(null);
     }
     
-    // Create a special My Location marker that looks distinctly different from contact pins
+    // Create a special My Location marker exactly matching the Google Maps style
     const newUserMarker = new window.google.maps.Marker({
       position: position,
       map: map,
       icon: {
-        // Use a much larger blue dot with white border to make it distinctive
+        // Create a blue dot like the one in Google Maps mobile app
         path: window.google.maps.SymbolPath.CIRCLE,
-        fillColor: "#3b82f6", // Bright blue 
-        fillOpacity: 1.0,
-        strokeColor: "#FFFFFF",
-        strokeWeight: 3,
-        scale: 16 // Make it significantly larger for visibility
+        fillColor: "#4285F4", // Google Maps blue 
+        fillOpacity: 0.8,
+        strokeColor: "#FFFFFF", 
+        strokeWeight: 2,
+        scale: 12 // Not too large, not too small
       },
       title: "Your Location",
       zIndex: 1000 // Ensure it's above other markers
