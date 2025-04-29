@@ -472,10 +472,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               duration: 0
             });
             
-            toast({
-              title: "Work timer started",
-              description: "Timer has started tracking your work session"
-            });
+            // Toast notification removed per user request
+            // No notification will be shown
           }
           
           // Different behavior based on click duration
@@ -496,10 +494,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             // Show the form dialog for long press
             setShowNewContactDialog(true);
             
-            toast({
-              title: "New Contact Form",
-              description: "Fill in the details to add this contact",
-            });
+            // Toast notification removed per user request
+            // No notification will be shown
           } else {
             // Quick click - just add the contact with minimal info
             createContactMutation.mutate({
