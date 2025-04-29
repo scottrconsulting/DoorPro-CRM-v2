@@ -11,6 +11,7 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { isFormData?: boolean }
 ): Promise<Response> {
   // Always use the current browser domain for API requests
   let fullUrl = url;
@@ -40,8 +41,8 @@ export async function apiRequest(
       'Expires': '0'
     };
     
-    // Add content-type for requests with data
-    if (data) {
+    // Add content-type for requests with data, but not for FormData
+    if (data && !options?.isFormData) {
       headers['Content-Type'] = 'application/json';
     }
     
@@ -54,10 +55,16 @@ export async function apiRequest(
       console.warn(`No auth token found for ${url}`);
     }
 
+    // Handle body differently for FormData vs JSON
+    let body: any = undefined;
+    if (data) {
+      body = options?.isFormData ? data : JSON.stringify(data);
+    }
+
     const res = await fetch(fullUrl, {
       method,
       headers,
-      body: data ? JSON.stringify(data) : undefined,
+      body,
       credentials: "include", // This ensures cookies are sent with the request
       mode: 'cors', // Enable CORS for cross-domain requests
     });
