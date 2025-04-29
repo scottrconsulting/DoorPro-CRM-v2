@@ -496,7 +496,10 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setShowSaleForm(true)}
+                        onClick={() => {
+                          setActiveTab("sales");
+                          setShowSaleForm(true);
+                        }}
                       >
                         <DollarSign className="h-4 w-4 mr-1" />
                         Record Sale
