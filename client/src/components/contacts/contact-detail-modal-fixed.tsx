@@ -498,7 +498,7 @@ export default function ContactDetailModal({
 
     const saleData: InsertSale = {
       contactId,
-      saleDate: new Date(saleDate),
+      saleDate: new Date(saleDate + "T00:00:00"), // Ensure we have a valid Date object with time component
       status: saleStatus,
       userId: 1, // TODO: Get from auth context
       amount: parseFloat(saleAmount),
