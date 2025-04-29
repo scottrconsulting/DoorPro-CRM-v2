@@ -285,13 +285,14 @@ export default function ContactForm({
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="John Doe" 
+                      placeholder="Enter name (required)" 
                       {...field} 
                       // Preserve manually entered value
                       onChange={(e) => {
                         const value = e.target.value;
                         field.onChange(value);
                       }}
+                      autoFocus // Automatically focus this field for better UX
                     />
                   </FormControl>
                   <FormMessage />

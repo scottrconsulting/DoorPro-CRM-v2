@@ -505,9 +505,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             // Long press - show detailed contact form
             setNewContactForm(prev => ({
               ...prev,
-              // For the fullName field, only set it if it's currently empty
-              // This allows users to edit the name without it being reset
-              fullName: prev.fullName || autoName,
+              // Don't pre-fill the name at all - let user enter it themselves
+              fullName: "", 
               address: address,
               city: city,
               state: state,
