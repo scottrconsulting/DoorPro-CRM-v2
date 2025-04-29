@@ -962,223 +962,65 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       </div>
       
-      {/* New Contact Dialog */}
-      <Dialog open={showNewContactDialog} onOpenChange={setShowNewContactDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Contact</DialogTitle>
-          </DialogHeader>
+      {/* New Contact Dialog - Using Universal Form Component */}
+      <UniversalContactForm
+        isOpen={showNewContactDialog}
+        onClose={() => setShowNewContactDialog(false)}
+        initialContact={{
+          fullName: newContactForm.fullName,
+          address: newContactForm.address,
+          city: newContactForm.city,
+          state: newContactForm.state,
+          zipCode: newContactForm.zipCode,
+          phone: newContactForm.phone || "",
+          email: newContactForm.email || "",
+          status: newContactForm.status,
+          notes: newContactForm.notes || "",
+          latitude: newContactCoords?.lat.toString() || "",
+          longitude: newContactCoords?.lng.toString() || "",
+        }}
+        onSuccess={(newContact) => {
+          // Handle successful creation
+          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
           
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Name</Label>
-              <Input 
-                id="fullName" 
-                value={newContactForm.fullName}
-                onChange={(e) => setNewContactForm(prev => ({...prev, fullName: e.target.value}))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input 
-                id="address" 
-                value={newContactForm.address}
-                onChange={(e) => setNewContactForm(prev => ({...prev, address: e.target.value}))}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input 
-                  id="city" 
-                  value={newContactForm.city}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, city: e.target.value}))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input 
-                  id="state" 
-                  value={newContactForm.state}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, state: e.target.value}))}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">Zip Code</Label>
-              <Input 
-                id="zipCode" 
-                value={newContactForm.zipCode}
-                onChange={(e) => setNewContactForm(prev => ({...prev, zipCode: e.target.value}))}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input 
-                  id="phone" 
-                  type="tel"
-                  value={newContactForm.phone}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, phone: e.target.value}))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={newContactForm.email}
-                  onChange={(e) => setNewContactForm(prev => ({...prev, email: e.target.value}))}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={newContactForm.status}
-                onValueChange={(value) => setNewContactForm(prev => ({...prev, status: value}))}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no_answer">No Answer</SelectItem>
-                  <SelectItem value="interested">Interested</SelectItem>
-                  <SelectItem value="not_interested">Not Interested</SelectItem>
-                  <SelectItem value="check_back">Check Back</SelectItem>
-                  <SelectItem value="booked">Appointment Booked</SelectItem>
-                  <SelectItem value="converted">Converted</SelectItem>
-                  <SelectItem value="no_soliciting">No Soliciting</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {showSchedulingFields && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="appointmentDate">
-                    {newContactForm.status === "booked" ? "Appointment Date" : "Follow-up Date"}
-                  </Label>
-                  <Input 
-                    id="appointmentDate" 
-                    type="date"
-                    value={newContactForm.appointmentDate}
-                    onChange={(e) => setNewContactForm(prev => ({...prev, appointmentDate: e.target.value}))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="appointmentTime">
-                    {newContactForm.status === "booked" ? "Appointment Time" : "Follow-up Time"}
-                  </Label>
-                  <Input 
-                    id="appointmentTime" 
-                    type="time"
-                    value={newContactForm.appointmentTime}
-                    onChange={(e) => setNewContactForm(prev => ({...prev, appointmentTime: e.target.value}))}
-                  />
-                </div>
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea 
-                id="notes" 
-                rows={3} 
-                value={newContactForm.notes}
-                onChange={(e) => setNewContactForm(prev => ({...prev, notes: e.target.value}))}
-              />
-            </div>
-          </div>
+          // Cleanup map marker
+          if (newHouseMarker) {
+            newHouseMarker.setMap(null);
+            setNewHouseMarker(null);
+          }
+          setIsAddingHouse(false);
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewContactDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={() => {
-                // Create the contact with all form data
-                if (newContactCoords) {
-                  // Prepare contact data for submission
-                  const contactData: any = {
-                    userId: user?.id || 0,
-                    fullName: newContactForm.fullName,
-                    address: newContactForm.address,
-                    city: newContactForm.city,
-                    state: newContactForm.state,
-                    zipCode: newContactForm.zipCode,
-                    phone: newContactForm.phone,
-                    email: newContactForm.email,
-                    status: newContactForm.status,
-                    latitude: newContactCoords.lat.toString(),
-                    longitude: newContactCoords.lng.toString(),
-                    notes: newContactForm.notes
-                  };
-                  
-                  // Handle scheduling fields based on status
-                  if (newContactForm.appointmentDate) {
-                    // Common scheduling data for both booked and check_back
-                    // Format appointment string - important to include this properly
-                  contactData.appointment = `${newContactForm.appointmentDate} ${newContactForm.appointmentTime}`;
-                  
-                  // Also include the separate fields
-                  contactData.appointmentDate = newContactForm.appointmentDate;
-                  contactData.appointmentTime = newContactForm.appointmentTime;
-                  
-                  console.log("Adding appointment data:", {
-                    appointment: contactData.appointment,
-                    appointmentDate: contactData.appointmentDate,
-                    appointmentTime: contactData.appointmentTime,
-                    status: contactData.status
-                  });
-                    
-                    // Handle booked appointments
-                    if (newContactForm.status === "booked") {
-                      // Add appointment details to notes for backward compatibility
-                      const appointmentNotes = `Appointment scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
-                      contactData.notes = contactData.notes 
-                        ? `${contactData.notes}\n\n${appointmentNotes}`
-                        : appointmentNotes;
-                      
-                      toast({
-                        title: "Appointment Scheduled",
-                        description: `Successfully scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
-                      });
-                    }
-                    
-                    // Handle check-back reminders
-                    if (newContactForm.status === "check_back") {
-                      // Add check-back details to notes for backward compatibility
-                      const checkBackNotes = `Check back scheduled for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`;
-                      contactData.notes = contactData.notes 
-                        ? `${contactData.notes}\n\n${checkBackNotes}`
-                        : checkBackNotes;
-                      
-                      toast({
-                        title: "Check Back Scheduled",
-                        description: `Reminder set for ${newContactForm.appointmentDate} at ${newContactForm.appointmentTime}`,
-                      });
-                    }
-                  }
-                  
-                  // Create the contact with all data
-                  console.log("Creating contact with data:", contactData);
-                  createContactMutation.mutate(contactData);
-                  
-                  setShowNewContactDialog(false);
-                }
-              }}
-            >
-              Create Contact
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          // Create a visit record for this contact interaction
+          if (newContact?.id && user?.id) {
+            createVisitMutation.mutate({
+              contactId: newContact.id,
+              userId: user.id,
+              visitType: "initial",
+              notes: `Initial contact - Status: ${newContact.status}`,
+              outcome: newContact.status === "booked" ? "positive" : 
+                     newContact.status === "not_interested" ? "negative" : "neutral",
+              followUpNeeded: newContact.status === "check_back" || newContact.status === "booked",
+              visitDate: new Date()
+            });
+            
+            // Handle scheduling based on status
+            if (newContact.appointmentDate && newContact.appointmentTime) {
+              if (newContact.status === "booked") {
+                toast({
+                  title: "Appointment Scheduled",
+                  description: `Successfully scheduled for ${newContact.appointmentDate} at ${newContact.appointmentTime}`,
+                });
+              } else if (newContact.status === "check_back") {
+                toast({
+                  title: "Check Back Scheduled",
+                  description: `Reminder set for ${newContact.appointmentDate} at ${newContact.appointmentTime}`,
+                });
+              }
+            }
+          }
+        }}
+        isAdding={true}
+      />
 
       {/* Delete Contact Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
