@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { geocodeAddress } from "@/lib/maps";
+import { geocodeAddress, IGeocodingResult } from "@/lib/maps";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { cn } from "@/lib/utils";
 import { 
@@ -403,6 +403,7 @@ export default function ContactDetailModal({
     },
   });
 
+  // Import IGeocodingResult from maps.ts
   // Edit contact mutation
   const editContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
@@ -412,7 +413,7 @@ export default function ContactDetailModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      setIsEditMode(false);
+      setActiveTab("notes"); // Switch back to notes tab after edit
 
       toast({
         title: "Contact updated",
@@ -583,8 +584,8 @@ export default function ContactDetailModal({
     // If location data is provided, attempt to geocode
     if (contactData.address) {
       try {
-        const geocodeResult = await geocodeAddress(`${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`);
-        if (geocodeResult.lat && geocodeResult.lng) {
+        const geocodeResult: IGeocodingResult = await geocodeAddress(`${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`);
+        if (geocodeResult && geocodeResult.lat && geocodeResult.lng) {
           contactData.latitude = geocodeResult.lat;
           contactData.longitude = geocodeResult.lng;
         }
@@ -689,11 +690,13 @@ export default function ContactDetailModal({
                   {statusConfig.label}
                 </Badge>
 
+                {/* Last visit badge - commented out until lastVisited field is properly integrated
                 {contact.lastVisited && (
                   <Badge variant="outline" className="text-neutral-600 border-neutral-300 text-xs">
                     Last: {formatDistanceToNow(new Date(contact.lastVisited), { addSuffix: true })}
                   </Badge>
                 )}
+                */}
 
                 {contact.source && (
                   <Badge variant="outline" className="text-neutral-600 border-neutral-300 text-xs">
