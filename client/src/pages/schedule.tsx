@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import ContactDetailModal from "@/components/contacts/contact-detail-modal";
+import ContactCard from "@/components/contacts/contact-card";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -1019,7 +1019,7 @@ export default function SchedulePage() {
     
       {/* Contact Detail Modal */}
       {showContactDetail && selectedContactId && (
-        <ContactDetailModal
+        <ContactCard
           isOpen={showContactDetail}
           contactId={selectedContactId}
           onClose={() => {

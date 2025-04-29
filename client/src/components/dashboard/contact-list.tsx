@@ -5,7 +5,7 @@ import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import ContactDetailModal from "@/components/contacts/contact-detail-modal";
+import ContactCard from "@/components/contacts/contact-card";
 
 interface ContactListProps {
   title?: string;
@@ -189,7 +189,7 @@ export default function ContactList({ title = "Recent Contacts" }: ContactListPr
       </div>
 
       {selectedContactId && (
-        <ContactDetailModal
+        <ContactCard
           contactId={selectedContactId}
           isOpen={true}
           onClose={handleCloseModal}
