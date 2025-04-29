@@ -43,7 +43,11 @@ const contactFormSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   phone: z.string().optional().nullable(),
-  email: z.string().email("Invalid email format").optional().nullable(),
+  email: z.union([
+    z.string().email("Invalid email format"),
+    z.string().length(0),
+    z.null()
+  ]).optional(),
   status: z.string(),
   notes: z.string().optional(),
 });
