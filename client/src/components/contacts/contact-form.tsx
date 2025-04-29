@@ -50,6 +50,9 @@ const contactFormSchema = z.object({
   ]).optional(),
   status: z.string(),
   notes: z.string().optional(),
+  // Add appointment fields
+  appointmentDate: z.string().optional(),
+  appointmentTime: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -72,6 +75,9 @@ export default function ContactForm({
 }: ContactFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [showAppointmentFields, setShowAppointmentFields] = useState(
+    initialContact?.status === "booked" || initialContact?.status === "check_back"
+  );
 
   // Form setup
   const form = useForm<ContactFormValues>({
@@ -193,6 +199,17 @@ export default function ContactForm({
         status: formData.status,
         notes: formData.notes || null,
       };
+      
+      // Add appointment data if it's available
+      if (
+        (formData.status === "booked" || formData.status === "check_back") &&
+        formData.appointmentDate && 
+        formData.appointmentTime
+      ) {
+        // Format the appointment field as "YYYY-MM-DD HH:MM" string
+        const appointmentStr = `${formData.appointmentDate} ${formData.appointmentTime}`;
+        cleanData.appointment = appointmentStr;
+      }
 
       // If we already have coordinates, keep them
       let contactData: any = {
@@ -403,7 +420,15 @@ export default function ContactForm({
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => {
+                      // First update the form field
+                      field.onChange(value);
+                      
+                      // Then check if we need to show the appointment fields
+                      setShowAppointmentFields(
+                        value === "booked" || value === "check_back"
+                      );
+                    }} 
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -426,6 +451,52 @@ export default function ContactForm({
                 </FormItem>
               )}
             />
+
+            {/* Show appointment fields if status is booked or check_back */}
+            {showAppointmentFields && (
+              <div className="space-y-4 border border-blue-200 bg-blue-50 p-4 rounded-md">
+                <h3 className="text-md font-semibold text-blue-700">
+                  {form.getValues().status === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="appointmentDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || ""} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="appointmentTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Time</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="time" 
+                            {...field} 
+                            value={field.value || ""} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
 
             <FormField
               control={form.control}
