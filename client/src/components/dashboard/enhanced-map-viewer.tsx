@@ -85,8 +85,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     zipCode: "",
     status: activeStatus,
     notes: "",
-    appointmentDate: "",
-    appointmentTime: "",
+    // We'll use the appointment string format in the contact schema
+    // instead of separate appointmentDate and appointmentTime fields
   });
   
   // Work timer states and refs
@@ -769,10 +769,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     
     // Clear scheduling fields if not needed
     if (!needsScheduling) {
+      // Reset appointment fields (will be handled via appointment string in universal form)
       setNewContactForm(prev => ({
-        ...prev,
-        appointmentDate: "",
-        appointmentTime: ""
+        ...prev
+        // appointment fields will be handled by the form component
       }));
     }
   }, [newContactForm.status]);
