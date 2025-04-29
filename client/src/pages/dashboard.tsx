@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   // Get user's widget preferences with defaults
   const enabledWidgets = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
-  const widgetOrder = customization?.dashboardWidgets || DASHBOARD_WIDGETS;
+  const widgetOrder = customization?.dashboardWidgetOrder || DASHBOARD_WIDGETS;
   const widgetLabels = customization?.dashboardWidgetLabels || {};
   const metricLabels = customization?.statisticsMetricLabels || {};
   
