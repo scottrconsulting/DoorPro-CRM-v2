@@ -50,26 +50,26 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
       <div className="absolute inset-y-0 left-0 w-64 bg-background shadow-lg h-full flex flex-col">
         {/* Header */}
-        <div className="p-4 flex items-center justify-between border-b border-border shrink-0">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center font-sans text-xl font-semibold">
-              <DoorProLogo className="mr-2" />
-              <span className="text-primary">DoorPro CRM</span>
-            </Link>
-            <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
-              {getPlanName(user?.role)}
-            </span>
-          </div>
-          <div className="flex items-center">
+        <div className="p-4 border-b border-border shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center">
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-muted mr-2"
+                aria-label="Close menu"
+              >
+                <span className="material-icons">close</span>
+              </button>
+              <Link href="/" className="flex items-center font-sans text-xl font-semibold">
+                <DoorProLogo className="mr-2" />
+                <span className="text-primary">DoorPro CRM</span>
+              </Link>
+            </div>
             <ThemeToggle />
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-muted ml-1"
-              aria-label="Close menu"
-            >
-              <span className="material-icons">close</span>
-            </button>
           </div>
+          <span className="text-xs bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground ml-10">
+            {getPlanName(user?.role)}
+          </span>
         </div>
 
         {/* Scrollable container */}
