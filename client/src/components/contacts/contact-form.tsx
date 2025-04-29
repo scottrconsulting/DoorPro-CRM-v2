@@ -106,6 +106,7 @@ export default function ContactForm({
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
+      // Always use initialContact values or empty strings to prevent data persistence
       fullName: initialContact?.fullName || "",
       address: initialContact?.address || "",
       city: initialContact?.city || "",
@@ -139,19 +140,16 @@ export default function ContactForm({
     }
   }, [isOpen, form]);
 
-  // Reset form when initialContact changes, but preserve any user input
+  // Reset form when initialContact changes - ensure we use the cleared values from initialContact
   useEffect(() => {
     if (initialContact) {
-      // Get current values from the form
-      const currentValues = form.getValues();
-      
       // Get status from initialContact or default to not_visited
       const status = initialContact.status || "not_visited";
       
-      // Only reset fields that haven't been modified by the user
+      // Reset fields to the initialContact values, which should be properly cleared for new pins
       form.reset({
-        // For fullName, keep the user's input if they've entered something
-        fullName: currentValues.fullName || initialContact.fullName || "",
+        // Always use initialContact.fullName, which will be "" for new pins
+        fullName: initialContact.fullName || "",
         address: initialContact.address || "",
         city: initialContact.city || "",
         state: initialContact.state || "",
@@ -160,11 +158,13 @@ export default function ContactForm({
         email: initialContact.email || "",
         status: status,
         notes: initialContact.notes || "",
-        appointmentDate: currentValues.appointmentDate || "",
-        appointmentTime: currentValues.appointmentTime || "",
-        saleAmount: currentValues.saleAmount || "",
-        saleDate: currentValues.saleDate || new Date().toISOString().split('T')[0],
-        saleNotes: currentValues.saleNotes || "",
+        // Always use empty values for appointment fields unless editing an existing appointment
+        appointmentDate: "",
+        appointmentTime: "",
+        // Always use empty values for sale fields
+        saleAmount: "",
+        saleDate: new Date().toISOString().split('T')[0],
+        saleNotes: "",
       });
       
       // Set conditional fields based on status
@@ -391,7 +391,8 @@ export default function ContactForm({
                     <Input 
                       placeholder="Enter name (required)" 
                       {...field} 
-                      // Preserve manually entered value
+                      // Make sure we use the value directly from the field to ensure reset works
+                      value={field.value}
                       onChange={(e) => {
                         const value = e.target.value;
                         field.onChange(value);
