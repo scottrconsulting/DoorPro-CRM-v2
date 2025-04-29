@@ -9,7 +9,7 @@ import EnhancedMapViewer from "@/components/dashboard/enhanced-map-viewer";
 import ContactList from "@/components/dashboard/contact-list";
 import ScheduleWidget from "@/components/dashboard/schedule-widget";
 import { PRO_FEATURES } from "@/lib/auth";
-import ContactDetailModal from "@/components/contacts/contact-detail-modal";
+import ContactCard from "@/components/contacts/contact-card";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
 import { 
   DASHBOARD_WIDGETS, 
@@ -393,9 +393,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Contact Detail Modal */}
+      {/* Contact Card - Using new consolidated component */}
       {selectedContactId && (
-        <ContactDetailModal
+        <ContactCard
           contactId={selectedContactId}
           isOpen={true}
           onClose={() => setSelectedContactId(null)}
