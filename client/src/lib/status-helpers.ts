@@ -9,9 +9,24 @@
  * @returns Properly formatted status label (e.g., "Not Visited", "Call Back")
  */
 export function getStatusLabel(status: string, statusLabels?: Record<string, string>): string {
+  // Map not_visited to no_answer for display purposes
+  const mappedStatus = status === 'not_visited' ? 'no_answer' : status;
+  
   // Use custom label if provided
-  if (statusLabels && statusLabels[status]) {
-    return statusLabels[status];
+  if (statusLabels) {
+    // First check for direct match
+    if (statusLabels[status]) {
+      return statusLabels[status];
+    }
+    // Then check for mapped status match
+    if (mappedStatus !== status && statusLabels[mappedStatus]) {
+      return statusLabels[mappedStatus];
+    }
+  }
+  
+  // Handle special cases directly
+  if (status === 'not_visited') {
+    return 'No Answer';
   }
   
   // Otherwise format status by capitalizing each word
@@ -82,7 +97,7 @@ export function getStatusBadgeConfig(status: string): { bg: string; text: string
     not_visited: {  // For backward compatibility
       bg: "bg-pink-100",
       text: "text-pink-800",
-      label: getStatusLabel("not_visited"),
+      label: "No Answer", // Hard-code the No Answer label
     },
     presented: {
       bg: "bg-orange-100",
