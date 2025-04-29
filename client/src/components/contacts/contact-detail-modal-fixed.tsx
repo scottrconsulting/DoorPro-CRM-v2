@@ -584,10 +584,11 @@ export default function ContactDetailModal({
     // If location data is provided, attempt to geocode
     if (contactData.address) {
       try {
-        const geocodeResult: IGeocodingResult = await geocodeAddress(`${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`);
-        if (geocodeResult && geocodeResult.lat && geocodeResult.lng) {
-          contactData.latitude = geocodeResult.lat;
-          contactData.longitude = geocodeResult.lng;
+        const geocodeResult = await geocodeAddress(`${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`);
+        if (geocodeResult) {
+          // These are already stored as strings in the database schema
+          contactData.latitude = geocodeResult.latitude;
+          contactData.longitude = geocodeResult.longitude;
         }
       } catch (error) {
         console.error("Failed to geocode address", error);
@@ -793,7 +794,7 @@ export default function ContactDetailModal({
                     <span className="sm:inline">Files</span>
                   </TabsTrigger>
                   <TabsTrigger value="edit" className="flex-shrink-0 ml-auto">
-                    <span className="material-icons text-base mr-1 sm:mr-2">edit</span>
+                    <FileText className="h-4 w-4 mr-1 sm:mr-2" />
                     <span className="sm:inline">Edit Contact</span>
                   </TabsTrigger>
                 </TabsList>
