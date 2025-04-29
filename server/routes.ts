@@ -2021,6 +2021,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add sales for a contact
+  app.post("/api/contacts/:contactId/sales", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId, 10);
+      const contact = await storage.getContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const user = req.user as any;
+      const saleData = {
+        ...req.body,
+        userId: user.id,
+        contactId,
+      };
+      
+      const sale = await storage.createSale(saleData);
+      return res.status(201).json(sale);
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      return res.status(500).json({ message: "Failed to create sale" });
+    }
+  });
+
+  // Get sales for a contact
+  app.get("/api/contacts/:contactId/sales", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId, 10);
+      const sales = await storage.getSalesByContact(contactId);
+      return res.json(sales);
+    } catch (error) {
+      console.error("Error fetching contact sales:", error);
+      return res.status(500).json({ message: "Failed to fetch sales data" });
+    }
+  });
+  
   // Reports routes (Pro feature)
   // Get all visits for a user
   app.get("/api/visits", ensureAuthenticated, async (req, res) => {
