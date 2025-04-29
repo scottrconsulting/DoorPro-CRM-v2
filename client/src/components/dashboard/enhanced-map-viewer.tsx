@@ -558,6 +558,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               latitude: e.latLng.lat().toString(),
               longitude: e.latLng.lng().toString(),
               notes: `Quick add: ${new Date().toLocaleString()}`
+            }, {
+              onSuccess: () => {
+                // Make sure to reset the form state after quick add too
+                setNewContactForm({
+                  fullName: "", // Critical: reset name to prevent persistence
+                  address: "",
+                  phone: "",
+                  email: "",
+                  city: "",
+                  state: "",
+                  zipCode: "",
+                  status: activeStatus, 
+                  notes: "",
+                  appointment: "",
+                });
+              }
             });
             
             // Toast notification removed per user request

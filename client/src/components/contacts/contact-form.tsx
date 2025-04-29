@@ -126,10 +126,28 @@ export default function ContactForm({
     },
   });
   
-  // Update conditional fields visibility when dialog opens
+  // Update conditional fields visibility and reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      const currentStatus = form.getValues("status");
+      // Reset the form to initialContact values when dialog opens
+      form.reset({
+        fullName: initialContact?.fullName || "", // Critical: Use initialContact value
+        address: initialContact?.address || "",
+        city: initialContact?.city || "",
+        state: initialContact?.state || "",
+        zipCode: initialContact?.zipCode || "",
+        phone: initialContact?.phone || "",
+        email: initialContact?.email || "",
+        status: initialContact?.status || "not_visited",
+        notes: initialContact?.notes || "",
+        appointmentDate: "",
+        appointmentTime: "",
+        saleAmount: "",
+        saleDate: new Date().toISOString().split('T')[0],
+        saleNotes: "",
+      });
+      
+      const currentStatus = initialContact?.status || "not_visited";
       // Set visibility flags based on status
       setShowAppointmentFields(currentStatus === "booked" || currentStatus === "check_back");
       setShowSaleFields(currentStatus === "sold");
@@ -138,44 +156,10 @@ export default function ContactForm({
         "- Shows appointment fields:", currentStatus === "booked" || currentStatus === "check_back",
         "- Shows sale fields:", currentStatus === "sold");
     }
-  }, [isOpen, form]);
+  }, [isOpen, form, initialContact]);
 
-  // Reset form when initialContact changes - ensure we use the cleared values from initialContact
-  useEffect(() => {
-    if (initialContact) {
-      // Get status from initialContact or default to not_visited
-      const status = initialContact.status || "not_visited";
-      
-      // Reset fields to the initialContact values, which should be properly cleared for new pins
-      form.reset({
-        // Always use initialContact.fullName, which will be "" for new pins
-        fullName: initialContact.fullName || "",
-        address: initialContact.address || "",
-        city: initialContact.city || "",
-        state: initialContact.state || "",
-        zipCode: initialContact.zipCode || "",
-        phone: initialContact.phone || "",
-        email: initialContact.email || "",
-        status: status,
-        notes: initialContact.notes || "",
-        // Always use empty values for appointment fields unless editing an existing appointment
-        appointmentDate: "",
-        appointmentTime: "",
-        // Always use empty values for sale fields
-        saleAmount: "",
-        saleDate: new Date().toISOString().split('T')[0],
-        saleNotes: "",
-      });
-      
-      // Set conditional fields based on status
-      setShowAppointmentFields(status === "booked" || status === "check_back");
-      setShowSaleFields(status === "sold");
-      
-      console.log("Form opened with status:", status, 
-        "- Showing appointment fields:", status === "booked" || status === "check_back",
-        "- Showing sale fields:", status === "sold");
-    }
-  }, [initialContact, form, isOpen]);
+  // We've moved the reset logic to the dialog open useEffect above
+  // This helps avoid conflicts between multiple form resets
 
   // Create contact mutation
   const createContactMutation = useMutation({
