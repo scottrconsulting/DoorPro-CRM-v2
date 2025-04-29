@@ -60,23 +60,44 @@ export async function geocodeAddress(address: string): Promise<IGeocodingResult 
   }
 }
 
-// Get user's current location
-export async function getCurrentLocation(): Promise<{ lat: number; lng: number } | null> {
+// Default location (Nebraska, USA) as fallback
+const DEFAULT_LOCATION = { lat: 41.5, lng: -99.5 };
+
+// Get user's current location with fallback
+export async function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve) => {
-    if (navigator.geolocation) {
+    // Check if in Replit preview or if geolocation is available
+    const isReplit = window.location.hostname.includes('replit');
+    
+    if (navigator.geolocation && !isReplit) {
+      // Set a timeout to handle slow geolocation responses
+      const timeoutId = setTimeout(() => {
+        console.log('Geolocation timed out, using default location');
+        resolve(DEFAULT_LOCATION);
+      }, 3000);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          clearTimeout(timeoutId);
           resolve({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
         },
-        () => {
-          resolve(null);
+        (error) => {
+          clearTimeout(timeoutId);
+          console.log('Geolocation error:', error.message);
+          resolve(DEFAULT_LOCATION);
+        },
+        { 
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 60000 
         }
       );
     } else {
-      resolve(null);
+      console.log('Geolocation not available or in Replit preview, using default location');
+      resolve(DEFAULT_LOCATION);
     }
   });
 }

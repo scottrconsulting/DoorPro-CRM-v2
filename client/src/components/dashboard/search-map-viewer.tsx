@@ -315,8 +315,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Handle my location button click
   const handleMyLocationClick = async () => {
+    // With our updated getCurrentLocation function, it will always return a position
+    // (either actual location or fallback)
     const position = await getCurrentLocation();
-    if (position && map) {
+    
+    if (map) {
       panTo(position);
       map.setZoom(15);
       
@@ -343,15 +346,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       setUserMarker(newUserMarker);
       
+      // We'll always have a location now - either real or default
       toast({
-        title: "Location Found",
-        description: "Map centered to your current location",
-      });
-    } else {
-      toast({
-        title: "Location Error",
-        description: "Unable to get your current location. Please ensure location services are enabled.",
-        variant: "destructive",
+        title: "Location Set",
+        description: "Map centered to location",
       });
     }
   };

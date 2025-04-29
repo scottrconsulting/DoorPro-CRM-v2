@@ -608,34 +608,35 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const locateUserSilently = useCallback(async () => {
     if (!map) return;
     
+    // With our updated getCurrentLocation function, it will always return a position
+    // (either actual location or fallback)
     const position = await getCurrentLocation();
-    if (position && map) {
-      panTo(position);
-      map.setZoom(15);
-      
-      // Remove previous user location marker if it exists
-      if (userMarker) {
-        userMarker.setMap(null);
-      }
-      
-      // Create a blue dot marker for user's current location
-      const newUserMarker = new window.google.maps.Marker({
-        position: position,
-        map: map,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: "#4285F4", // Google blue
-          fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: "#FFFFFF",
-        },
-        title: "Your Location",
-        zIndex: 1000 // Ensure it's above other markers
-      });
-      
-      setUserMarker(newUserMarker);
+    
+    panTo(position);
+    map.setZoom(15);
+    
+    // Remove previous user location marker if it exists
+    if (userMarker) {
+      userMarker.setMap(null);
     }
+    
+    // Create a blue dot marker for user's current location
+    const newUserMarker = new window.google.maps.Marker({
+      position: position,
+      map: map,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: "#4285F4", // Google blue
+        fillOpacity: 1,
+        strokeWeight: 2,
+        strokeColor: "#FFFFFF",
+      },
+      title: "Your Location",
+      zIndex: 1000 // Ensure it's above other markers
+    });
+    
+    setUserMarker(newUserMarker);
   }, [map, panTo, userMarker]);
   
   // Get user's location on map load - but only once when the component first mounts
