@@ -132,10 +132,10 @@ export default function ContactDetailModal({
   const [followUpDate, setFollowUpDate] = useState(format(addDays(new Date(), 2), "yyyy-MM-dd"));
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("follow_up");
-  
+
   // Active tab state - ensure it's initialized with a valid value
   const [activeTab, setActiveTab] = useState<string>("notes");
-  
+
   // Sale state
   const [saleAmount, setSaleAmount] = useState("");
   const [saleProduct, setSaleProduct] = useState("");
@@ -143,19 +143,19 @@ export default function ContactDetailModal({
   const [saleStatus, setSaleStatus] = useState("completed");
   const [salePaymentMethod, setSalePaymentMethod] = useState("cash");
   const [saleNotes, setSaleNotes] = useState("");
-  
+
   // Task state
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [taskPriority, setTaskPriority] = useState("medium");
-  
+
   // Document state
   const [documentName, setDocumentName] = useState("");
   const [documentCategory, setDocumentCategory] = useState("general");
   const [documentDescription, setDocumentDescription] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
-  
+
   // Edit contact state
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
@@ -178,25 +178,25 @@ export default function ContactDetailModal({
     queryKey: [`/api/contacts/${contactId}/visits`],
     enabled: isOpen,
   });
-  
+
   // Fetch sales
   const { data: sales = [], isLoading: isLoadingSales } = useQuery<Sale[]>({
     queryKey: [`/api/contacts/${contactId}/sales`],
     enabled: isOpen && activeTab === "sales",
   });
-  
+
   // Fetch tasks
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<Task[]>({
     queryKey: [`/api/contacts/${contactId}/tasks`],
     enabled: isOpen && activeTab === "tasks",
   });
-  
+
   // Fetch documents
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<Document[]>({
     queryKey: [`/api/contacts/${contactId}/documents`],
     enabled: isOpen && activeTab === "documents",
   });
-  
+
   // Fetch schedules for this contact
   const { data: contactSchedules = [], isLoading: isLoadingSchedules } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
@@ -254,7 +254,7 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Add sale mutation
   const addSaleMutation = useMutation({
     mutationFn: async (saleData: InsertSale) => {
@@ -270,7 +270,7 @@ export default function ContactDetailModal({
       setSaleStatus("completed");
       setSalePaymentMethod("cash");
       setSaleNotes("");
-      
+
       toast({
         title: "Sale recorded",
         description: "The sale was successfully recorded",
@@ -284,7 +284,7 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Add task mutation
   const addTaskMutation = useMutation({
     mutationFn: async (taskData: InsertTask) => {
@@ -298,7 +298,7 @@ export default function ContactDetailModal({
       setTaskDescription("");
       setTaskDueDate(format(new Date(), "yyyy-MM-dd"));
       setTaskPriority("medium");
-      
+
       toast({
         title: "Task created",
         description: "The task was successfully created",
@@ -312,7 +312,7 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Complete task mutation
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -334,11 +334,11 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Delete schedule functionality
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
   const [showDeleteScheduleDialog, setShowDeleteScheduleDialog] = useState(false);
-  
+
   const deleteScheduleMutation = useMutation({
     mutationFn: async (scheduleId: number) => {
       const res = await apiRequest("DELETE", `/api/schedules/${scheduleId}`);
@@ -361,13 +361,13 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Handle delete schedule
   const handleDeleteSchedule = (scheduleId: number) => {
     setScheduleToDelete(scheduleId);
     setShowDeleteScheduleDialog(true);
   };
-  
+
   // Confirm delete schedule
   const confirmDeleteSchedule = () => {
     if (scheduleToDelete) {
@@ -388,7 +388,7 @@ export default function ContactDetailModal({
       setDocumentCategory("general");
       setDocumentDescription("");
       setDocumentFile(null);
-      
+
       toast({
         title: "Document uploaded",
         description: "Your document was successfully uploaded",
@@ -402,7 +402,7 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Edit contact mutation
   const editContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
@@ -413,7 +413,7 @@ export default function ContactDetailModal({
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       setIsEditMode(false);
-      
+
       toast({
         title: "Contact updated",
         description: "The contact information was successfully updated",
@@ -427,7 +427,7 @@ export default function ContactDetailModal({
       });
     },
   });
-  
+
   // Initialize edit form with contact data when it loads
   useEffect(() => {
     if (contact) {
@@ -441,11 +441,11 @@ export default function ContactDetailModal({
       setEditStatus(contact.status);
     }
   }, [contact]);
-  
+
   // Handle note form submission
   const handleNoteSubmit = async () => {
     if (!note.trim()) return;
-    
+
     const visitData: InsertVisit = {
       contactId,
       userId: 1, // TODO: Get from auth context
@@ -453,19 +453,19 @@ export default function ContactDetailModal({
       notes: note,
       visitDate: new Date(),
     };
-    
+
     addVisitMutation.mutate(visitData);
   };
-  
+
   // Handle follow-up scheduling
   const handleScheduleFollowUp = async () => {
     const [year, month, day] = followUpDate.split('-').map(Number);
     const [hour, minute] = followUpTime.split(':').map(Number);
-    
+
     const startDate = new Date(year, month - 1, day, hour, minute);
     const endDate = new Date(startDate);
     endDate.setHours(endDate.getHours() + 1);
-    
+
     // Add a visit record
     const visitData: InsertVisit = {
       contactId,
@@ -474,9 +474,9 @@ export default function ContactDetailModal({
       notes: `Follow-up scheduled for ${format(startDate, "MMM d, yyyy 'at' h:mm a")}`,
       visitDate: new Date(),
     };
-    
+
     addVisitMutation.mutate(visitData);
-    
+
     // Schedule the follow-up
     const scheduleData: InsertSchedule = {
       title: `Follow-up with ${contact?.fullName}`,
@@ -488,14 +488,14 @@ export default function ContactDetailModal({
       description: note || undefined,
       contactIds: [contactId],
     };
-    
+
     scheduleFollowUpMutation.mutate(scheduleData);
   };
-  
+
   // Handle sale form submission
   const handleSaleSubmit = async () => {
     if (!saleProduct || !saleAmount) return;
-    
+
     const saleData: InsertSale = {
       contactId,
       saleDate: new Date(saleDate),
@@ -506,7 +506,7 @@ export default function ContactDetailModal({
       notes: saleNotes || null,
       paymentMethod: salePaymentMethod,
     };
-    
+
     // Also add a visit record
     const visitData: InsertVisit = {
       contactId,
@@ -515,15 +515,15 @@ export default function ContactDetailModal({
       notes: `Sale recorded: ${saleProduct} for $${parseFloat(saleAmount).toFixed(2)}`,
       visitDate: new Date(),
     };
-    
+
     addVisitMutation.mutate(visitData);
     addSaleMutation.mutate(saleData);
   };
-  
+
   // Handle task form submission
   const handleTaskSubmit = async () => {
     if (!taskTitle) return;
-    
+
     const taskData: InsertTask = {
       contactId,
       userId: 1, // TODO: Get from auth context
@@ -533,34 +533,34 @@ export default function ContactDetailModal({
       priority: taskPriority,
       status: "pending",
     };
-    
+
     addTaskMutation.mutate(taskData);
   };
-  
+
   // Handle document upload
   const handleDocumentUpload = async () => {
     if (!documentName || !documentFile) return;
-    
+
     const formData = new FormData();
     formData.append("file", documentFile);
     formData.append("name", documentName);
     formData.append("category", documentCategory);
     formData.append("description", documentDescription || "");
-    
+
     uploadDocumentMutation.mutate(formData);
   };
-  
+
   // Handle document file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setDocumentFile(e.target.files[0]);
     }
   };
-  
+
   // Handle edit contact form submission
   const handleEditContactSubmit = async () => {
     if (!editName || !editAddress) return;
-    
+
     const contactData: Partial<Contact> = {
       fullName: editName,
       address: editAddress,
@@ -571,7 +571,7 @@ export default function ContactDetailModal({
       email: editEmail || null,
       status: editStatus,
     };
-    
+
     // If location data is provided, attempt to geocode
     if (contactData.address) {
       try {
@@ -584,14 +584,14 @@ export default function ContactDetailModal({
         console.error("Failed to geocode address", error);
       }
     }
-    
+
     editContactMutation.mutate(contactData);
   };
-  
+
   // Enable cancel edit mode
   const handleCancelEdit = () => {
     setIsEditMode(false);
-    
+
     // Reset form to original values
     if (contact) {
       setEditName(contact.fullName);
@@ -604,7 +604,7 @@ export default function ContactDetailModal({
       setEditStatus(contact.status);
     }
   };
-  
+
   // Format address for display
   const getFormattedAddress = (contact: Contact): string => {
     const parts = [contact.address];
@@ -620,12 +620,12 @@ export default function ContactDetailModal({
     }
     return parts.join(', ');
   };
-  
+
   // Get status configuration for badges
   const statusConfig = contact ? getStatusBadgeConfig(contact.status) : { bg: "", text: "", label: "" };
-  
+
   if (!isOpen) return null;
-  
+
   // Loading state
   if (isLoadingContact) {
     return (
@@ -638,7 +638,7 @@ export default function ContactDetailModal({
       </Dialog>
     );
   }
-  
+
   if (!contact) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -652,6 +652,15 @@ export default function ContactDetailModal({
       </Dialog>
     );
   }
+
+  // Placeholder for delete function - needs proper implementation
+  const handleContactDelete = (contact: Contact) => {
+    //Implementation to delete contact goes here.
+    console.log("Deleting contact:", contact);
+    alert("Contact deleted - placeholder function"); // Replace with actual delete logic
+  };
+
+  let selectedContact = contact; // Assuming 'contact' is available in this scope
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -670,13 +679,13 @@ export default function ContactDetailModal({
                 >
                   {statusConfig.label}
                 </Badge>
-                
+
                 {contact.lastVisited && (
                   <Badge variant="outline" className="text-neutral-600 border-neutral-300">
                     Last visited: {formatDistanceToNow(new Date(contact.lastVisited), { addSuffix: true })}
                   </Badge>
                 )}
-                
+
                 {contact.source && (
                   <Badge variant="outline" className="text-neutral-600 border-neutral-300">
                     Source: {contact.source}
@@ -686,7 +695,7 @@ export default function ContactDetailModal({
             </div>
           </div>
         </div>
-        
+
         <div className="px-6">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Contact info sidebar - 1/3 width on large screens, full width on small */}
@@ -711,7 +720,7 @@ export default function ContactDetailModal({
                         </a>
                       </div>
                     </div>
-                    
+
                     {contact.phone && (
                       <div className="flex items-start gap-3">
                         <Phone className="h-5 w-5 mt-0.5 text-neutral-600 flex-shrink-0" />
@@ -723,7 +732,7 @@ export default function ContactDetailModal({
                         </div>
                       </div>
                     )}
-                    
+
                     {contact.email && (
                       <div className="flex items-start gap-3">
                         <Mail className="h-5 w-5 mt-0.5 text-neutral-600 flex-shrink-0" />
@@ -736,7 +745,7 @@ export default function ContactDetailModal({
                       </div>
                     )}
                   </div>
-                  
+
                   {contact.notes && (
                     <div className="px-4 py-3 border-t border-neutral-200">
                       <p className="font-medium text-sm text-neutral-700 mb-1">Notes</p>
@@ -746,7 +755,7 @@ export default function ContactDetailModal({
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Main content area - 2/3 width on large screens, full width on small */}
             <div className="lg:w-2/3">
               <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
@@ -772,7 +781,7 @@ export default function ContactDetailModal({
                     Documents
                   </TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="notes">
                   <Card>
                     <CardHeader>
@@ -798,7 +807,7 @@ export default function ContactDetailModal({
                           {addVisitMutation.isPending ? "Adding..." : "Add Note"}
                         </Button>
                       </div>
-                      
+
                       <div className="space-y-4">
                         <div className="text-lg font-medium">Schedule a Follow-up</div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -843,7 +852,7 @@ export default function ContactDetailModal({
                           {scheduleFollowUpMutation.isPending ? "Scheduling..." : "Schedule Follow-up"}
                         </Button>
                       </div>
-                      
+
                       {/* Visit history timeline */}
                       {visits.length > 0 && (
                         <div className="space-y-4 mt-8">
@@ -863,7 +872,7 @@ export default function ContactDetailModal({
                                     {visit.visitType === "call" && "Phone Call"}
                                     {visit.visitType === "email" && "Email Sent"}
                                     {visit.visitType === "follow_up_scheduled" && "Follow-up Scheduled"}
-                                    {visit.visitType === "sale" && "Sale Completed"}
+                                    {visit.visitType === "sale" && "Sale Completed")
                                   </div>
                                   {visit.notes && <div className="text-neutral-700">{visit.notes}</div>}
                                 </div>
@@ -871,13 +880,13 @@ export default function ContactDetailModal({
                           </div>
                         </div>
                       )}
-                      
+
                       {isLoadingVisits && (
                         <div className="flex justify-center my-6">
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                         </div>
                       )}
-                      
+
                       {!isLoadingVisits && visits.length === 0 && (
                         <div className="text-center py-8 text-neutral-500">
                           <p>No history recorded yet</p>
@@ -886,7 +895,7 @@ export default function ContactDetailModal({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                
+
                 <TabsContent value="schedule">
                   <Card>
                     <CardHeader>
@@ -916,7 +925,7 @@ export default function ContactDetailModal({
                               >
                                 <span className="material-icons text-sm">delete</span>
                               </button>
-                              
+
                               <div className="pr-6"> {/* Added padding right to make room for delete button */}
                                 <div className="font-medium">
                                   {schedule.title}
@@ -943,13 +952,13 @@ export default function ContactDetailModal({
                               </div>
                             </div>
                           ))}
-                          
+
                         {isLoadingSchedules && (
                           <div className="flex justify-center my-6">
                             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                           </div>
                         )}
-                        
+
                         {!isLoadingSchedules && contactSchedules.length === 0 && (
                           <div className="text-center py-8 text-neutral-500">
                             <p>No scheduled appointments or follow-ups</p>
@@ -960,7 +969,7 @@ export default function ContactDetailModal({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                
+
                 <TabsContent value="sales">
                   <Card>
                     <CardHeader>
@@ -992,7 +1001,7 @@ export default function ContactDetailModal({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <div className="space-y-1">
                             <Label htmlFor="saleDate">Sale Date</Label>
@@ -1032,7 +1041,7 @@ export default function ContactDetailModal({
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <Label htmlFor="saleNotes">Notes (Optional)</Label>
                           <Textarea 
@@ -1042,7 +1051,7 @@ export default function ContactDetailModal({
                             placeholder="Any additional details about this sale..."
                           />
                         </div>
-                        
+
                         <Button 
                           onClick={handleSaleSubmit}
                           disabled={!saleProduct || !saleAmount || addSaleMutation.isPending}
@@ -1051,7 +1060,7 @@ export default function ContactDetailModal({
                           {addSaleMutation.isPending ? "Recording..." : "Record Sale"}
                         </Button>
                       </div>
-                      
+
                       {/* Sales history */}
                       {sales.length > 0 && (
                         <div className="space-y-4 mt-8">
@@ -1090,13 +1099,13 @@ export default function ContactDetailModal({
                           </div>
                         </div>
                       )}
-                      
+
                       {isLoadingSales && (
                         <div className="flex justify-center my-6">
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                         </div>
                       )}
-                      
+
                       {!isLoadingSales && sales.length === 0 && (
                         <div className="text-center py-8 text-neutral-500">
                           <p>No sales recorded</p>
@@ -1105,7 +1114,7 @@ export default function ContactDetailModal({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                
+
                 <TabsContent value="tasks">
                   <Card>
                     <CardHeader>
@@ -1124,7 +1133,7 @@ export default function ContactDetailModal({
                             placeholder="e.g. Follow up on proposal"
                           />
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <Label htmlFor="taskDueDate">Due Date</Label>
@@ -1149,7 +1158,7 @@ export default function ContactDetailModal({
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <Label htmlFor="taskDescription">Description (Optional)</Label>
                           <Textarea 
@@ -1159,7 +1168,7 @@ export default function ContactDetailModal({
                             placeholder="Additional details about this task..."
                           />
                         </div>
-                        
+
                         <Button 
                           onClick={handleTaskSubmit}
                           disabled={!taskTitle || addTaskMutation.isPending}
@@ -1168,7 +1177,7 @@ export default function ContactDetailModal({
                           {addTaskMutation.isPending ? "Creating..." : "Create Task"}
                         </Button>
                       </div>
-                      
+
                       {/* Task list */}
                       {tasks.length > 0 && (
                         <div className="space-y-4 mt-8">
@@ -1237,13 +1246,13 @@ export default function ContactDetailModal({
                           </div>
                         </div>
                       )}
-                      
+
                       {isLoadingTasks && (
                         <div className="flex justify-center my-6">
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                         </div>
                       )}
-                      
+
                       {!isLoadingTasks && tasks.length === 0 && (
                         <div className="text-center py-8 text-neutral-500">
                           <p>No tasks created yet</p>
@@ -1252,7 +1261,7 @@ export default function ContactDetailModal({
                     </CardContent>
                   </Card>
                 </TabsContent>
-                
+
                 <TabsContent value="documents">
                   <Card>
                     <CardHeader>
@@ -1324,7 +1333,7 @@ export default function ContactDetailModal({
                           )}
                         </Button>
                       </div>
-                      
+
                       {/* Document list */}
                       {documents.length > 0 && (
                         <div className="space-y-4 mt-8">
@@ -1366,13 +1375,13 @@ export default function ContactDetailModal({
                           </div>
                         </div>
                       )}
-                      
+
                       {isLoadingDocuments && (
                         <div className="flex justify-center my-6">
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                         </div>
                       )}
-                      
+
                       {!isLoadingDocuments && documents.length === 0 && (
                         <div className="text-center py-8 text-neutral-500">
                           <p>No documents uploaded yet</p>
@@ -1385,17 +1394,26 @@ export default function ContactDetailModal({
             </div>
           </div>
         </div>
-        
+
         {/* Dialog footer - conditionally rendered based on view */}
         {!isEditMode && (
           <div className="flex flex-wrap justify-between gap-2 mt-8">
-            <div>
+            <div className="flex gap-2">
               <Button 
-                variant="outline" 
-                className="mr-2"
+                variant="outline"
                 onClick={() => setIsEditMode(true)}
               >
                 Edit Contact
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (selectedContact) {
+                    handleContactDelete(selectedContact);
+                  }
+                }}
+              >
+                Delete Contact
               </Button>
             </div>
             <Button className="h-10" onClick={onClose}>Close</Button>
