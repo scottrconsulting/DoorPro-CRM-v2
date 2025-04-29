@@ -845,25 +845,32 @@ useEffect(() => {
                               onClick={() => {
                                 if (index === 0) return;
                                 
-                                // Find the actual indexes in the full widgetOrder array
-                                const widgetToMove = widget;
-                                const previousWidgetIndex = enabledWidgets
+                                // Get the current sorted enabled widgets
+                                const sortedWidgets = enabledWidgets
+                                  .filter(w => !HIDDEN_WIDGETS.includes(w))
                                   .map(w => {
                                     const orderIndex = widgetOrder.findIndex(wo => wo === w);
-                                    return orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER;
+                                    return { 
+                                      widget: w, 
+                                      orderIndex: orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER 
+                                    };
                                   })
-                                  .sort((a, b) => a - b)[index - 1];
+                                  .sort((a, b) => a.orderIndex - b.orderIndex)
+                                  .map(item => item.widget);
                                 
-                                // Create new order with these widgets swapped
+                                // Find the current widget and the one before it in this sorted list
+                                const currentWidget = widget;
+                                const prevWidgetIndex = index - 1;
+                                const previousWidget = sortedWidgets[prevWidgetIndex];
+                                
+                                // Get their actual positions in the full widget order array
+                                const currentWidgetIndex = widgetOrder.indexOf(currentWidget);
+                                const previousWidgetIndex = widgetOrder.indexOf(previousWidget);
+                                
+                                // Create new order and swap the positions
                                 const newOrder = [...widgetOrder];
-                                
-                                // Find indexes of widgets in the full order array
-                                const widgetIndex = widgetOrder.findIndex(w => w === widgetToMove);
-                                const previousWidget = widgetOrder[previousWidgetIndex];
-                                
-                                // Swap them
-                                newOrder[previousWidgetIndex] = widgetToMove;
-                                newOrder[widgetIndex] = previousWidget;
+                                newOrder[currentWidgetIndex] = previousWidget;
+                                newOrder[previousWidgetIndex] = currentWidget;
                                 
                                 setWidgetOrder(newOrder);
                               }}
@@ -875,32 +882,40 @@ useEffect(() => {
                               size="sm"
                               variant="ghost"
                               onClick={() => {
-                                const enabledCount = enabledWidgets.length;
-                                if (index === enabledCount - 1) return;
-                                
-                                // Find the actual indexes in the full widgetOrder array
-                                const widgetToMove = widget;
-                                const nextWidgetIndex = enabledWidgets
+                                // Get the filtered enabled widgets in order
+                                const sortedWidgets = enabledWidgets
+                                  .filter(w => !HIDDEN_WIDGETS.includes(w))
                                   .map(w => {
                                     const orderIndex = widgetOrder.findIndex(wo => wo === w);
-                                    return orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER;
+                                    return { 
+                                      widget: w, 
+                                      orderIndex: orderIndex >= 0 ? orderIndex : Number.MAX_SAFE_INTEGER 
+                                    };
                                   })
-                                  .sort((a, b) => a - b)[index + 1];
+                                  .sort((a, b) => a.orderIndex - b.orderIndex)
+                                  .map(item => item.widget);
                                 
-                                // Create new order with these widgets swapped
+                                // If this is the last widget, we can't move it down
+                                const enabledCount = sortedWidgets.length;
+                                if (index === enabledCount - 1) return;
+                                
+                                // Find the current widget and the one after it in this sorted list
+                                const currentWidget = widget;
+                                const nextWidgetIndex = index + 1;
+                                const nextWidget = sortedWidgets[nextWidgetIndex];
+                                
+                                // Get their actual positions in the full widget order array
+                                const currentWidgetIndex = widgetOrder.indexOf(currentWidget);
+                                const nextWidgetFullIndex = widgetOrder.indexOf(nextWidget);
+                                
+                                // Create new order and swap the positions
                                 const newOrder = [...widgetOrder];
-                                
-                                // Find indexes of widgets in the full order array
-                                const widgetIndex = widgetOrder.findIndex(w => w === widgetToMove);
-                                const nextWidget = widgetOrder[nextWidgetIndex];
-                                
-                                // Swap them
-                                newOrder[nextWidgetIndex] = widgetToMove;
-                                newOrder[widgetIndex] = nextWidget;
+                                newOrder[currentWidgetIndex] = nextWidget;
+                                newOrder[nextWidgetFullIndex] = currentWidget;
                                 
                                 setWidgetOrder(newOrder);
                               }}
-                              disabled={index === widgetOrder.filter(w => enabledWidgets.includes(w)).length - 1}
+                              disabled={index === enabledWidgets.filter(w => !HIDDEN_WIDGETS.includes(w)).length - 1}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="m6 9 6 6 6-6"/></svg>
                             </Button>
