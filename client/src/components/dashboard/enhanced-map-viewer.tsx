@@ -823,14 +823,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       </div>
       
       {/* Other Controls - Right side */}
-      <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
+      <div className="absolute top-16 right-4 flex flex-col gap-2 z-10">
         
         {/* Location and Search Controls */}
-        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col gap-2">
+        <div className="bg-white p-1.5 rounded-lg shadow-lg flex flex-col gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleMyLocationClick}
+            className="text-xs px-2 py-1 h-7"
           >
             My Location
           </Button>
