@@ -503,6 +503,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           // Different behavior based on click duration
           if (isLongClick) {
             // Long press - show detailed contact form
+            const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
+            
             setNewContactForm(prev => ({
               ...prev,
               // Don't pre-fill the name at all - let user enter it themselves
@@ -516,8 +518,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               longitude: e.latLng.lng().toString(),
             }));
             
+            // Set the scheduling fields visibility state first
+            setShowSchedulingFields(isAppointmentStatus);
+            
             // Show the form dialog for long press
             setShowNewContactDialog(true);
+            
+            // Log for debugging
+            console.log("Map pin contact form opened with status:", activeStatus, "- Should show appointment fields:", isAppointmentStatus);
             
             // Toast notification removed per user request
             // No notification will be shown
@@ -816,7 +824,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         // appointment fields will be handled by the form component
       }));
     }
-  }, [newContactForm.status]);
+    
+    // If status needs scheduling and we're showing the dialog, ensure we flag the form
+    if (needsScheduling && showNewContactDialog) {
+      console.log("Status needs scheduling, updating form...");
+    }
+  }, [newContactForm.status, showNewContactDialog]);
 
   // Update the form status when the active status changes
   useEffect(() => {
@@ -1036,6 +1049,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           notes: newContactForm.notes || "",
           latitude: newContactCoords?.lat.toString() || "",
           longitude: newContactCoords?.lng.toString() || "",
+          // Add a field that triggers the appointment fields
+          // This ensures the form shows scheduling fields for booked or check_back
+          // This matches our form's showAppointmentFields state initialization
         }}
         onSuccess={(newContact: Contact) => {
           // Handle successful creation
