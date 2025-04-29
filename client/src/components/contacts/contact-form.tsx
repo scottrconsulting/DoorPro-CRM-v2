@@ -195,25 +195,47 @@ export default function ContactForm({
         userId: user.id,
       };
 
-      if (initialContact?.latitude && initialContact?.longitude) {
-        contactData.latitude = initialContact.latitude;
-        contactData.longitude = initialContact.longitude;
-      } else {
-        // Try to geocode the address if we don't have coordinates
-        try {
-          const geocodeResult = await geocodeAddress(formData.address);
-          if (geocodeResult && 
-              typeof geocodeResult === 'object' && 
-              'lat' in geocodeResult && 
-              'lng' in geocodeResult &&
-              geocodeResult.lat !== undefined &&
-              geocodeResult.lng !== undefined) {
-            contactData.latitude = String(geocodeResult.lat);
-            contactData.longitude = String(geocodeResult.lng);
+      // Always attempt to geocode the address for all contact creations and updates
+      // This ensures the contact will appear on the map
+      const fullAddress = `${formData.address}, ${formData.city || ''}, ${formData.state || ''} ${formData.zipCode || ''}`.trim();
+      console.log("Geocoding address:", fullAddress);
+      
+      try {
+        // Use the full address for better geocoding results
+        const geocodeResult = await geocodeAddress(fullAddress);
+        console.log("Geocode result:", geocodeResult);
+        
+        if (geocodeResult) {
+          // The geocodeAddress function returns a different format than expected in the condition below
+          contactData.latitude = geocodeResult.latitude;
+          contactData.longitude = geocodeResult.longitude;
+          
+          // Update city/state/zip if they were missing and we got them from geocoding
+          if (!formData.city && geocodeResult.city) {
+            contactData.city = geocodeResult.city;
           }
-        } catch (error) {
-          console.error("Geocoding error:", error);
-          // Continue with submission even if geocoding fails
+          if (!formData.state && geocodeResult.state) {
+            contactData.state = geocodeResult.state;
+          }
+          if (!formData.zipCode && geocodeResult.zipCode) {
+            contactData.zipCode = geocodeResult.zipCode;
+          }
+          
+          console.log("Contact with geocoded data:", contactData);
+        } else {
+          console.warn("Geocoding failed but continuing with submission");
+          // Fall back to existing coordinates if available
+          if (initialContact?.latitude && initialContact?.longitude) {
+            contactData.latitude = initialContact.latitude;
+            contactData.longitude = initialContact.longitude;
+          }
+        }
+      } catch (error) {
+        console.error("Geocoding error:", error);
+        // Fall back to existing coordinates if available
+        if (initialContact?.latitude && initialContact?.longitude) {
+          contactData.latitude = initialContact.latitude;
+          contactData.longitude = initialContact.longitude;
         }
       }
 
