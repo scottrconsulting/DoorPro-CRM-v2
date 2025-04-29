@@ -807,12 +807,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return () => clearInterval(streetViewInterval);
   }, [isLoaded, map, isInStreetView, inStreetView]);
 
+  // Monitor when the dialog opens
+  useEffect(() => {
+    if (showNewContactDialog) {
+      console.log("Map pin contact form opened with status:", newContactForm.status, 
+        "- Should show appointment fields:", 
+        newContactForm.status === "booked" || newContactForm.status === "check_back",
+        "- Should show sale fields:", newContactForm.status === "sold");
+    }
+  }, [showNewContactDialog, newContactForm.status]);
+
   // Monitor status changes in the form
   useEffect(() => {
     // Show/hide appointment scheduling fields based on status
     const needsScheduling = 
       newContactForm.status === "booked" || 
       newContactForm.status === "check_back";
+    
+    const needsSaleFields = newContactForm.status === "sold";
     
     setShowSchedulingFields(needsScheduling);
     
@@ -826,8 +838,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }
     
     // If status needs scheduling and we're showing the dialog, ensure we flag the form
-    if (needsScheduling && showNewContactDialog) {
-      console.log("Status needs scheduling, updating form...");
+    if ((needsScheduling || needsSaleFields) && showNewContactDialog) {
+      console.log(`Status ${newContactForm.status} requires extra fields, updating form...`);
     }
   }, [newContactForm.status, showNewContactDialog]);
 
@@ -1054,6 +1066,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           // This matches our form's showAppointmentFields state initialization
         }}
         onSuccess={(newContact: Contact) => {
+          // Log status for debugging
+          console.log("Map pin contact form opened with status:", newContactForm.status, 
+            "- Should show appointment fields:", newContactForm.status === "booked" || newContactForm.status === "check_back");
           // Handle successful creation
           queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
           

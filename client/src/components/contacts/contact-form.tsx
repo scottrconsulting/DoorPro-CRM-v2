@@ -70,6 +70,13 @@ const contactFormSchema = z.object({
   // Add appointment fields
   appointmentDate: z.string().optional(),
   appointmentTime: z.string().optional(),
+  // Add sale fields
+  saleAmount: z.union([
+    z.string().regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount"),
+    z.string().length(0),
+  ]).optional(),
+  saleDate: z.string().optional(),
+  saleNotes: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -95,6 +102,9 @@ export default function ContactForm({
   const [showAppointmentFields, setShowAppointmentFields] = useState(
     initialContact?.status === "booked" || initialContact?.status === "check_back"
   );
+  const [showSaleFields, setShowSaleFields] = useState(
+    initialContact?.status === "sold"
+  );
 
   // Form setup
   const form = useForm<ContactFormValues>({
@@ -112,6 +122,10 @@ export default function ContactForm({
       // Add appointment fields with default empty values
       appointmentDate: "",
       appointmentTime: "",
+      // Add sale fields with default empty values
+      saleAmount: "",
+      saleDate: new Date().toISOString().split('T')[0], // Default to today
+      saleNotes: "",
     },
   });
 
@@ -135,6 +149,9 @@ export default function ContactForm({
         notes: initialContact.notes || "",
         appointmentDate: currentValues.appointmentDate || "",
         appointmentTime: currentValues.appointmentTime || "",
+        saleAmount: currentValues.saleAmount || "",
+        saleDate: currentValues.saleDate || new Date().toISOString().split('T')[0],
+        saleNotes: currentValues.saleNotes || "",
       });
     }
   }, [initialContact, form]);
@@ -231,6 +248,33 @@ export default function ContactForm({
         // Format the appointment field as "YYYY-MM-DD HH:MM" string
         const appointmentStr = `${formData.appointmentDate} ${formData.appointmentTime}`;
         cleanData.appointment = appointmentStr;
+      }
+      
+      // Add sale data if it's available and status is sold
+      if (formData.status === "sold") {
+        // Store sale details in the notes field using a structured format
+        // This way we don't need to add schema fields for sales data
+        let saleInfo = "";
+        
+        if (formData.saleAmount) {
+          saleInfo += `Sale Amount: $${formData.saleAmount}\n`;
+        }
+        
+        if (formData.saleDate) {
+          saleInfo += `Sale Date: ${formData.saleDate}\n`;
+        }
+        
+        if (formData.saleNotes) {
+          saleInfo += `Sale Notes: ${formData.saleNotes}\n`;
+        }
+        
+        // Add existing notes if available
+        if (formData.notes) {
+          saleInfo += `\nAdditional Notes: ${formData.notes}`;
+        }
+        
+        // Update notes field with sale information
+        cleanData.notes = saleInfo.trim();
       }
 
       // If we already have coordinates, keep them
@@ -450,6 +494,14 @@ export default function ContactForm({
                       setShowAppointmentFields(
                         value === "booked" || value === "check_back"
                       );
+                      
+                      // Check if we need to show sale fields
+                      setShowSaleFields(value === "sold");
+                      
+                      // If switching to sold status, pre-set the sale date to today
+                      if (value === "sold") {
+                        form.setValue("saleDate", new Date().toISOString().split('T')[0]);
+                      }
                     }} 
                     defaultValue={field.value}
                   >
@@ -517,6 +569,72 @@ export default function ContactForm({
                     )}
                   />
                 </div>
+              </div>
+            )}
+            
+            {/* Show sale fields if status is sold */}
+            {showSaleFields && (
+              <div className="space-y-4 border border-green-200 bg-green-50 p-4 rounded-md">
+                <h3 className="text-md font-semibold text-green-700">
+                  Record Sale Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="saleAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sale Amount ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="text"
+                            placeholder="0.00" 
+                            {...field} 
+                            value={field.value || ""} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="saleDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sale Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || new Date().toISOString().split('T')[0]} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="saleNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sale Notes</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Additional notes about this sale..." 
+                          {...field} 
+                          value={field.value || ""} 
+                          className="min-h-[80px]"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
