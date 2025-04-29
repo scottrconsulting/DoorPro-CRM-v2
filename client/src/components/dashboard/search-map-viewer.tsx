@@ -545,9 +545,25 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Function to properly capitalize a status for display
   const getStatusLabel = (status: string): string => {
-    if (customization?.statusLabels && customization.statusLabels[status]) {
-      return customization.statusLabels[status];
+    // Map not_visited to no_answer for display purposes
+    const mappedStatus = status === 'not_visited' ? 'no_answer' : status;
+    
+    if (customization?.statusLabels) {
+      // First check for direct match
+      if (customization.statusLabels[status]) {
+        return customization.statusLabels[status];
+      }
+      // Then check for mapped status match
+      if (mappedStatus !== status && customization.statusLabels[mappedStatus]) {
+        return customization.statusLabels[mappedStatus];
+      }
     }
+    
+    // Handle special cases directly
+    if (status === 'not_visited') {
+      return 'No Answer';
+    }
+    
     // Capitalize each word
     return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };

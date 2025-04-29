@@ -597,9 +597,25 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Function to properly capitalize a status for display
   const getStatusLabel = (status: string): string => {
-    if (customization?.statusLabels && customization.statusLabels[status]) {
-      return customization.statusLabels[status];
+    // Map not_visited to no_answer for display purposes
+    const mappedStatus = status === 'not_visited' ? 'no_answer' : status;
+    
+    if (customization?.statusLabels) {
+      // First check for direct match
+      if (customization.statusLabels[status]) {
+        return customization.statusLabels[status];
+      }
+      // Then check for mapped status match
+      if (mappedStatus !== status && customization.statusLabels[mappedStatus]) {
+        return customization.statusLabels[mappedStatus];
+      }
     }
+    
+    // Handle special cases directly
+    if (status === 'not_visited') {
+      return 'No Answer';
+    }
+    
     // Capitalize each word
     return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
@@ -874,7 +890,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             {/* Status buttons matching colors in customize page */}
             {[
               { status: "no_answer", defaultLabel: "No Answer" },
-              { status: "presented", defaultLabel: "Demoed" },
+              { status: "presented", defaultLabel: "Presented" },
               { status: "booked", defaultLabel: "Booked" },
               { status: "sold", defaultLabel: "Sold" },
               { status: "not_interested", defaultLabel: "Not Interested" },
@@ -892,7 +908,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                   className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status)}`} 
                   style={getColorStyle(status.status)}
                 ></span>
-                {customization?.statusLabels?.[status.status] || status.defaultLabel}
+                {getStatusLabel(status.status)}
               </Button>
             ))}
           </>
