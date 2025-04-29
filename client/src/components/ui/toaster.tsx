@@ -8,26 +8,7 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
+// Completely disabled toaster - returns empty fragment
 export function Toaster() {
-  const { toasts } = useToast()
-
-  return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle className="text-xs">{title}</ToastTitle>}
-              {description && (
-                <ToastDescription className="text-xs">{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
+  return <></>
 }
