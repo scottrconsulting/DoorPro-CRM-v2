@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertContactSchema, Contact, InsertContact, CONTACT_STATUSES } from "@shared/schema";
+import { insertContactSchema, Contact, InsertContact, CONTACT_STATUSES, Sale, InsertSale } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/maps";
@@ -228,6 +228,31 @@ export default function ContactForm({
     },
   });
 
+  // Create a sale record
+  const createSaleMutation = useMutation({
+    mutationFn: async (saleData: any) => {
+      const response = await apiRequest("POST", `/api/contacts/${saleData.contactId}/sales`, saleData);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate sales queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      
+      toast({
+        title: "Success",
+        description: "Sale has been recorded successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error creating sale:", error);
+      toast({
+        title: "Error",
+        description: "Failed to record sale. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Form submission handler
   const onSubmit = async (formData: ContactFormValues) => {
     try {
@@ -264,10 +289,9 @@ export default function ContactForm({
         cleanData.appointment = appointmentStr;
       }
       
-      // Add sale data if it's available and status is sold
+      // Store sale details in notes field for reference
       if (formData.status === "sold") {
-        // Store sale details in the notes field using a structured format
-        // This way we don't need to add schema fields for sales data
+        // Include sale details in notes for historical reference
         let saleInfo = "";
         
         if (formData.saleAmount) {
@@ -347,8 +371,41 @@ export default function ContactForm({
           id: initialContact.id,
           data: contactData,
         });
+        
+        // Create sale record if status is "sold" and we have sale amount
+        if (formData.status === "sold" && formData.saleAmount && initialContact.id) {
+          // Create a sale record in the database
+          createSaleMutation.mutate({
+            contactId: initialContact.id,
+            userId: user.id,
+            amount: parseFloat(formData.saleAmount),
+            product: formData.saleNotes || "Unknown product",
+            saleDate: formData.saleDate || new Date().toISOString().split('T')[0],
+            status: "completed",
+            paymentMethod: "Unknown",
+            notes: formData.saleNotes || "",
+          });
+        }
       } else {
-        createContactMutation.mutate(contactData as InsertContact);
+        // For new contacts, we need to wait for the contact to be created before we can add a sale
+        createContactMutation.mutate(contactData as InsertContact, {
+          onSuccess: (newContact) => {
+            // Create sale record if status is "sold" and we have sale amount
+            if (formData.status === "sold" && formData.saleAmount && newContact.id) {
+              // Create a sale record in the database
+              createSaleMutation.mutate({
+                contactId: newContact.id,
+                userId: user.id,
+                amount: parseFloat(formData.saleAmount),
+                product: formData.saleNotes || "Unknown product",
+                saleDate: formData.saleDate || new Date().toISOString().split('T')[0],
+                status: "completed",
+                paymentMethod: "Unknown",
+                notes: formData.saleNotes || "",
+              });
+            }
+          }
+        });
       }
     } catch (error) {
       console.error("Error with contact form:", error);
