@@ -76,7 +76,9 @@ export default function Contacts() {
       }
     },
     onSuccess: () => {
+      // Invalidate both contacts and sales data to update dashboard
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
       setSelectedContacts([]);
       toast({
         title: "Contact(s) deleted",
