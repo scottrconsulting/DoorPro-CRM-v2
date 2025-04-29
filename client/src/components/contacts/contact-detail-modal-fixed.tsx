@@ -60,6 +60,7 @@ import {
 import { format, parseISO, addDays } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import EditContactView from "./edit-contact-view";
 
 // US States for dropdown
 const US_STATES = [
@@ -553,54 +554,12 @@ export default function ContactDetailModal({
     }
   };
 
-  // Handle edit contact form submission
-  const handleEditContactSubmit = async () => {
-    if (!editName || !editAddress) return;
-
-    const contactData: Partial<Contact> = {
-      fullName: editName,
-      address: editAddress,
-      city: editCity || null,
-      state: editState || null,
-      zipCode: editZipCode || null,
-      phone: editPhone || null,
-      email: editEmail || null,
-      status: editStatus,
-    };
-
-    // If location data is provided, attempt to geocode
-    if (contactData.address) {
-      try {
-        const geocodeResult = await geocodeAddress(`${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`);
-        if (geocodeResult) {
-          // These are already stored as strings in the database schema
-          contactData.latitude = geocodeResult.latitude;
-          contactData.longitude = geocodeResult.longitude;
-        }
-      } catch (error) {
-        console.error("Failed to geocode address", error);
-      }
-    }
-
-    editContactMutation.mutate(contactData);
-  };
-
-  // Enable cancel edit mode
-  const handleCancelEdit = () => {
-    // Switch back to notes tab
-    setActiveTab("notes");
-    
-    // Reset form to original values
-    if (contact) {
-      setEditName(contact.fullName);
-      setEditAddress(contact.address);
-      setEditCity(contact.city || "");
-      setEditState(contact.state || "");
-      setEditZipCode(contact.zipCode || "");
-      setEditPhone(contact.phone || "");
-      setEditEmail(contact.email || "");
-      setEditStatus(contact.status);
-    }
+  // Handle contact edit success
+  const handleEditSuccess = (updatedContact: Contact) => {
+    setIsEditMode(false);
+    // Invalidate queries to ensure updated data is shown
+    queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
   };
 
   // Format address for display
@@ -701,25 +660,47 @@ export default function ContactDetailModal({
             {/* Contact info - full width on mobile, 1/3 on large screens */}
             <div className="lg:w-1/3 space-y-4">
               <Card className="overflow-hidden">
+                <CardHeader className="p-3 pb-0 flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-base">Contact Details</CardTitle>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setIsEditMode(true)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
                 <CardContent className="p-0">
-                  <div className="p-3 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-neutral-700 mb-0.5">Address</p>
-                        <a 
-                          href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline block text-sm break-words"
-                        >
-                          {contact.address}
-                          {contact.city && `, ${contact.city}`}
-                          {contact.state && `, ${contact.state}`}
-                          {contact.zipCode && ` ${contact.zipCode}`}
-                        </a>
-                      </div>
+                  {isEditMode ? (
+                    <div className="p-3">
+                      <EditContactView
+                        contactId={contactId}
+                        onCancel={() => setIsEditMode(false)}
+                        onSuccess={handleEditSuccess}
+                      />
                     </div>
+                  ) : (
+                    <div className="p-3 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-neutral-700 mb-0.5">Address</p>
+                          <a 
+                            href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline block text-sm break-words"
+                          >
+                            {contact.address}
+                            {contact.city && `, ${contact.city}`}
+                            {contact.state && `, ${contact.state}`}
+                            {contact.zipCode && ` ${contact.zipCode}`}
+                          </a>
+                        </div>
+                      </div>
 
                     {contact.phone && (
                       <div className="flex items-start gap-2">
@@ -1487,140 +1468,11 @@ export default function ContactDetailModal({
 
                 {/* Edit Contact Tab */}
                 <TabsContent value="edit">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Edit Contact</CardTitle>
-                      <CardDescription>Update contact information</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Contact Name */}
-                      <div className="space-y-1">
-                        <Label htmlFor="editName">Full Name</Label>
-                        <Input 
-                          id="editName"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Contact's full name"
-                        />
-                      </div>
-
-                      {/* Contact Address - Full width */}
-                      <div className="space-y-1">
-                        <Label htmlFor="editAddress">Street Address</Label>
-                        <Input 
-                          id="editAddress"
-                          value={editAddress}
-                          onChange={(e) => setEditAddress(e.target.value)}
-                          placeholder="Street address"
-                        />
-                      </div>
-                      
-                      {/* City, State and Zip in a responsive grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label htmlFor="editCity">City</Label>
-                          <Input 
-                            id="editCity"
-                            value={editCity}
-                            onChange={(e) => setEditCity(e.target.value)}
-                            placeholder="City"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="editState">State</Label>
-                          <Select 
-                            value={editState} 
-                            onValueChange={setEditState}
-                          >
-                            <SelectTrigger id="editState">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {US_STATES.map((state) => (
-                                <SelectItem key={state.value} value={state.value}>
-                                  {state.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="editZipCode">Zip Code</Label>
-                          <Input 
-                            id="editZipCode"
-                            value={editZipCode}
-                            onChange={(e) => setEditZipCode(e.target.value)}
-                            placeholder="Zip Code"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Contact Phone and Email in a responsive grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="editPhone">Phone</Label>
-                          <Input 
-                            id="editPhone"
-                            value={editPhone}
-                            onChange={(e) => setEditPhone(e.target.value)}
-                            placeholder="Phone number"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="editEmail">Email</Label>
-                          <Input 
-                            id="editEmail"
-                            value={editEmail}
-                            onChange={(e) => setEditEmail(e.target.value)}
-                            placeholder="Email address"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="space-y-1 pt-2">
-                        <Label htmlFor="editStatus">Contact Status</Label>
-                        <Select 
-                          value={editStatus} 
-                          onValueChange={setEditStatus}
-                        >
-                          <SelectTrigger id="editStatus">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no_contact">No Contact Yet</SelectItem>
-                            <SelectItem value="contacted">Contacted</SelectItem>
-                            <SelectItem value="interested">Interested</SelectItem>
-                            <SelectItem value="not_interested">Not Interested</SelectItem>
-                            <SelectItem value="no_soliciting">No Soliciting</SelectItem>
-                            <SelectItem value="check_back">Check Back Later</SelectItem>
-                            <SelectItem value="presented">Presented</SelectItem>
-                            <SelectItem value="booked">Booked</SelectItem>
-                            <SelectItem value="sold">Sold</SelectItem>
-                            <SelectItem value="no_answer">No Answer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Button Group */}
-                      <div className="flex justify-between pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleCancelEdit}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleEditContactSubmit}
-                          disabled={!editName || !editAddress || editContactMutation.isPending}
-                        >
-                          {editContactMutation.isPending ? "Saving..." : "Save Changes"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <EditContactView
+                    contactId={contactId}
+                    onCancel={() => setActiveTab("notes")}
+                    onSuccess={handleEditSuccess}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
