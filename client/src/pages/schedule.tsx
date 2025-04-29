@@ -550,7 +550,7 @@ export default function SchedulePage() {
       )}
     
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Task & Appointment Schedule</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Tasks & Bookings Schedule</h1>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
           {/* View mode selector */}
@@ -646,7 +646,7 @@ export default function SchedulePage() {
                   <SelectContent>
                     <SelectItem value="route">Route Planning</SelectItem>
                     <SelectItem value="follow_up">Follow Up</SelectItem>
-                    <SelectItem value="appointment">Appointment</SelectItem>
+                    <SelectItem value="appointment">Booked</SelectItem>
                     <SelectItem value="presentation">Presentation</SelectItem>
                   </SelectContent>
                 </Select>
@@ -945,9 +945,9 @@ export default function SchedulePage() {
                         className={cn(
                           "border-l-4 px-3 py-2 rounded-r-md cursor-pointer hover:shadow-md transition-shadow relative",
                           schedule.type === "route" && "border-blue-500 bg-blue-50",
-                          (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-green-500 bg-green-50",
-                          schedule.type === "appointment" && "border-yellow-500 bg-yellow-50",
-                          schedule.type === "presentation" && "border-purple-500 bg-purple-50"
+                          (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-yellow-500 bg-yellow-50",
+                          schedule.type === "appointment" && "border-blue-500 bg-blue-50",
+                          schedule.type === "presentation" && "border-orange-500 bg-orange-50"
                         )}
                         onClick={() => handleScheduleItemClick(schedule)}
                       >
@@ -981,7 +981,7 @@ export default function SchedulePage() {
                           </div>
                           <div>
                             <Badge variant="outline" className="capitalize text-xs">
-                              {schedule.type.replace("_", " ")}
+                              {schedule.type === "appointment" ? "Booked" : schedule.type.replace("_", " ")}
                             </Badge>
                           </div>
                         </div>
