@@ -953,7 +953,31 @@ export class DatabaseStorage implements IStorage {
 
   async createSale(insertSale: InsertSale): Promise<Sale> {
     try {
-      const result = await db.insert(sales).values(insertSale).returning();
+      // Ensure saleDate is a valid date object
+      let saleData = {...insertSale};
+      
+      // Convert saleDate to a proper Date if it's not already one
+      if (saleData.saleDate && !(saleData.saleDate instanceof Date)) {
+        // If it's a string in ISO format, parse it
+        if (typeof saleData.saleDate === 'string') {
+          saleData.saleDate = new Date(saleData.saleDate);
+        } else {
+          // Default to current date if conversion fails
+          console.log("Invalid sale date format, using current date");
+          saleData.saleDate = new Date();
+        }
+      }
+      
+      // Normalize the time part to avoid timezone issues
+      if (saleData.saleDate instanceof Date) {
+        // Set time to noon to avoid timezone issues
+        const normalizedDate = new Date(saleData.saleDate);
+        normalizedDate.setHours(12, 0, 0, 0);
+        saleData.saleDate = normalizedDate;
+      }
+      
+      console.log("Inserting sale with date:", saleData.saleDate);
+      const result = await db.insert(sales).values(saleData).returning();
       return result[0];
     } catch (error) {
       console.error("Error creating sale:", error);
