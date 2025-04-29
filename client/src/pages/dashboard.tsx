@@ -106,7 +106,18 @@ export default function Dashboard() {
     
     // Calculate sales metrics
     const todaySales = sales.filter(sale => {
+      if (!sale.saleDate) return false;
+      
+      // Parse the sale date string into a proper Date object
       const saleDate = new Date(sale.saleDate);
+      
+      // Check if it's a valid date
+      if (isNaN(saleDate.getTime())) {
+        console.warn("Invalid sale date found:", sale.saleDate);
+        return false;
+      }
+      
+      // Compare with today's date
       return (
         saleDate.getDate() === today.getDate() &&
         saleDate.getMonth() === today.getMonth() &&
@@ -114,7 +125,14 @@ export default function Dashboard() {
       );
     });
     
-    const salesTotal = todaySales.reduce((sum, sale) => sum + Number(sale.amount), 0);
+    console.log("Today's sales:", todaySales);
+    
+    // Calculate total sales amount with better error handling
+    const salesTotal = todaySales.reduce((sum, sale) => {
+      // Ensure we're dealing with a numeric amount
+      const amount = Number(sale.amount);
+      return isNaN(amount) ? sum : sum + amount;
+    }, 0);
     
     // Calculate time worked (from all visits timing)
     const totalMinutesWorked = visits.reduce((total, visit) => {

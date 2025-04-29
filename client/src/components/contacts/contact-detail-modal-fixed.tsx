@@ -987,9 +987,9 @@ export default function ContactDetailModal({
                     <CardContent className="space-y-6">
                       {/* Add Sale form - Simplified for mobile */}
                       <div className="space-y-3">
-                        {/* Product and Amount in one row with larger amount field */}
-                        <div className="flex flex-row gap-2">
-                          <div className="flex-grow space-y-1">
+                        {/* Product and Amount responsive layout */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2 space-y-1">
                             <Label htmlFor="saleProduct">Product</Label>
                             <Input 
                               id="saleProduct"
@@ -998,7 +998,7 @@ export default function ContactDetailModal({
                               placeholder="e.g. Premium Package"
                             />
                           </div>
-                          <div className="w-1/3 space-y-1">
+                          <div className="space-y-1">
                             <Label htmlFor="saleAmount">Amount</Label>
                             <Input 
                               id="saleAmount"
@@ -1011,9 +1011,9 @@ export default function ContactDetailModal({
                           </div>
                         </div>
 
-                        {/* Date and Payment Method in one row */}
-                        <div className="flex flex-row gap-2">
-                          <div className="w-1/2 space-y-1">
+                        {/* Date and Payment Method - responsive grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
                             <Label htmlFor="saleDate">Date</Label>
                             <Input 
                               id="saleDate"
@@ -1022,11 +1022,11 @@ export default function ContactDetailModal({
                               onChange={(e) => setSaleDate(e.target.value)}
                             />
                           </div>
-                          <div className="w-1/2 space-y-1">
-                            <Label htmlFor="salePaymentMethod">Payment</Label>
+                          <div className="space-y-1">
+                            <Label htmlFor="salePaymentMethod">Payment Method</Label>
                             <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
                               <SelectTrigger id="salePaymentMethod" className="h-10">
-                                <SelectValue placeholder="Payment" />
+                                <SelectValue placeholder="Select method" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="cash">Cash</SelectItem>
@@ -1042,12 +1042,12 @@ export default function ContactDetailModal({
                         {/* Status as a separate row with buttons for quick selection */}
                         <div className="space-y-1">
                           <Label>Status</Label>
-                          <div className="flex flex-row gap-2 mt-1">
+                          <div className="flex flex-wrap gap-2 mt-1">
                             <Button 
                               type="button"
                               size="sm"
                               variant={saleStatus === "completed" ? "default" : "outline"}
-                              className={saleStatus === "completed" ? "bg-green-600 hover:bg-green-700" : ""}
+                              className={`flex-1 min-w-[80px] ${saleStatus === "completed" ? "bg-green-600 hover:bg-green-700" : ""}`}
                               onClick={() => setSaleStatus("completed")}
                             >
                               Completed
@@ -1056,7 +1056,7 @@ export default function ContactDetailModal({
                               type="button"
                               size="sm"
                               variant={saleStatus === "pending" ? "default" : "outline"}
-                              className={saleStatus === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                              className={`flex-1 min-w-[80px] ${saleStatus === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
                               onClick={() => setSaleStatus("pending")}
                             >
                               Pending
@@ -1065,7 +1065,7 @@ export default function ContactDetailModal({
                               type="button"
                               size="sm"
                               variant={saleStatus === "cancelled" ? "default" : "outline"}
-                              className={saleStatus === "cancelled" ? "bg-red-600 hover:bg-red-700" : ""}
+                              className={`flex-1 min-w-[80px] ${saleStatus === "cancelled" ? "bg-red-600 hover:bg-red-700" : ""}`}
                               onClick={() => setSaleStatus("cancelled")}
                             >
                               Cancelled
@@ -1173,9 +1173,9 @@ export default function ContactDetailModal({
                           />
                         </div>
 
-                        {/* Due Date and Priority in one row */}
-                        <div className="flex flex-row gap-2">
-                          <div className="w-1/2 space-y-1">
+                        {/* Due Date - Full width on mobile, half on larger screens */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
                             <Label htmlFor="taskDueDate">Due Date</Label>
                             <Input 
                               id="taskDueDate"
@@ -1184,14 +1184,16 @@ export default function ContactDetailModal({
                               onChange={(e) => setTaskDueDate(e.target.value)}
                             />
                           </div>
-                          <div className="w-1/2 space-y-1">
+                          
+                          {/* Priority - Responsive buttons */}
+                          <div className="space-y-1">
                             <Label htmlFor="taskPriority">Priority</Label>
-                            <div className="flex space-x-2 mt-1">
+                            <div className="flex flex-wrap gap-2 mt-1">
                               <Button 
                                 type="button"
                                 size="sm"
                                 variant={taskPriority === "low" ? "default" : "outline"}
-                                className={taskPriority === "low" ? "bg-green-600 hover:bg-green-700 flex-1" : "flex-1"}
+                                className={`flex-1 min-w-[60px] ${taskPriority === "low" ? "bg-green-600 hover:bg-green-700" : ""}`}
                                 onClick={() => setTaskPriority("low")}
                               >
                                 Low
@@ -1200,16 +1202,16 @@ export default function ContactDetailModal({
                                 type="button"
                                 size="sm"
                                 variant={taskPriority === "medium" ? "default" : "outline"}
-                                className={taskPriority === "medium" ? "bg-yellow-600 hover:bg-yellow-700 flex-1" : "flex-1"}
+                                className={`flex-1 min-w-[60px] ${taskPriority === "medium" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
                                 onClick={() => setTaskPriority("medium")}
                               >
-                                Med
+                                Medium
                               </Button>
                               <Button
                                 type="button"
                                 size="sm"
                                 variant={taskPriority === "high" ? "default" : "outline"}
-                                className={taskPriority === "high" ? "bg-red-600 hover:bg-red-700 flex-1" : "flex-1"}
+                                className={`flex-1 min-w-[60px] ${taskPriority === "high" ? "bg-red-600 hover:bg-red-700" : ""}`}
                                 onClick={() => setTaskPriority("high")}
                               >
                                 High
