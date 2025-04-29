@@ -389,14 +389,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         userMarker.setMap(null);
       }
       
-      // Create a blue dot marker for user's current location with a distinct appearance
+      // Create a special My Location marker that looks distinctly different from contact pins
       const newUserMarker = new window.google.maps.Marker({
         position: position,
         map: map,
         icon: {
-          // Use a standard blue dot icon for reliability
-          url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-          scaledSize: new window.google.maps.Size(38, 38), // Larger size for better visibility
+          // Use a much larger blue dot with white border to make it distinctive
+          path: window.google.maps.SymbolPath.CIRCLE,
+          fillColor: "#3b82f6", // Bright blue 
+          fillOpacity: 1.0,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 3,
+          scale: 16 // Make it significantly larger for visibility
         },
         title: "Your Location",
         animation: window.google.maps.Animation.BOUNCE, // Use animation for better visibility
@@ -656,14 +660,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       userMarker.setMap(null);
     }
     
-    // Create a blue dot marker for user's current location
+    // Create a special My Location marker that looks distinctly different from contact pins
     const newUserMarker = new window.google.maps.Marker({
       position: position,
       map: map,
       icon: {
-        // Use a standard blue dot icon for reliability
-        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-        scaledSize: new window.google.maps.Size(38, 38),
+        // Use a much larger blue dot with white border to make it distinctive
+        path: window.google.maps.SymbolPath.CIRCLE,
+        fillColor: "#3b82f6", // Bright blue 
+        fillOpacity: 1.0,
+        strokeColor: "#FFFFFF",
+        strokeWeight: 3,
+        scale: 16 // Make it significantly larger for visibility
       },
       title: "Your Location",
       zIndex: 1000 // Ensure it's above other markers

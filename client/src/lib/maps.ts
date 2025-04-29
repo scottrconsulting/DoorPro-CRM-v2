@@ -71,82 +71,66 @@ function isMobileDevice(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Get user's current location with improved fallback strategy
+// Get user's current location with improved location strategy
 export async function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve) => {
-    // Always make the geolocation attempts, even in Replit preview
-    const isMobile = isMobileDevice();
+    if (!navigator.geolocation) {
+      console.log('Geolocation API not available in this browser');
+      resolve(lastKnownLocation || DEFAULT_LOCATION);
+      return;
+    }
     
-    // Determine if we're in a demo mode
-    const isDemoMode = window.location.hostname.includes('replit.dev');
-    
-    // For demo purposes to ensure it works in Replit preview, provide a fallback location
-    const REPLIT_DEMO_LOCATION = { lat: 44.9778, lng: -93.2650 }; // Minneapolis
-    
-    // Use higher accuracy options in all environments
+    // Always request high accuracy regardless of platform
     const options = {
       enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 30000
+      timeout: 10000, // Longer timeout for better chances
+      maximumAge: 0 // Always get a fresh reading
     };
     
-    if (navigator.geolocation) {
-      // Set a timeout to handle slow geolocation responses
-      const timeoutId = setTimeout(() => {
-        console.log('Geolocation timed out, using fallback location');
-        // In demo mode, use the demo location
-        if (isDemoMode) {
-          console.log('Using demo location for Replit preview');
-          resolve(REPLIT_DEMO_LOCATION);
-        } else {
-          // Use last known location if available, otherwise use default
-          resolve(lastKnownLocation || DEFAULT_LOCATION);
+    console.log('Requesting precise geolocation...');
+    
+    // Set a longer timeout before falling back
+    const timeoutId = setTimeout(() => {
+      console.log('Geolocation request timed out');
+      resolve(lastKnownLocation || DEFAULT_LOCATION);
+    }, 8000);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timeoutId);
+        
+        // Store successful location for future use
+        lastKnownLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        
+        console.log('Got precise location:', lastKnownLocation);
+        resolve(lastKnownLocation);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        console.log('Geolocation error:', error.message);
+        
+        if (error.code === 1) {
+          console.log('Location permission denied. Please enable location services for this site.');
+        } else if (error.code === 2) {
+          console.log('Position unavailable. Your device may not have GPS or it failed to acquire position.');
+        } else if (error.code === 3) {
+          console.log('Location request timed out. Please try again in an area with better GPS reception.');
         }
-      }, 3000);
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          clearTimeout(timeoutId);
-          
-          // Store successful location for future use
-          lastKnownLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          
-          console.log('Got current location:', lastKnownLocation);
+        
+        // Fall back to last known location if available
+        if (lastKnownLocation) {
+          console.log('Using previously known location:', lastKnownLocation);
           resolve(lastKnownLocation);
-        },
-        (error) => {
-          clearTimeout(timeoutId);
-          console.log('Geolocation error:', error.message);
-          
-          // For PERMISSION_DENIED, show a more helpful message in console
-          if (error.code === 1) {
-            console.log('Location permission denied. Please enable location services in your device settings and browser permissions.');
-          }
-          
-          // In demo mode, use the demo location
-          if (isDemoMode) {
-            console.log('Using demo location for Replit preview');
-            resolve(REPLIT_DEMO_LOCATION);
-          } else {
-            // Use last known location if available, otherwise use default
-            resolve(lastKnownLocation || DEFAULT_LOCATION);
-          }
-        },
-        options
-      );
-    } else {
-      console.log('Geolocation not available, using fallback location');
-      // In demo mode, use the demo location
-      if (isDemoMode) {
-        console.log('Using demo location for Replit preview');
-        resolve(REPLIT_DEMO_LOCATION);
-      } else {
-        resolve(lastKnownLocation || DEFAULT_LOCATION);
-      }
-    }
+        } else {
+          console.log('No previous location known, using default location');
+          resolve(DEFAULT_LOCATION);
+        }
+      },
+      options
+    );
   });
 }
 
