@@ -19,8 +19,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
-import NewContactDetailModal from "@/components/contacts/new-contact-detail-modal";
-import UniversalContactForm from "@/components/contacts/universal-contact-form";
+import ContactForm from "@/components/contacts/contact-form";
+import ContactCard from "@/components/contacts/contact-card";
 
 export default function Contacts() {
   console.log("Contacts component is rendering");
@@ -478,10 +478,10 @@ export default function Contacts() {
       </div>
 
       {/* Create Contact Modal */}
-      <UniversalContactForm
+      <ContactForm
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newContact) => {
+        onSuccess={(newContact: Contact) => {
           toast({
             title: "Contact created",
             description: "Your contact was successfully created"
@@ -492,7 +492,7 @@ export default function Contacts() {
 
       {/* Contact Detail Modal */}
       {selectedContactId && (
-        <NewContactDetailModal
+        <ContactCard
           contactId={selectedContactId}
           isOpen={true}
           onClose={() => setSelectedContactId(null)}
