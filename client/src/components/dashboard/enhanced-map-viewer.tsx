@@ -520,9 +520,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               notes: `Quick add: ${new Date().toLocaleString()}`
             });
             
+            // Simplified status display to prevent errors
             toast({
               title: "Contact added",
-              description: `Added pin with status: ${activeStatus === 'presented' && customization?.statusLabels?.presented ? customization.statusLabels.presented : getStatusLabel(activeStatus)}`,
+              description: `Added pin with status: ${activeStatus === 'not_visited' ? 'No Answer' : activeStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`,
             });
           }
         } else {
