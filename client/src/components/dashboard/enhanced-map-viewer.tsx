@@ -181,41 +181,44 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         });
         
         // Create a schedule entry if the contact has appointment/follow-up details
-        if (createdContact.appointmentDate && createdContact.appointmentTime) {
-          const startDateTime = new Date(`${createdContact.appointmentDate}T${createdContact.appointmentTime}`);
-          
-          if (createdContact.status === "booked") {
-            // Create an appointment schedule entry
-            const endDateTime = new Date(startDateTime);
-            endDateTime.setMinutes(endDateTime.getMinutes() + 60); // Default to 1 hour appointment
+        if (createdContact.appointment) {
+          const [apptDate, apptTime] = createdContact.appointment.split(' ');
+          if (apptDate && apptTime) {
+            const startDateTime = new Date(`${apptDate}T${apptTime}`);
             
-            createScheduleEntry({
-              userId: user.id,
-              title: `Appointment with ${createdContact.fullName}`,
-              description: `Sales appointment at ${createdContact.address}`,
-              startTime: startDateTime,
-              endTime: endDateTime,
-              type: "appointment",
-              location: createdContact.address,
-              reminderSent: false,
-              contactIds: [createdContact.id]
-            });
-          } else if (createdContact.status === "check_back") {
-            // Create a follow-up schedule entry
-            const endDateTime = new Date(startDateTime);
-            endDateTime.setMinutes(endDateTime.getMinutes() + 30); // Default to 30 min follow-up
-            
-            createScheduleEntry({
-              userId: user.id,
-              title: `Follow-up with ${createdContact.fullName}`,
-              description: `Check back at ${createdContact.address}`,
-              startTime: startDateTime,
-              endTime: endDateTime,
-              type: "follow_up",
-              location: createdContact.address,
-              reminderSent: false,
-              contactIds: [createdContact.id]
-            });
+            if (createdContact.status === "booked") {
+              // Create an appointment schedule entry
+              const endDateTime = new Date(startDateTime);
+              endDateTime.setMinutes(endDateTime.getMinutes() + 60); // Default to 1 hour appointment
+              
+              createScheduleEntry({
+                userId: user.id,
+                title: `Appointment with ${createdContact.fullName}`,
+                description: `Sales appointment at ${createdContact.address}`,
+                startTime: startDateTime,
+                endTime: endDateTime,
+                type: "appointment",
+                location: createdContact.address,
+                reminderSent: false,
+                contactIds: [createdContact.id]
+              });
+            } else if (createdContact.status === "check_back") {
+              // Create a follow-up schedule entry
+              const endDateTime = new Date(startDateTime);
+              endDateTime.setMinutes(endDateTime.getMinutes() + 30); // Default to 30 min follow-up
+              
+              createScheduleEntry({
+                userId: user.id,
+                title: `Follow-up with ${createdContact.fullName}`,
+                description: `Check back at ${createdContact.address}`,
+                startTime: startDateTime,
+                endTime: endDateTime,
+                type: "follow_up",
+                location: createdContact.address,
+                reminderSent: false,
+                contactIds: [createdContact.id]
+              });
+            }
           }
         }
       }
@@ -1004,17 +1007,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             });
             
             // Handle scheduling based on status
-            if (newContact.appointmentDate && newContact.appointmentTime) {
-              if (newContact.status === "booked") {
-                toast({
-                  title: "Appointment Scheduled",
-                  description: `Successfully scheduled for ${newContact.appointmentDate} at ${newContact.appointmentTime}`,
-                });
-              } else if (newContact.status === "check_back") {
-                toast({
-                  title: "Check Back Scheduled",
-                  description: `Reminder set for ${newContact.appointmentDate} at ${newContact.appointmentTime}`,
-                });
+            if (newContact.appointment) {
+              const [appointmentDate, appointmentTime] = newContact.appointment.split(' ');
+              if (appointmentDate && appointmentTime) {
+                if (newContact.status === "booked") {
+                  toast({
+                    title: "Appointment Scheduled",
+                    description: `Successfully scheduled for ${appointmentDate} at ${appointmentTime}`,
+                  });
+                } else if (newContact.status === "check_back") {
+                  toast({
+                    title: "Check Back Scheduled",
+                    description: `Reminder set for ${appointmentDate} at ${appointmentTime}`,
+                  });
+                }
               }
             }
           }

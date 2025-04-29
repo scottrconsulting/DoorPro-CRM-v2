@@ -78,8 +78,8 @@ const saleFormSchema = z.object({
 // Visit form schema
 const visitFormSchema = z.object({
   visitDate: z.string().min(1, "Visit date is required"),
-  visitType: z.string().min(1, "Visit type is required"),
-  outcome: z.string().min(1, "Outcome is required"),
+  visitType: z.enum(["in_person", "phone", "email", "video"]),
+  outcome: z.enum(["positive", "neutral", "negative"]),
   notes: z.string().optional(),
   followUpNeeded: z.boolean().default(false),
 });
@@ -87,17 +87,16 @@ const visitFormSchema = z.object({
 // Document form schema
 const documentFormSchema = z.object({
   title: z.string().min(1, "Document title is required"),
-  type: z.string().min(1, "Document type is required"),
-  file: z.instanceof(File).optional(),
+  type: z.enum(["contract", "invoice", "proposal", "other"]),
+  file: z.any().optional(), // File input will be handled separately
 });
 
-// Form values type
+// Type definitions
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 type SaleFormValues = z.infer<typeof saleFormSchema>;
 type VisitFormValues = z.infer<typeof visitFormSchema>;
 type DocumentFormValues = z.infer<typeof documentFormSchema>;
 
-// Component props
 interface UniversalContactFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -120,61 +119,57 @@ export default function UniversalContactForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
-  const [activeTab, setActiveTab] = useState("contact"); // Default to contact tab
-  
-  // Use initialContact to determine if we're in editing mode
+  const [activeTab, setActiveTab] = useState("contact");
   const isEditMode = !isAdding;
-  
-  // Parse appointment data from contact if available
-  let appointmentDate = "";
-  let appointmentTime = "";
-  
-  if (initialContact?.appointment) {
-    try {
-      const [datePart, timePart] = initialContact.appointment.split(' ');
-      appointmentDate = datePart || "";
-      appointmentTime = timePart || "";
-    } catch (error) {
-      console.error("Error parsing appointment:", error);
-    }
-  }
 
-  // Create contact form
+  // Initialize the contact form with default values
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: {
-      id: initialContact?.id,
-      fullName: initialContact?.fullName || "",
-      address: initialContact?.address || initialAddress || "",
-      city: initialContact?.city || "",
-      state: initialContact?.state || "",
-      zipCode: initialContact?.zipCode || "",
-      phone: initialContact?.phone || "",
-      email: initialContact?.email || "",
-      status: initialContact?.status || "not_visited",
-      userId: user?.id || 0,
-      appointmentDate: appointmentDate,
-      appointmentTime: appointmentTime,
-      notes: initialContact?.notes || "",
+    defaultValues: isEditMode && initialContact ? {
+      fullName: initialContact.fullName || "",
+      address: initialContact.address || "",
+      city: initialContact.city || "",
+      state: initialContact.state || "",
+      zipCode: initialContact.zipCode || "",
+      email: initialContact.email || "",
+      phone: initialContact.phone || "",
+      status: initialContact.status || "lead",
+      notes: initialContact.notes || "",
+      id: initialContact.id,
+      // Split appointment if it exists
+      ...(initialContact.appointment ? {
+        appointmentDate: initialContact.appointment.split(' ')[0],
+        appointmentTime: initialContact.appointment.split(' ')[1]
+      } : {})
+    } : {
+      fullName: "",
+      address: initialAddress || "",
+      city: "",
+      state: "",
+      zipCode: "",
+      email: "",
+      phone: "",
+      status: "lead",
+      notes: "",
     },
   });
   
-  // Create sale form
+  // Sale form
   const saleForm = useForm<SaleFormValues>({
     resolver: zodResolver(saleFormSchema),
     defaultValues: {
       amount: "",
       product: "",
-      saleDate: new Date().toISOString().split("T")[0], // Today's date
+      saleDate: new Date().toISOString().split("T")[0],
       notes: "",
     },
   });
   
-  // Create visit form
+  // Visit form
   const visitForm = useForm<VisitFormValues>({
     resolver: zodResolver(visitFormSchema),
     defaultValues: {
-      visitDate: new Date().toISOString().split("T")[0], // Today's date
+      visitDate: new Date().toISOString().split("T")[0],
       visitType: "in_person",
       outcome: "neutral",
       notes: "",
@@ -182,7 +177,7 @@ export default function UniversalContactForm({
     },
   });
   
-  // Create document form
+  // Document form
   const documentForm = useForm<DocumentFormValues>({
     resolver: zodResolver(documentFormSchema),
     defaultValues: {
@@ -191,7 +186,7 @@ export default function UniversalContactForm({
     },
   });
 
-  // Update form when initialAddress changes
+  // When initialAddress changes, update the form
   useEffect(() => {
     if (initialAddress) {
       form.setValue("address", initialAddress);
@@ -611,7 +606,6 @@ export default function UniversalContactForm({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Tab interface for editing mode */}
         {isEditMode ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 mb-4">
@@ -639,738 +633,738 @@ export default function UniversalContactForm({
                     )}
                   />
 
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Street Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 Main St" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="City" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="State" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="zipCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Zip Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Zip Code" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="(555) 123-4567" 
-                        value={field.value || ""} 
-                        onChange={field.onChange} 
-                        onBlur={field.onBlur} 
-                        name={field.name} 
-                        ref={field.ref} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="john.doe@example.com" 
-                        value={field.value || ""} 
-                        onChange={field.onChange} 
-                        onBlur={field.onBlur} 
-                        name={field.name} 
-                        ref={field.ref} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {CONTACT_STATUSES.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status
-                            .split("_")
-                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                            .join(" ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Scheduling section only for booked and check_back statuses */}
-            {showSchedulingFields && (
-              <div className="space-y-4 border border-gray-200 rounded-md p-4 bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    {currentStatus === "booked" ? "Appointment Details" : "Follow-up Details"}
-                  </h3>
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="enableScheduling"
-                      checked={showSchedulingFields}
-                      onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input placeholder="City" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <Label htmlFor="enableScheduling" className="ml-2 text-sm">
-                      {currentStatus === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
-                    </Label>
+
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <FormControl>
+                            <Input placeholder="State" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="zipCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Zip Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Zip Code" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="(555) 123-4567" 
+                              value={field.value || ""} 
+                              onChange={field.onChange} 
+                              onBlur={field.onBlur} 
+                              name={field.name} 
+                              ref={field.ref} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="john.doe@example.com" 
+                              value={field.value || ""} 
+                              onChange={field.onChange} 
+                              onBlur={field.onBlur} 
+                              name={field.name} 
+                              ref={field.ref} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CONTACT_STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status
+                                  .split("_")
+                                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                  .join(" ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Scheduling section only for booked and check_back statuses */}
+                  {showSchedulingFields && (
+                    <div className="space-y-4 border border-gray-200 rounded-md p-4 bg-gray-50">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-sm font-medium text-gray-700">
+                          {currentStatus === "booked" ? "Appointment Details" : "Follow-up Details"}
+                        </h3>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="enableScheduling"
+                            checked={showSchedulingFields}
+                            onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
+                          />
+                          <Label htmlFor="enableScheduling" className="ml-2 text-sm">
+                            {currentStatus === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
+                          </Label>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="appointmentDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="date"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="appointmentTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Time</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="time"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional notes about this contact..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={onClose}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={createContactMutation.isPending || updateContactMutation.isPending}
+                    >
+                      {isEditMode 
+                        ? (updateContactMutation.isPending ? "Updating..." : "Update Contact")
+                        : (createContactMutation.isPending ? "Adding..." : "Add Contact")
+                      }
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </TabsContent>
+            
+            {/* Sales Tab */}
+            <TabsContent value="sales">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Record a Sale</h3>
+                <Form {...saleForm}>
+                  <form onSubmit={saleForm.handleSubmit(onSubmitSale)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={saleForm.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amount</FormLabel>
+                            <FormControl>
+                              <Input placeholder="0.00" type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={saleForm.control}
+                        name="product"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product/Service</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Product name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={saleForm.control}
+                      name="saleDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sale Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={saleForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Details about the sale..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button 
+                      type="submit"
+                      disabled={createSaleMutation.isPending}
+                    >
+                      {createSaleMutation.isPending ? "Recording..." : "Record Sale"}
+                    </Button>
+                  </form>
+                </Form>
+              </div>
+            </TabsContent>
+            
+            {/* Visits Tab */}
+            <TabsContent value="visits">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Record a Visit</h3>
+                <Form {...visitForm}>
+                  <form onSubmit={visitForm.handleSubmit(onSubmitVisit)} className="space-y-4">
+                    <FormField
+                      control={visitForm.control}
+                      name="visitDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Visit Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={visitForm.control}
+                        name="visitType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Visit Type</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="in_person">In Person</SelectItem>
+                                <SelectItem value="phone">Phone</SelectItem>
+                                <SelectItem value="email">Email</SelectItem>
+                                <SelectItem value="video">Video</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={visitForm.control}
+                        name="outcome"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Outcome</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select outcome" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="positive">Positive</SelectItem>
+                                <SelectItem value="neutral">Neutral</SelectItem>
+                                <SelectItem value="negative">Negative</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={visitForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Details about the visit..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={visitForm.control}
+                      name="followUpNeeded"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              Follow-up needed
+                            </FormLabel>
+                            <p className="text-sm text-muted-foreground">
+                              Check if a follow-up action is required
+                            </p>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    <Button 
+                      type="submit"
+                      disabled={createVisitMutation.isPending}
+                    >
+                      {createVisitMutation.isPending ? "Recording..." : "Record Visit"}
+                    </Button>
+                  </form>
+                </Form>
+              </div>
+            </TabsContent>
+            
+            {/* Documents Tab */}
+            <TabsContent value="documents">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Upload a Document</h3>
+                <Form {...documentForm}>
+                  <form className="space-y-4">
+                    <FormField
+                      control={documentForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Document Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Contract title" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={documentForm.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Document Type</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="contract">Contract</SelectItem>
+                              <SelectItem value="invoice">Invoice</SelectItem>
+                              <SelectItem value="proposal">Proposal</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center">
+                      <Input 
+                        type="file" 
+                        className="w-full" 
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            documentForm.setValue('file', e.target.files[0]);
+                          }
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Upload PDF, Word, or image files
+                      </p>
+                    </div>
+                    <Button 
+                      type="button"
+                      onClick={documentForm.handleSubmit(onSubmitDocument)}
+                      disabled={createDocumentMutation.isPending}
+                    >
+                      {createDocumentMutation.isPending ? "Uploading..." : "Upload Document"}
+                    </Button>
+                  </form>
+                </Form>
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          // Add New Contact mode - simple form without tabs
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main St" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input placeholder="State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zip Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Zip Code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="(555) 123-4567" 
+                          value={field.value || ""} 
+                          onChange={field.onChange} 
+                          onBlur={field.onBlur} 
+                          name={field.name} 
+                          ref={field.ref} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="john.doe@example.com" 
+                          value={field.value || ""} 
+                          onChange={field.onChange} 
+                          onBlur={field.onBlur} 
+                          name={field.name} 
+                          ref={field.ref} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CONTACT_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status
+                              .split("_")
+                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                              .join(" ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Scheduling section only for booked and check_back statuses */}
+              {showSchedulingFields && (
+                <div className="space-y-4 border border-gray-200 rounded-md p-4 bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      {currentStatus === "booked" ? "Appointment Details" : "Follow-up Details"}
+                    </h3>
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="enableScheduling"
+                        checked={showSchedulingFields}
+                        onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
+                      />
+                      <Label htmlFor="enableScheduling" className="ml-2 text-sm">
+                        {currentStatus === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
+                      </Label>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="appointmentDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="appointmentTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Time</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="appointmentDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="appointmentTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Time</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="time"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Additional notes about this contact..."
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
               )}
-            />
 
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={createContactMutation.isPending || updateContactMutation.isPending}
-              >
-                {isEditMode 
-                  ? (updateContactMutation.isPending ? "Updating..." : "Update Contact")
-                  : (createContactMutation.isPending ? "Adding..." : "Add Contact")
-                }
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-        </TabsContent>
-        
-        {/* Sales Tab */}
-        <TabsContent value="sales">
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Record a Sale</h3>
-            <Form {...saleForm}>
-              <form onSubmit={saleForm.handleSubmit(onSubmitSale)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={saleForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0.00" type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={saleForm.control}
-                    name="product"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Product/Service</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Product name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={saleForm.control}
-                  name="saleDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sale Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={saleForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Details about the sale..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Additional notes about this contact..."
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose}
+                >
+                  Cancel
+                </Button>
                 <Button 
                   type="submit"
-                  disabled={createSaleMutation.isPending}
+                  disabled={createContactMutation.isPending}
                 >
-                  {createSaleMutation.isPending ? "Recording..." : "Record Sale"}
+                  {createContactMutation.isPending ? "Adding..." : "Add Contact"}
                 </Button>
-              </form>
-            </Form>
-          </div>
-        </TabsContent>
-        
-        {/* Visits Tab */}
-        <TabsContent value="visits">
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Record a Visit</h3>
-            <Form {...visitForm}>
-              <form onSubmit={visitForm.handleSubmit(onSubmitVisit)} className="space-y-4">
-                <FormField
-                  control={visitForm.control}
-                  name="visitDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Visit Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={visitForm.control}
-                    name="visitType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Visit Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="in_person">In Person</SelectItem>
-                            <SelectItem value="phone">Phone</SelectItem>
-                            <SelectItem value="email">Email</SelectItem>
-                            <SelectItem value="video">Video</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={visitForm.control}
-                    name="outcome"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Outcome</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select outcome" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="positive">Positive</SelectItem>
-                            <SelectItem value="neutral">Neutral</SelectItem>
-                            <SelectItem value="negative">Negative</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={visitForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Details about the visit..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={visitForm.control}
-                  name="followUpNeeded"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Follow-up needed
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Check if a follow-up action is required
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <Button 
-                  type="submit"
-                  disabled={createVisitMutation.isPending}
-                >
-                  {createVisitMutation.isPending ? "Recording..." : "Record Visit"}
-                </Button>
-              </form>
-            </Form>
-          </div>
-        </TabsContent>
-        
-        {/* Documents Tab */}
-        <TabsContent value="documents">
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Upload a Document</h3>
-            <Form {...documentForm}>
-              <form className="space-y-4">
-                <FormField
-                  control={documentForm.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Document Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Contract title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={documentForm.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Document Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="contract">Contract</SelectItem>
-                          <SelectItem value="invoice">Invoice</SelectItem>
-                          <SelectItem value="proposal">Proposal</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center">
-                  <Input 
-                    type="file" 
-                    className="w-full" 
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        documentForm.setValue('file', e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Upload PDF, Word, or image files
-                  </p>
-                </div>
-                <Button 
-                  type="button"
-                  onClick={documentForm.handleSubmit(onSubmitDocument)}
-                  disabled={createDocumentMutation.isPending}
-                >
-                  {createDocumentMutation.isPending ? "Uploading..." : "Upload Document"}
-                </Button>
-              </form>
-            </Form>
-          </div>
-        </TabsContent>
-      </Tabs>
-    ) : (
-      // Add New Contact mode - simple form without tabs
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="fullName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="John Doe" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Street Address</FormLabel>
-                <FormControl>
-                  <Input placeholder="123 Main St" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="City" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input placeholder="State" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="zipCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Zip Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Zip Code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="(555) 123-4567" 
-                      value={field.value || ""} 
-                      onChange={field.onChange} 
-                      onBlur={field.onBlur} 
-                      name={field.name} 
-                      ref={field.ref} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="john.doe@example.com" 
-                      value={field.value || ""} 
-                      onChange={field.onChange} 
-                      onBlur={field.onBlur} 
-                      name={field.name} 
-                      ref={field.ref} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {CONTACT_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status
-                          .split("_")
-                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                          .join(" ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Scheduling section only for booked and check_back statuses */}
-          {showSchedulingFields && (
-            <div className="space-y-4 border border-gray-200 rounded-md p-4 bg-gray-50">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium text-gray-700">
-                  {currentStatus === "booked" ? "Appointment Details" : "Follow-up Details"}
-                </h3>
-                <div className="flex items-center">
-                  <Checkbox 
-                    id="enableScheduling"
-                    checked={showSchedulingFields}
-                    onCheckedChange={(checked) => setShowSchedulingFields(!!checked)}
-                  />
-                  <Label htmlFor="enableScheduling" className="ml-2 text-sm">
-                    {currentStatus === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
-                  </Label>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="appointmentDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="appointmentTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="time"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          )}
-
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Additional notes about this contact..."
-                    rows={3}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              disabled={createContactMutation.isPending}
-            >
-              {createContactMutation.isPending ? "Adding..." : "Add Contact"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </Form>
-    )}
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
