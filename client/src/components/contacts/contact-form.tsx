@@ -126,26 +126,35 @@ export default function ContactForm({
     },
   });
   
-  // Update conditional fields visibility and reset form when dialog opens
+  // Only update conditional fields visibility when dialog opens - just once
   useEffect(() => {
     if (isOpen) {
-      // Reset the form to initialContact values when dialog opens
-      form.reset({
-        fullName: initialContact?.fullName || "", // Critical: Use initialContact value
-        address: initialContact?.address || "",
-        city: initialContact?.city || "",
-        state: initialContact?.state || "",
-        zipCode: initialContact?.zipCode || "",
-        phone: initialContact?.phone || "",
-        email: initialContact?.email || "",
-        status: initialContact?.status || "not_visited",
-        notes: initialContact?.notes || "",
-        appointmentDate: "",
-        appointmentTime: "",
-        saleAmount: "",
-        saleDate: new Date().toISOString().split('T')[0],
-        saleNotes: "",
-      });
+      // Only do a one-time initialization when the form opens
+      // DO NOT reset the form continuously while it's open
+      
+      // Track initialization with a local ref to avoid TypeScript issues
+      const formValues = form.getValues();
+      const hasInitialized = formValues.fullName !== "";
+      
+      if (!hasInitialized) {
+        // Only reset once when dialog first opens
+        form.reset({
+          fullName: initialContact?.fullName || "", 
+          address: initialContact?.address || "",
+          city: initialContact?.city || "",
+          state: initialContact?.state || "",
+          zipCode: initialContact?.zipCode || "",
+          phone: initialContact?.phone || "",
+          email: initialContact?.email || "",
+          status: initialContact?.status || "not_visited",
+          notes: initialContact?.notes || "",
+          appointmentDate: "",
+          appointmentTime: "",
+          saleAmount: "",
+          saleDate: new Date().toISOString().split('T')[0],
+          saleNotes: "",
+        });
+      }
       
       const currentStatus = initialContact?.status || "not_visited";
       // Set visibility flags based on status
@@ -156,7 +165,7 @@ export default function ContactForm({
         "- Shows appointment fields:", currentStatus === "booked" || currentStatus === "check_back",
         "- Shows sale fields:", currentStatus === "sold");
     }
-  }, [isOpen, form, initialContact]);
+  }, [isOpen, initialContact, form]);
 
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
@@ -374,13 +383,17 @@ export default function ContactForm({
                   <FormControl>
                     <Input 
                       placeholder="Enter name (required)" 
-                      {...field} 
-                      // Make sure we use the value directly from the field to ensure reset works
-                      value={field.value}
+                      // Do NOT spread field props here as it would override our value
+                      // Don't use explicit value={field.value} - it causes reset conflicts
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value);
+                        // Simply pass the event value to field.onChange
+                        field.onChange(e.target.value);
                       }}
+                      // Ensure the input shows what the user types, not what form.reset sets
+                      defaultValue={field.value || ""}
                       autoFocus // Automatically focus this field for better UX
                     />
                   </FormControl>
