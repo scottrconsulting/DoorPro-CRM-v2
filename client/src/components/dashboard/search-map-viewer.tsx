@@ -190,11 +190,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     },
     onError: (error) => {
       console.error("Failed to create contact", error);
-      toast({
-        title: "Failed to create contact",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
     },
   });
   
@@ -220,20 +217,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     },
     onSuccess: (contactId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      toast({
-        title: "Contact deleted",
-        description: "The contact has been successfully deleted",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
       // Remove from selected contacts if needed
       setSelectedContacts((prev) => prev.filter(id => id !== contactId));
     },
     onError: (error) => {
       console.error("Failed to delete contact", error);
-      toast({
-        title: "Failed to delete contact",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
     }
   });
   
@@ -246,11 +238,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Handle address search
   const handleAddressSearch = async () => {
     if (!searchQuery.trim()) {
-      toast({
-        title: "Search Error",
-        description: "Please enter an address to search",
-        variant: "destructive",
-      });
+      // Toast notification removed per user request
+      // No notification will be shown
       return;
     }
     
