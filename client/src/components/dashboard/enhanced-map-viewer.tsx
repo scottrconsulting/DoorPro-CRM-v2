@@ -920,25 +920,25 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           >
             Search
           </Button>
-        </div>
-      </div>
-      
-      {/* Other Controls - Right side */}
-      <div className="absolute top-16 right-4 flex flex-col gap-2 z-10">
-        
-        {/* Location and Search Controls */}
-        <div className="bg-white p-1.5 rounded-lg shadow-lg flex flex-col gap-2">
+          
+          {/* My Location button moved parallel with search */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleMyLocationClick}
-            className="text-xs px-2 py-1 h-7"
+            className="text-xs"
           >
             My Location
           </Button>
-          
-          {/* Street View Exit Button - Only shown when in street view */}
-          {inStreetView && (
+        </div>
+      </div>
+      
+      {/* Other Controls - Right side */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        
+        {/* Street View Exit Button - Only shown when in street view */}
+        {inStreetView && (
+          <div className="bg-white p-1.5 rounded-lg shadow-lg">
             <Button
               variant="default"
               size="sm"
@@ -946,12 +946,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 exitStreetView();
                 setInStreetView(false);
               }}
-              className="mt-2"
             >
               Exit Street View
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       
       {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
@@ -1000,9 +999,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         )}
       </div>
       
-      {/* Map Type Controls */}
-      <div className="absolute bottom-4 right-4 z-10">
-        <div className="bg-white rounded-lg shadow-lg flex flex-col p-1 gap-1">
+      {/* Map Type Controls - Moved to top right */}
+      <div className="absolute top-20 right-4 z-10">
+        <div className="bg-white rounded-lg shadow-lg flex flex-row p-1 gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -1030,7 +1029,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               setMapType('satellite');
             }}
           >
-            Satellite
+            Sat
           </Button>
           <Button
             variant="ghost"
@@ -1044,7 +1043,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               setMapType('hybrid');
             }}
           >
-            Hybrid
+            Hyb
           </Button>
           <Button
             variant="ghost"
@@ -1058,7 +1057,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               setMapType('terrain');
             }}
           >
-            Terrain
+            Ter
           </Button>
         </div>
       </div>
