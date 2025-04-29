@@ -672,11 +672,11 @@ export default function ContactDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="mb-6 relative">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <div className="mb-4 relative">
           <div className="flex items-start justify-between">
-            <div>
-              <DialogTitle className="text-2xl font-bold">{contact.fullName}</DialogTitle>
+            <div className="w-full pr-6">
+              <DialogTitle className="text-xl sm:text-2xl font-bold break-words">{contact.fullName}</DialogTitle>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Badge 
                   className={cn(
@@ -689,14 +689,14 @@ export default function ContactDetailModal({
                 </Badge>
 
                 {contact.lastVisited && (
-                  <Badge variant="outline" className="text-neutral-600 border-neutral-300">
-                    Last visited: {formatDistanceToNow(new Date(contact.lastVisited), { addSuffix: true })}
+                  <Badge variant="outline" className="text-neutral-600 border-neutral-300 text-xs">
+                    Last: {formatDistanceToNow(new Date(contact.lastVisited), { addSuffix: true })}
                   </Badge>
                 )}
 
                 {contact.source && (
-                  <Badge variant="outline" className="text-neutral-600 border-neutral-300">
-                    Source: {contact.source}
+                  <Badge variant="outline" className="text-neutral-600 border-neutral-300 text-xs">
+                    {contact.source}
                   </Badge>
                 )}
               </div>
@@ -704,22 +704,22 @@ export default function ContactDetailModal({
           </div>
         </div>
 
-        <div className="px-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Contact info sidebar - 1/3 width on large screens, full width on small */}
-            <div className="lg:w-1/3 space-y-6">
+        <div className="px-0 sm:px-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Contact info - full width on mobile, 1/3 on large screens */}
+            <div className="lg:w-1/3 space-y-4">
               <Card className="overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 mt-0.5 text-neutral-600 flex-shrink-0" />
-                      <div>
+                  <div className="p-3 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-neutral-700 mb-0.5">Address</p>
                         <a 
                           href={`https://maps.google.com/?q=${encodeURIComponent(contact.address)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline block"
+                          className="text-blue-600 hover:underline block text-sm break-words"
                         >
                           {contact.address}
                           {contact.city && `, ${contact.city}`}
@@ -730,11 +730,11 @@ export default function ContactDetailModal({
                     </div>
 
                     {contact.phone && (
-                      <div className="flex items-start gap-3">
-                        <Phone className="h-5 w-5 mt-0.5 text-neutral-600 flex-shrink-0" />
-                        <div>
+                      <div className="flex items-start gap-2">
+                        <Phone className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-neutral-700 mb-0.5">Phone</p>
-                          <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                          <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline text-sm break-words">
                             {contact.phone}
                           </a>
                         </div>
@@ -742,11 +742,11 @@ export default function ContactDetailModal({
                     )}
 
                     {contact.email && (
-                      <div className="flex items-start gap-3">
-                        <Mail className="h-5 w-5 mt-0.5 text-neutral-600 flex-shrink-0" />
-                        <div>
+                      <div className="flex items-start gap-2">
+                        <Mail className="h-4 w-4 mt-0.5 text-neutral-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-neutral-700 mb-0.5">Email</p>
-                          <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
+                          <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline text-sm break-words">
                             {contact.email}
                           </a>
                         </div>
@@ -767,26 +767,26 @@ export default function ContactDetailModal({
             {/* Main content area - 2/3 width on large screens, full width on small */}
             <div className="lg:w-2/3">
               <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="notes">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Notes & History
+                <TabsList className="mb-4 w-full overflow-x-auto flex justify-start no-scrollbar">
+                  <TabsTrigger value="notes" className="flex-shrink-0">
+                    <FileText className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline">Notes</span>
                   </TabsTrigger>
-                  <TabsTrigger value="schedule">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Schedule
+                  <TabsTrigger value="schedule" className="flex-shrink-0">
+                    <Calendar className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline">Schedule</span>
                   </TabsTrigger>
-                  <TabsTrigger value="sales">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Sales
+                  <TabsTrigger value="sales" className="flex-shrink-0">
+                    <DollarSign className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline">Sales</span>
                   </TabsTrigger>
-                  <TabsTrigger value="tasks">
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Tasks
+                  <TabsTrigger value="tasks" className="flex-shrink-0">
+                    <CheckSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline">Tasks</span>
                   </TabsTrigger>
-                  <TabsTrigger value="documents">
-                    <File className="h-4 w-4 mr-2" />
-                    Documents
+                  <TabsTrigger value="documents" className="flex-shrink-0">
+                    <File className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="sm:inline">Files</span>
                   </TabsTrigger>
                 </TabsList>
 
