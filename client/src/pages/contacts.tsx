@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
-import ContactDetailModal from "@/components/contacts/contact-detail-modal";
+import NewContactDetailModal from "@/components/contacts/new-contact-detail-modal";
 import UniversalContactForm from "@/components/contacts/universal-contact-form";
 
 export default function Contacts() {
@@ -492,7 +492,7 @@ export default function Contacts() {
 
       {/* Contact Detail Modal */}
       {selectedContactId && (
-        <ContactDetailModal
+        <NewContactDetailModal
           contactId={selectedContactId}
           isOpen={true}
           onClose={() => setSelectedContactId(null)}
