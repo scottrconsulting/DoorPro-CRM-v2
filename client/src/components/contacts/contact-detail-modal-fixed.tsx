@@ -132,6 +132,7 @@ export default function ContactDetailModal({
   const [followUpDate, setFollowUpDate] = useState(format(addDays(new Date(), 2), "yyyy-MM-dd"));
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("follow_up");
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Active tab state - ensure it's initialized with a valid value
   const [activeTab, setActiveTab] = useState<string>("notes");
@@ -156,16 +157,7 @@ export default function ContactDetailModal({
   const [documentDescription, setDocumentDescription] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
 
-  // Edit contact state
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editAddress, setEditAddress] = useState("");
-  const [editCity, setEditCity] = useState("");
-  const [editState, setEditState] = useState("");
-  const [editZipCode, setEditZipCode] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editStatus, setEditStatus] = useState("");
+  // We'll use the new EditContactView component instead of these fields
 
   // Fetch contact details
   const { data: contact, isLoading: isLoadingContact } = useQuery<Contact>({
@@ -429,19 +421,14 @@ export default function ContactDetailModal({
     },
   });
 
-  // Initialize edit form with contact data when it loads
-  useEffect(() => {
-    if (contact) {
-      setEditName(contact.fullName);
-      setEditAddress(contact.address);
-      setEditCity(contact.city || "");
-      setEditState(contact.state || "");
-      setEditZipCode(contact.zipCode || "");
-      setEditPhone(contact.phone || "");
-      setEditEmail(contact.email || "");
-      setEditStatus(contact.status);
-    }
-  }, [contact]);
+  // Handle toggling edit mode
+  const handleEnterEditMode = () => {
+    setIsEditMode(true);
+  };
+  
+  const handleExitEditMode = () => {
+    setIsEditMode(false);
+  };
 
   // Handle note form submission
   const handleNoteSubmit = async () => {
