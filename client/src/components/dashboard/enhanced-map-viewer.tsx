@@ -7,7 +7,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Contact, InsertContact, InsertVisit, InsertSchedule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import UniversalContactForm from "@/components/contacts/universal-contact-form";
+import ContactForm from "@/components/contacts/contact-form";
+import ContactCard from "@/components/contacts/contact-card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -965,8 +966,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       </div>
       
-      {/* New Contact Dialog - Using Universal Form Component */}
-      <UniversalContactForm
+      {/* New Contact Dialog - Using our new consolidated Form Component */}
+      <ContactForm
         isOpen={showNewContactDialog}
         onClose={() => setShowNewContactDialog(false)}
         initialContact={{
@@ -982,7 +983,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           latitude: newContactCoords?.lat.toString() || "",
           longitude: newContactCoords?.lng.toString() || "",
         }}
-        onSuccess={(newContact) => {
+        onSuccess={(newContact: Contact) => {
           // Handle successful creation
           queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
           
@@ -1025,7 +1026,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             }
           }
         }}
-        isAdding={true}
       />
 
       {/* Delete Contact Confirmation Dialog */}
