@@ -8,6 +8,23 @@ import { insertContactSchema, Contact, InsertContact, CONTACT_STATUSES } from "@
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/maps";
+
+// Extended interface to include appointment field
+interface ContactData {
+  fullName: string;
+  address: string;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  phone: string | null;
+  email: string | null;
+  status: string;
+  notes: string | null;
+  appointment?: string;
+  latitude?: string;
+  longitude?: string;
+  userId?: number;
+}
 import {
   Dialog,
   DialogContent,
@@ -92,6 +109,9 @@ export default function ContactForm({
       email: initialContact?.email || "",
       status: initialContact?.status || "not_visited",
       notes: initialContact?.notes || "",
+      // Add appointment fields with default empty values
+      appointmentDate: "",
+      appointmentTime: "",
     },
   });
 
@@ -113,6 +133,8 @@ export default function ContactForm({
         email: initialContact.email || "",
         status: initialContact.status || "not_visited",
         notes: initialContact.notes || "",
+        appointmentDate: currentValues.appointmentDate || "",
+        appointmentTime: currentValues.appointmentTime || "",
       });
     }
   }, [initialContact, form]);
@@ -188,7 +210,7 @@ export default function ContactForm({
       }
 
       // Clean the data to ensure we only send what's expected
-      const cleanData = {
+      const cleanData: ContactData = {
         fullName: formData.fullName,
         address: formData.address,
         city: formData.city || null,
@@ -212,7 +234,7 @@ export default function ContactForm({
       }
 
       // If we already have coordinates, keep them
-      let contactData: any = {
+      let contactData: ContactData = {
         ...cleanData,
         userId: user.id,
       };
