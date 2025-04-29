@@ -60,10 +60,7 @@ export async function geocodeAddress(address: string): Promise<IGeocodingResult 
   }
 }
 
-// Default location (Nebraska, USA) as fallback
-const DEFAULT_LOCATION = { lat: 44.9778, lng: -93.2650 }; // Minneapolis, matching demo location
-
-// Store previous known location to use as fallback before default
+// Store the most recent successful location
 let lastKnownLocation: { lat: number; lng: number } | null = null;
 
 // Check if on a mobile device
@@ -73,27 +70,36 @@ function isMobileDevice(): boolean {
 
 // Get user's current location with improved location strategy
 export async function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       console.log('Geolocation API not available in this browser');
-      resolve(lastKnownLocation || DEFAULT_LOCATION);
+      if (lastKnownLocation) {
+        resolve(lastKnownLocation);
+      } else {
+        reject(new Error('Geolocation not available and no previous location found'));
+      }
       return;
     }
     
-    // Always request high accuracy regardless of platform
+    // Always request high accuracy for proper real-time tracking
     const options = {
       enableHighAccuracy: true,
-      timeout: 10000, // Longer timeout for better chances
-      maximumAge: 0 // Always get a fresh reading
+      timeout: 15000, // Longer timeout for better location acquisition
+      maximumAge: 0 // Always get a fresh reading each time for real-time movement
     };
     
-    console.log('Requesting precise geolocation...');
+    console.log('Requesting real-time GPS location...');
     
-    // Set a longer timeout before falling back
+    // Set a timeout for location acquisition
     const timeoutId = setTimeout(() => {
       console.log('Geolocation request timed out');
-      resolve(lastKnownLocation || DEFAULT_LOCATION);
-    }, 8000);
+      if (lastKnownLocation) {
+        console.log('Using last known position while trying again');
+        resolve(lastKnownLocation);
+      } else {
+        reject(new Error('Location acquisition timed out and no previous location available'));
+      }
+    }, 12000);
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -120,22 +126,14 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
           console.log('Location request timed out. Please try again in an area with better GPS reception or WiFi connection.');
         }
         
-        // Check if we're in a Replit environment
-        const isReplitEnv = window.location.hostname.includes('replit') || 
-                           window.location.hostname.includes('repl.co');
-        
-        if (isReplitEnv) {
-          // Use Minneapolis coordinates for Replit preview
-          console.log('Using demo location for Replit preview');
-          resolve(DEFAULT_LOCATION);
-        }
-        // Fall back to last known location if available
-        else if (lastKnownLocation) {
-          console.log('Using previously known location:', lastKnownLocation);
+        // Use the last known location if we have one
+        if (lastKnownLocation) {
+          console.log('Using last known position while trying to acquire new location');
           resolve(lastKnownLocation);
         } else {
-          console.log('No previous location known, using default location');
-          resolve(DEFAULT_LOCATION);
+          console.log('No previous location known, cannot determine current position');
+          // Reject the promise instead of using a default location
+          reject(new Error('Cannot determine location. Please ensure location services are enabled.'));
         }
       },
       options

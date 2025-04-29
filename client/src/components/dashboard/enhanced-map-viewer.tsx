@@ -692,13 +692,23 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setUserMarker(newUserMarker);
   }, [map, panTo, userMarker]);
   
-  // Get user's location on map load - but only once when the component first mounts
+  // Set up real-time location tracking that continuously updates every 30 seconds
   useEffect(() => {
-    if (isLoaded && map && !hasLocatedUser.current) {
-      hasLocatedUser.current = true;
-      // Silently locate user without showing toast notification
+    if (!isLoaded || !map) return;
+    
+    // Immediately get initial location when map loads
+    locateUserSilently();
+    
+    // Set up interval for continuous real-time tracking
+    const locationTrackingInterval = setInterval(() => {
+      // Re-request location every 30 seconds to keep location current
       locateUserSilently();
-    }
+    }, 30000); // 30 seconds in milliseconds
+    
+    // Clean up interval when component unmounts
+    return () => {
+      clearInterval(locationTrackingInterval);
+    };
   }, [isLoaded, map, locateUserSilently]);
 
   // Update markers when contacts or customization changes
