@@ -557,7 +557,24 @@ export default function ContactDetailModal({
       status: "pending",
     };
     
+    // Also create a schedule entry for this task so it shows up in the schedule page
+    const taskDueDateObj = new Date(taskDueDate);
+    const endDateObj = new Date(taskDueDateObj);
+    endDateObj.setMinutes(endDateObj.getMinutes() + 30); // Default duration of 30 minutes
+    
+    const scheduleData: InsertSchedule = {
+      userId: 1, // TODO: Get from auth context
+      title: taskTitle,
+      description: taskDescription || undefined,
+      startTime: taskDueDateObj,
+      endTime: endDateObj,
+      type: "task", // Using task type to differentiate from appointments
+      contactIds: [contactId], // Link to this contact
+    };
+    
+    // Mutate both the task table and the schedules table
     addTaskMutation.mutate(taskData);
+    scheduleFollowUpMutation.mutate(scheduleData);
   };
   
   // Handle document upload
