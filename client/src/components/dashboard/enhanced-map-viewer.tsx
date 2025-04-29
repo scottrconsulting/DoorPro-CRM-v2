@@ -376,7 +376,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Handle my location button click
   const handleMyLocationClick = async () => {
     try {
-      setLoading(true); // Show loading state while getting location
+      // No need for loading state as it might cause UI issues
       console.log("Getting current location...");
       const position = await getCurrentLocation();
       console.log("Current location:", position);
@@ -409,18 +409,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           zIndex: 1000 // Ensure it's above other markers
         });
         
-        // Add a small accuracy circle around the user's location
-        const accuracyCircle = new window.google.maps.Circle({
-          map: map,
-          center: position,
-          radius: 100, // 100 meters accuracy radius
-          fillColor: "#4285F4",
-          fillOpacity: 0.15,
-          strokeColor: "#4285F4",
-          strokeOpacity: 0.4,
-          strokeWeight: 1,
-        });
-        
         // Store the new marker reference
         setUserMarker(newUserMarker);
         
@@ -438,8 +426,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         description: "Please enable location services in your device settings to track your location",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false); // Hide loading state
     }
   };
   
@@ -652,8 +638,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       const position = await getCurrentLocation();
       console.log("Auto-locate position:", position);
       
-      panTo(position);
-      map.setZoom(15);
+      // Only update marker position without changing map zoom or center
+      // This provides real-time tracking without disrupting the user's map view
       
       // Remove previous user location marker if it exists
       if (userMarker) {
@@ -677,18 +663,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         zIndex: 1000 // Ensure it's above other markers
       });
       
-      // Add a small accuracy circle around the user's location
-      const accuracyCircle = new window.google.maps.Circle({
-        map: map,
-        center: position,
-        radius: 100, // 100 meters accuracy radius
-        fillColor: "#4285F4",
-        fillOpacity: 0.15,
-        strokeColor: "#4285F4",
-        strokeOpacity: 0.4,
-        strokeWeight: 1,
-      });
-      
       // Store the new marker reference
       setUserMarker(newUserMarker);
     } catch (error) {
@@ -696,7 +670,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       console.log("Location tracking error (silent):", error);
       // Don't show error notifications for automatic background tracking
     }
-  }, [map, panTo, userMarker]);
+  }, [map, userMarker]);
   
   // Set up real-time location tracking that continuously updates every 30 seconds
   useEffect(() => {
