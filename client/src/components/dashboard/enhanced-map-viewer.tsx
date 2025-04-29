@@ -1051,15 +1051,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Contact Card for Selected Contact */}
-      {selectedContact && (
-        <ContactCard
-          contactId={selectedContact.id}
-          isOpen={!!selectedContact}
-          onClose={() => setSelectedContact(null)}
-        />
-      )}
     </div>
   );
 }
