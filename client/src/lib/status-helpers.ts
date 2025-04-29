@@ -84,82 +84,83 @@ export function getColorStyle(status: string, pinColors?: Record<string, string>
  * Returns a badge component configuration for status badges.
  * 
  * @param status The status from the database
+ * @param statusLabels Optional map of custom status labels from user settings
  * @returns Configuration with background, text color and label
  */
-export function getStatusBadgeConfig(status: string): { bg: string; text: string; label: string } {
+export function getStatusBadgeConfig(status: string, statusLabels?: Record<string, string>): { bg: string; text: string; label: string } {
   const config: Record<string, { bg: string; text: string; label: string }> = {
     // Consistent with DEFAULT_PIN_COLORS mapping from schema.ts
     no_answer: {
       bg: "bg-pink-100",
       text: "text-pink-800",
-      label: getStatusLabel("no_answer"),
+      label: getStatusLabel("no_answer", statusLabels),
     },
     not_visited: {  // For backward compatibility
       bg: "bg-pink-100",
       text: "text-pink-800",
-      label: "No Answer", // Hard-code the No Answer label
+      label: getStatusLabel("no_answer", statusLabels), // Map to no_answer for custom labels
     },
     presented: {
       bg: "bg-orange-100",
       text: "text-orange-800",
-      label: getStatusLabel("presented"),
+      label: getStatusLabel("presented", statusLabels),
     },
     booked: {
       bg: "bg-blue-100",
       text: "text-blue-800",
-      label: getStatusLabel("booked"),
+      label: getStatusLabel("booked", statusLabels),
     },
     sold: {
       bg: "bg-green-100",
       text: "text-green-800",
-      label: getStatusLabel("sold"),
+      label: getStatusLabel("sold", statusLabels),
     },
     not_interested: {
       bg: "bg-red-100",
       text: "text-red-800",
-      label: getStatusLabel("not_interested"),
+      label: getStatusLabel("not_interested", statusLabels),
     },
     no_soliciting: {
       bg: "bg-purple-100",
       text: "text-purple-800",
-      label: getStatusLabel("no_soliciting"),
+      label: getStatusLabel("no_soliciting", statusLabels),
     },
     check_back: {
       bg: "bg-yellow-100",
       text: "text-yellow-800",
-      label: getStatusLabel("check_back"),
+      label: getStatusLabel("check_back", statusLabels),
     },
     // Other statuses for backward compatibility
     interested: {
       bg: "bg-yellow-100",
       text: "text-yellow-800",
-      label: getStatusLabel("interested"),
+      label: getStatusLabel("interested", statusLabels),
     },
     converted: {
       bg: "bg-green-100",
       text: "text-green-800",
-      label: getStatusLabel("converted"),
+      label: getStatusLabel("converted", statusLabels),
     },
     considering: {
       bg: "bg-purple-100",
       text: "text-purple-800",
-      label: getStatusLabel("considering"),
+      label: getStatusLabel("considering", statusLabels),
     },
     call_back: {
       bg: "bg-yellow-100",
       text: "text-yellow-800",
-      label: getStatusLabel("call_back"),
+      label: getStatusLabel("call_back", statusLabels),
     },
     appointment_scheduled: {
       bg: "bg-blue-100",
       text: "text-blue-800",
-      label: getStatusLabel("appointment_scheduled"),
+      label: getStatusLabel("appointment_scheduled", statusLabels),
     },
   };
 
   return config[status] || {
     bg: "bg-gray-100",
     text: "text-gray-800",
-    label: getStatusLabel(status),
+    label: getStatusLabel(status, statusLabels),
   };
 }

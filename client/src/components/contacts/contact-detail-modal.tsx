@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { geocodeAddress } from "@/lib/maps";
-import { getStatusBadgeConfig } from "@/lib/status-helpers";
+import { getStatusBadgeConfig, getStatusLabel } from "@/lib/status-helpers";
 import { cn } from "@/lib/utils";
 import { 
   Contact, 
@@ -170,6 +170,12 @@ export default function ContactDetailModal({
   // Fetch contact details
   const { data: contact, isLoading: isLoadingContact } = useQuery<Contact>({
     queryKey: [`/api/contacts/${contactId}`],
+    enabled: isOpen,
+  });
+  
+  // Fetch customization settings
+  const { data: customization } = useQuery({
+    queryKey: ["/api/customizations/current"],
     enabled: isOpen,
   });
 
@@ -662,7 +668,12 @@ export default function ContactDetailModal({
   };
   
   // Get status configuration for badges
-  const statusConfig = contact ? getStatusBadgeConfig(contact.status) : { bg: "", text: "", label: "" };
+  const statusConfig = contact ? 
+    getStatusBadgeConfig(
+      contact.status, 
+      customization?.statusLabels
+    ) : 
+    { bg: "", text: "", label: "" };
   
   if (!isOpen) return null;
   
