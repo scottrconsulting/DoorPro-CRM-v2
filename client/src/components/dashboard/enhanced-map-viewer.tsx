@@ -505,7 +505,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             // Long press - show detailed contact form
             setNewContactForm(prev => ({
               ...prev,
-              fullName: autoName,
+              // For the fullName field, only set it if it's currently empty
+              // This allows users to edit the name without it being reset
+              fullName: prev.fullName || autoName,
               address: address,
               city: city,
               state: state,
@@ -1008,7 +1010,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       {/* New Contact Dialog - Using our new consolidated Form Component */}
       <ContactForm
         isOpen={showNewContactDialog}
-        onClose={() => setShowNewContactDialog(false)}
+        onClose={() => {
+          // Clear the form when closing the dialog to prevent conflicts on next open
+          setNewContactForm({
+            fullName: "",
+            address: "",
+            phone: "",
+            email: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            status: activeStatus,
+            notes: "",
+          });
+          setShowNewContactDialog(false);
+        }}
         initialContact={{
           fullName: newContactForm.fullName,
           address: newContactForm.address,

@@ -89,11 +89,16 @@ export default function ContactForm({
     },
   });
 
-  // Reset form when initialContact changes
+  // Reset form when initialContact changes, but preserve any user input
   useEffect(() => {
     if (initialContact) {
+      // Get current values from the form
+      const currentValues = form.getValues();
+      
+      // Only reset fields that haven't been modified by the user
       form.reset({
-        fullName: initialContact.fullName || "",
+        // For fullName, keep the user's input if they've entered something
+        fullName: currentValues.fullName || initialContact.fullName || "",
         address: initialContact.address || "",
         city: initialContact.city || "",
         state: initialContact.state || "",
@@ -279,7 +284,15 @@ export default function ContactForm({
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John Doe" {...field} />
+                    <Input 
+                      placeholder="John Doe" 
+                      {...field} 
+                      // Preserve manually entered value
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
