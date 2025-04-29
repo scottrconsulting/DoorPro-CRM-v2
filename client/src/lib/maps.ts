@@ -81,16 +81,16 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
       return;
     }
     
-    // Always request high accuracy for proper real-time tracking
+    // Request options for geolocation
     const options = {
       enableHighAccuracy: true,
-      timeout: 15000, // Longer timeout for better location acquisition
-      maximumAge: 0 // Always get a fresh reading each time for real-time movement
+      timeout: 8000, // Shorter timeout to avoid UI delays
+      maximumAge: 5000 // Accept a location reading from the last 5 seconds to reduce flickering
     };
     
     console.log('Requesting real-time GPS location...');
     
-    // Set a timeout for location acquisition
+    // Geolocation sometimes takes too long, so we use a safety timeout
     const timeoutId = setTimeout(() => {
       console.log('Geolocation request timed out');
       if (lastKnownLocation) {
@@ -99,7 +99,7 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
       } else {
         reject(new Error('Location acquisition timed out and no previous location available'));
       }
-    }, 12000);
+    }, 5000); // 5 second maximum wait, faster than internal timeout
     
     navigator.geolocation.getCurrentPosition(
       (position) => {

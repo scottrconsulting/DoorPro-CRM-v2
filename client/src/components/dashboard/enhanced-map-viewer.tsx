@@ -386,31 +386,32 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         panTo(position);
         map.setZoom(15);
         
-        // Remove previous user location marker if it exists
         if (userMarker) {
-          userMarker.setMap(null);
+          // If marker exists, just update its position instead of recreating it
+          // This prevents the flickering effect
+          userMarker.setPosition(position);
+        } else {
+          // Create a special My Location marker only if it doesn't exist yet
+          const newUserMarker = new window.google.maps.Marker({
+            position: position,
+            map: map,
+            icon: {
+              // Create a pulsing blue dot like the one in Google Maps mobile app
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: "#4285F4", // Google Maps blue 
+              fillOpacity: 0.8,
+              strokeColor: "#FFFFFF", 
+              strokeWeight: 2,
+              scale: 12 // Not too large, not too small
+            },
+            title: "Your Location",
+            animation: window.google.maps.Animation.DROP, // Add a drop animation for visibility
+            zIndex: 1000 // Ensure it's above other markers
+          });
+          
+          // Store the new marker reference
+          setUserMarker(newUserMarker);
         }
-        
-        // Create a special My Location marker exactly matching the Google Maps style
-        const newUserMarker = new window.google.maps.Marker({
-          position: position,
-          map: map,
-          icon: {
-            // Create a pulsing blue dot like the one in Google Maps mobile app
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: "#4285F4", // Google Maps blue 
-            fillOpacity: 0.8,
-            strokeColor: "#FFFFFF", 
-            strokeWeight: 2,
-            scale: 12 // Not too large, not too small
-          },
-          title: "Your Location",
-          animation: window.google.maps.Animation.DROP, // Add a drop animation for visibility
-          zIndex: 1000 // Ensure it's above other markers
-        });
-        
-        // Store the new marker reference
-        setUserMarker(newUserMarker);
         
         // Show a success notification
         toast({
@@ -641,30 +642,31 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       // Only update marker position without changing map zoom or center
       // This provides real-time tracking without disrupting the user's map view
       
-      // Remove previous user location marker if it exists
       if (userMarker) {
-        userMarker.setMap(null);
+        // If marker exists, just update its position instead of recreating it
+        // This prevents the flickering effect
+        userMarker.setPosition(position);
+      } else {
+        // Create a special My Location marker only if it doesn't exist yet
+        const newUserMarker = new window.google.maps.Marker({
+          position: position,
+          map: map,
+          icon: {
+            // Create a blue dot like the one in Google Maps mobile app
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: "#4285F4", // Google Maps blue 
+            fillOpacity: 0.8,
+            strokeColor: "#FFFFFF", 
+            strokeWeight: 2,
+            scale: 12 // Not too large, not too small
+          },
+          title: "Your Location",
+          zIndex: 1000 // Ensure it's above other markers
+        });
+        
+        // Store the new marker reference
+        setUserMarker(newUserMarker);
       }
-      
-      // Create a special My Location marker exactly matching the Google Maps style
-      const newUserMarker = new window.google.maps.Marker({
-        position: position,
-        map: map,
-        icon: {
-          // Create a blue dot like the one in Google Maps mobile app
-          path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: "#4285F4", // Google Maps blue 
-          fillOpacity: 0.8,
-          strokeColor: "#FFFFFF", 
-          strokeWeight: 2,
-          scale: 12 // Not too large, not too small
-        },
-        title: "Your Location",
-        zIndex: 1000 // Ensure it's above other markers
-      });
-      
-      // Store the new marker reference
-      setUserMarker(newUserMarker);
     } catch (error) {
       // Silently handle location errors without showing toasts
       console.log("Location tracking error (silent):", error);
@@ -672,7 +674,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }
   }, [map, userMarker]);
   
-  // Set up real-time location tracking that continuously updates every 30 seconds
+  // Set up real-time location tracking that continuously updates every minute
   useEffect(() => {
     if (!isLoaded || !map) return;
     
@@ -681,9 +683,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     
     // Set up interval for continuous real-time tracking
     const locationTrackingInterval = setInterval(() => {
-      // Re-request location every 30 seconds to keep location current
+      // Re-request location every minute to keep location current
+      // A longer interval reduces flickering and battery usage
       locateUserSilently();
-    }, 30000); // 30 seconds in milliseconds
+    }, 60000); // 60 seconds in milliseconds
     
     // Clean up interval when component unmounts
     return () => {
