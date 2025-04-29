@@ -496,9 +496,12 @@ export default function ContactDetailModal({
   const handleSaleSubmit = async () => {
     if (!saleProduct || !saleAmount) return;
 
+    // Create a proper Date object from the selected date
+    const selectedDate = new Date(saleDate + "T00:00:00");
+    
     const saleData: InsertSale = {
       contactId,
-      saleDate: new Date(saleDate + "T00:00:00"), // Ensure we have a valid Date object with time component
+      saleDate: selectedDate, // Send as Date object, server will handle conversion
       status: saleStatus,
       userId: 1, // TODO: Get from auth context
       amount: parseFloat(saleAmount),
@@ -516,8 +519,13 @@ export default function ContactDetailModal({
       visitDate: new Date(),
     };
 
-    addVisitMutation.mutate(visitData);
-    addSaleMutation.mutate(saleData);
+    try {
+      console.log("Recording sale with date:", selectedDate);
+      addVisitMutation.mutate(visitData);
+      addSaleMutation.mutate(saleData);
+    } catch (error) {
+      console.error("Error recording sale:", error);
+    }
   };
 
   // Handle task form submission
@@ -977,11 +985,12 @@ export default function ContactDetailModal({
                       <CardDescription>Record and track sales for this contact</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Add Sale form */}
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <Label htmlFor="saleProduct">Product/Service</Label>
+                      {/* Add Sale form - Simplified for mobile */}
+                      <div className="space-y-3">
+                        {/* Product and Amount in one row with larger amount field */}
+                        <div className="flex flex-row gap-2">
+                          <div className="flex-grow space-y-1">
+                            <Label htmlFor="saleProduct">Product</Label>
                             <Input 
                               id="saleProduct"
                               value={saleProduct}
@@ -989,8 +998,8 @@ export default function ContactDetailModal({
                               placeholder="e.g. Premium Package"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="saleAmount">Amount ($)</Label>
+                          <div className="w-1/3 space-y-1">
+                            <Label htmlFor="saleAmount">Amount</Label>
                             <Input 
                               id="saleAmount"
                               type="number"
@@ -1002,9 +1011,10 @@ export default function ContactDetailModal({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="space-y-1">
-                            <Label htmlFor="saleDate">Sale Date</Label>
+                        {/* Date and Payment Method in one row */}
+                        <div className="flex flex-row gap-2">
+                          <div className="w-1/2 space-y-1">
+                            <Label htmlFor="saleDate">Date</Label>
                             <Input 
                               id="saleDate"
                               type="date"
@@ -1012,24 +1022,11 @@ export default function ContactDetailModal({
                               onChange={(e) => setSaleDate(e.target.value)}
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="saleStatus">Status</Label>
-                            <Select value={saleStatus} onValueChange={setSaleStatus}>
-                              <SelectTrigger id="saleStatus">
-                                <SelectValue placeholder="Select a status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="salePaymentMethod">Payment Method</Label>
+                          <div className="w-1/2 space-y-1">
+                            <Label htmlFor="salePaymentMethod">Payment</Label>
                             <Select value={salePaymentMethod} onValueChange={setSalePaymentMethod}>
-                              <SelectTrigger id="salePaymentMethod">
-                                <SelectValue placeholder="Select a method" />
+                              <SelectTrigger id="salePaymentMethod" className="h-10">
+                                <SelectValue placeholder="Payment" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="cash">Cash</SelectItem>
@@ -1041,21 +1038,62 @@ export default function ContactDetailModal({
                             </Select>
                           </div>
                         </div>
-
+                        
+                        {/* Status as a separate row with buttons for quick selection */}
                         <div className="space-y-1">
-                          <Label htmlFor="saleNotes">Notes (Optional)</Label>
+                          <Label>Status</Label>
+                          <div className="flex flex-row gap-2 mt-1">
+                            <Button 
+                              type="button"
+                              size="sm"
+                              variant={saleStatus === "completed" ? "default" : "outline"}
+                              className={saleStatus === "completed" ? "bg-green-600 hover:bg-green-700" : ""}
+                              onClick={() => setSaleStatus("completed")}
+                            >
+                              Completed
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={saleStatus === "pending" ? "default" : "outline"}
+                              className={saleStatus === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                              onClick={() => setSaleStatus("pending")}
+                            >
+                              Pending
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={saleStatus === "cancelled" ? "default" : "outline"}
+                              className={saleStatus === "cancelled" ? "bg-red-600 hover:bg-red-700" : ""}
+                              onClick={() => setSaleStatus("cancelled")}
+                            >
+                              Cancelled
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Optional Notes */}
+                        <div className="space-y-1">
+                          <Label htmlFor="saleNotes" className="flex items-center">
+                            <span>Notes</span>
+                            <span className="text-xs text-gray-500 ml-1">(Optional)</span>
+                          </Label>
                           <Textarea 
                             id="saleNotes"
                             value={saleNotes}
                             onChange={(e) => setSaleNotes(e.target.value)}
                             placeholder="Any additional details about this sale..."
+                            className="h-20"
                           />
                         </div>
 
+                        {/* Prominent Record Sale Button */}
                         <Button 
                           onClick={handleSaleSubmit}
                           disabled={!saleProduct || !saleAmount || addSaleMutation.isPending}
-                          className="w-full sm:w-auto"
+                          className="w-full mt-2"
+                          size="lg"
                         >
                           {addSaleMutation.isPending ? "Recording..." : "Record Sale"}
                         </Button>
@@ -1122,8 +1160,9 @@ export default function ContactDetailModal({
                       <CardDescription>Manage tasks related to this contact</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Add Task form */}
-                      <div className="space-y-4">
+                      {/* Add Task form - Mobile friendly */}
+                      <div className="space-y-3">
+                        {/* Task Title - Full Width */}
                         <div className="space-y-1">
                           <Label htmlFor="taskTitle">Task Title</Label>
                           <Input 
@@ -1134,8 +1173,9 @@ export default function ContactDetailModal({
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
+                        {/* Due Date and Priority in one row */}
+                        <div className="flex flex-row gap-2">
+                          <div className="w-1/2 space-y-1">
                             <Label htmlFor="taskDueDate">Due Date</Label>
                             <Input 
                               id="taskDueDate"
@@ -1144,35 +1184,61 @@ export default function ContactDetailModal({
                               onChange={(e) => setTaskDueDate(e.target.value)}
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="w-1/2 space-y-1">
                             <Label htmlFor="taskPriority">Priority</Label>
-                            <Select value={taskPriority} onValueChange={setTaskPriority}>
-                              <SelectTrigger id="taskPriority">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="low">Low</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex space-x-2 mt-1">
+                              <Button 
+                                type="button"
+                                size="sm"
+                                variant={taskPriority === "low" ? "default" : "outline"}
+                                className={taskPriority === "low" ? "bg-green-600 hover:bg-green-700 flex-1" : "flex-1"}
+                                onClick={() => setTaskPriority("low")}
+                              >
+                                Low
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={taskPriority === "medium" ? "default" : "outline"}
+                                className={taskPriority === "medium" ? "bg-yellow-600 hover:bg-yellow-700 flex-1" : "flex-1"}
+                                onClick={() => setTaskPriority("medium")}
+                              >
+                                Med
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={taskPriority === "high" ? "default" : "outline"}
+                                className={taskPriority === "high" ? "bg-red-600 hover:bg-red-700 flex-1" : "flex-1"}
+                                onClick={() => setTaskPriority("high")}
+                              >
+                                High
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
+                        {/* Optional Description */}
                         <div className="space-y-1">
-                          <Label htmlFor="taskDescription">Description (Optional)</Label>
+                          <Label htmlFor="taskDescription" className="flex items-center">
+                            <span>Description</span>
+                            <span className="text-xs text-gray-500 ml-1">(Optional)</span>
+                          </Label>
                           <Textarea 
                             id="taskDescription"
                             value={taskDescription}
                             onChange={(e) => setTaskDescription(e.target.value)}
                             placeholder="Additional details about this task..."
+                            className="h-20"
                           />
                         </div>
 
+                        {/* Create Task Button */}
                         <Button 
                           onClick={handleTaskSubmit}
                           disabled={!taskTitle || addTaskMutation.isPending}
-                          className="w-full sm:w-auto"
+                          className="w-full mt-2"
+                          size="lg"
                         >
                           {addTaskMutation.isPending ? "Creating..." : "Create Task"}
                         </Button>
@@ -1269,59 +1335,89 @@ export default function ContactDetailModal({
                       <CardDescription>Upload and manage documents related to this contact</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Document upload form */}
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <Label htmlFor="documentName">Document Name</Label>
-                            <Input 
-                              id="documentName"
-                              value={documentName}
-                              onChange={(e) => setDocumentName(e.target.value)}
-                              placeholder="e.g. Sales Contract"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="documentCategory">Category</Label>
-                            <Select value={documentCategory} onValueChange={setDocumentCategory}>
-                              <SelectTrigger id="documentCategory">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="general">General</SelectItem>
-                                <SelectItem value="contract">Contract</SelectItem>
-                                <SelectItem value="proposal">Proposal</SelectItem>
-                                <SelectItem value="invoice">Invoice</SelectItem>
-                                <SelectItem value="receipt">Receipt</SelectItem>
-                                <SelectItem value="form">Form</SelectItem>
-                              </SelectContent>
-                            </Select>
+                      {/* Document upload form - Mobile friendly */}
+                      <div className="space-y-3">
+                        {/* Document Name - Full Width */}
+                        <div className="space-y-1">
+                          <Label htmlFor="documentName">Document Name</Label>
+                          <Input 
+                            id="documentName"
+                            value={documentName}
+                            onChange={(e) => setDocumentName(e.target.value)}
+                            placeholder="e.g. Sales Contract"
+                          />
+                        </div>
+                        
+                        {/* Category with button selection */}
+                        <div className="space-y-1">
+                          <Label htmlFor="documentCategory">Category</Label>
+                          <div className="grid grid-cols-3 gap-2 mt-1">
+                            {[
+                              {value: 'contract', label: 'Contract'},
+                              {value: 'proposal', label: 'Proposal'},
+                              {value: 'invoice', label: 'Invoice'},
+                              {value: 'receipt', label: 'Receipt'},
+                              {value: 'form', label: 'Form'},
+                              {value: 'general', label: 'General'}
+                            ].map((category) => (
+                              <Button 
+                                key={category.value}
+                                type="button"
+                                size="sm"
+                                variant={documentCategory === category.value ? "default" : "outline"}
+                                className={`text-xs ${documentCategory === category.value ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                                onClick={() => setDocumentCategory(category.value)}
+                              >
+                                {category.label}
+                              </Button>
+                            ))}
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="documentDescription">Description (Optional)</Label>
+                        
+                        {/* File Upload */}
+                        <div className="space-y-1 mt-3">
+                          <Label htmlFor="documentFile" className="block">Upload File</Label>
+                          <div className="mt-1 flex items-center">
+                            <Label 
+                              htmlFor="documentFile" 
+                              className="flex-1 cursor-pointer border rounded-md p-3 text-center bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Upload className="h-4 w-4" />
+                              {documentFile ? documentFile.name : "Choose a file"}
+                            </Label>
+                            <Input 
+                              id="documentFile"
+                              type="file"
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Optional Description */}
+                        <div className="space-y-1 mt-2">
+                          <Label htmlFor="documentDescription" className="flex items-center">
+                            <span>Description</span>
+                            <span className="text-xs text-gray-500 ml-1">(Optional)</span>
+                          </Label>
                           <Textarea 
                             id="documentDescription"
                             value={documentDescription}
                             onChange={(e) => setDocumentDescription(e.target.value)}
                             placeholder="Additional details about this document..."
+                            className="h-20"
                           />
                         </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="documentFile">Upload File</Label>
-                          <Input 
-                            id="documentFile"
-                            type="file"
-                            onChange={handleFileChange}
-                          />
-                        </div>
+                        
+                        {/* Upload Button */}
                         <Button 
                           onClick={handleDocumentUpload}
                           disabled={!documentName || !documentFile || uploadDocumentMutation.isPending}
-                          className="w-full sm:w-auto"
+                          className="w-full mt-3"
+                          size="lg"
                         >
                           {uploadDocumentMutation.isPending ? (
-                            <span className="flex items-center">
+                            <span className="flex items-center justify-center">
                               <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-r-transparent rounded-full"></span>
                               Uploading...
                             </span>

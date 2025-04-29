@@ -2032,8 +2032,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = req.user as any;
+      
+      // Handle date conversion properly
+      let saleDate;
+      if (req.body.saleDate) {
+        if (typeof req.body.saleDate === 'string') {
+          // If it's an ISO string, just parse it
+          saleDate = new Date(req.body.saleDate);
+        } else if (req.body.saleDate instanceof Date) {
+          // If it's already a date object
+          saleDate = req.body.saleDate;
+        } else {
+          // Default to current date
+          saleDate = new Date();
+        }
+      } else {
+        saleDate = new Date();
+      }
+      
       const saleData = {
         ...req.body,
+        saleDate,
         userId: user.id,
         contactId,
       };
