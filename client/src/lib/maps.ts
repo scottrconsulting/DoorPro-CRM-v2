@@ -63,41 +63,68 @@ export async function geocodeAddress(address: string): Promise<IGeocodingResult 
 // Default location (Nebraska, USA) as fallback
 const DEFAULT_LOCATION = { lat: 41.5, lng: -99.5 };
 
-// Get user's current location with fallback
+// Store previous known location to use as fallback before default
+let lastKnownLocation: { lat: number; lng: number } | null = null;
+
+// Check if on a mobile device
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Get user's current location with improved fallback strategy
 export async function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve) => {
     // Check if in Replit preview or if geolocation is available
     const isReplit = window.location.hostname.includes('replit');
+    const isMobile = isMobileDevice();
+    
+    // Use a shorter timeout for mobile devices to improve responsiveness
+    const timeoutDuration = isMobile ? 5000 : 3000;
+    
+    // Use higher accuracy for mobile devices
+    const options = {
+      enableHighAccuracy: isMobile,
+      timeout: isMobile ? 10000 : 5000,
+      maximumAge: isMobile ? 30000 : 60000
+    };
     
     if (navigator.geolocation && !isReplit) {
       // Set a timeout to handle slow geolocation responses
       const timeoutId = setTimeout(() => {
-        console.log('Geolocation timed out, using default location');
-        resolve(DEFAULT_LOCATION);
-      }, 3000);
+        console.log('Geolocation timed out, using fallback location');
+        // Use last known location if available, otherwise use default
+        resolve(lastKnownLocation || DEFAULT_LOCATION);
+      }, timeoutDuration);
       
       navigator.geolocation.getCurrentPosition(
         (position) => {
           clearTimeout(timeoutId);
-          resolve({
+          
+          // Store successful location for future use
+          lastKnownLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          
+          resolve(lastKnownLocation);
         },
         (error) => {
           clearTimeout(timeoutId);
           console.log('Geolocation error:', error.message);
-          resolve(DEFAULT_LOCATION);
+          
+          // For PERMISSION_DENIED on mobile, show a more helpful message in console
+          if (error.code === 1 && isMobile) {
+            console.log('Location permission denied. On mobile, please enable location services in your device settings and browser permissions.');
+          }
+          
+          // Use last known location if available, otherwise use default
+          resolve(lastKnownLocation || DEFAULT_LOCATION);
         },
-        { 
-          enableHighAccuracy: false,
-          timeout: 5000,
-          maximumAge: 60000 
-        }
+        options
       );
     } else {
-      console.log('Geolocation not available or in Replit preview, using default location');
-      resolve(DEFAULT_LOCATION);
+      console.log('Geolocation not available or in Replit preview, using fallback location');
+      resolve(lastKnownLocation || DEFAULT_LOCATION);
     }
   });
 }
