@@ -2020,6 +2020,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch sales data" });
     }
   });
+  
+  // Create new sale record (generic endpoint)
+  app.post("/api/sales", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { contactId, amount, product, saleDate, status, paymentMethod, notes } = req.body;
+      
+      if (!contactId || !amount || !product) {
+        return res.status(400).json({ message: "Missing required fields: contactId, amount, and product are required" });
+      }
+      
+      // Get the contact to verify it exists
+      const contact = await storage.getContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Handle date conversion properly
+      let parsedSaleDate;
+      if (saleDate) {
+        if (typeof saleDate === 'string') {
+          // If it's an ISO string, just parse it
+          parsedSaleDate = new Date(saleDate);
+        } else if (saleDate instanceof Date) {
+          // If it's already a Date object, use it directly
+          parsedSaleDate = saleDate;
+        } else {
+          // Default to current date
+          parsedSaleDate = new Date();
+        }
+      } else {
+        parsedSaleDate = new Date();
+      }
+      
+      // Create the sale record
+      const sale = await storage.createSale({
+        contactId,
+        userId: user.id,
+        amount: typeof amount === 'string' ? parseFloat(amount) : amount,
+        product,
+        saleDate: parsedSaleDate,
+        status: status || 'completed',
+        paymentMethod: paymentMethod || 'Unknown',
+        notes: notes || '',
+      });
+      
+      // Also update the contact status to reflect the sale if needed
+      if (contact.status !== 'sold') {
+        await storage.updateContact(contactId, { 
+          ...contact,
+          status: 'sold'
+        });
+      }
+      
+      return res.json(sale);
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      return res.status(500).json({ message: "Failed to create sale record" });
+    }
+  });
 
   // Add sales for a contact
   app.post("/api/contacts/:contactId/sales", ensureAuthenticated, async (req, res) => {
