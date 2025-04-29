@@ -99,12 +99,8 @@ export default function ContactForm({
 }: ContactFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [showAppointmentFields, setShowAppointmentFields] = useState(
-    initialContact?.status === "booked" || initialContact?.status === "check_back"
-  );
-  const [showSaleFields, setShowSaleFields] = useState(
-    initialContact?.status === "sold"
-  );
+  const [showAppointmentFields, setShowAppointmentFields] = useState(false);
+  const [showSaleFields, setShowSaleFields] = useState(false);
 
   // Form setup
   const form = useForm<ContactFormValues>({
@@ -128,12 +124,29 @@ export default function ContactForm({
       saleNotes: "",
     },
   });
+  
+  // Update conditional fields visibility when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      const currentStatus = form.getValues("status");
+      // Set visibility flags based on status
+      setShowAppointmentFields(currentStatus === "booked" || currentStatus === "check_back");
+      setShowSaleFields(currentStatus === "sold");
+      
+      console.log("Dialog opened with status:", currentStatus, 
+        "- Shows appointment fields:", currentStatus === "booked" || currentStatus === "check_back",
+        "- Shows sale fields:", currentStatus === "sold");
+    }
+  }, [isOpen, form]);
 
   // Reset form when initialContact changes, but preserve any user input
   useEffect(() => {
     if (initialContact) {
       // Get current values from the form
       const currentValues = form.getValues();
+      
+      // Get status from initialContact or default to not_visited
+      const status = initialContact.status || "not_visited";
       
       // Only reset fields that haven't been modified by the user
       form.reset({
@@ -145,7 +158,7 @@ export default function ContactForm({
         zipCode: initialContact.zipCode || "",
         phone: initialContact.phone || "",
         email: initialContact.email || "",
-        status: initialContact.status || "not_visited",
+        status: status,
         notes: initialContact.notes || "",
         appointmentDate: currentValues.appointmentDate || "",
         appointmentTime: currentValues.appointmentTime || "",
@@ -153,8 +166,16 @@ export default function ContactForm({
         saleDate: currentValues.saleDate || new Date().toISOString().split('T')[0],
         saleNotes: currentValues.saleNotes || "",
       });
+      
+      // Set conditional fields based on status
+      setShowAppointmentFields(status === "booked" || status === "check_back");
+      setShowSaleFields(status === "sold");
+      
+      console.log("Form opened with status:", status, 
+        "- Showing appointment fields:", status === "booked" || status === "check_back",
+        "- Showing sale fields:", status === "sold");
     }
-  }, [initialContact, form]);
+  }, [initialContact, form, isOpen]);
 
   // Create contact mutation
   const createContactMutation = useMutation({
@@ -491,12 +512,15 @@ export default function ContactForm({
                       field.onChange(value);
                       
                       // Then check if we need to show the appointment fields
-                      setShowAppointmentFields(
-                        value === "booked" || value === "check_back"
-                      );
+                      const needsAppointment = value === "booked" || value === "check_back";
+                      const needsSale = value === "sold";
                       
-                      // Check if we need to show sale fields
-                      setShowSaleFields(value === "sold");
+                      setShowAppointmentFields(needsAppointment);
+                      setShowSaleFields(needsSale);
+                      
+                      console.log("Status changed to:", value, 
+                        "- Now showing appointment fields:", needsAppointment,
+                        "- Now showing sale fields:", needsSale);
                       
                       // If switching to sold status, pre-set the sale date to today
                       if (value === "sold") {
