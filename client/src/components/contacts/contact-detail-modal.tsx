@@ -428,6 +428,29 @@ export default function ContactDetailModal({
     },
   });
   
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: number) => {
+      const res = await apiRequest("DELETE", `/api/contacts/${contactId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact deleted",
+        description: "The contact was successfully deleted",
+      });
+      onClose(); // Close the modal after successful deletion
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete contact",
+        description: "There was an error deleting the contact",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Initialize edit form with contact data when it loads
   useEffect(() => {
     if (contact) {
@@ -1389,13 +1412,23 @@ export default function ContactDetailModal({
         {/* Dialog footer - conditionally rendered based on view */}
         {!isEditMode && (
           <div className="flex flex-wrap justify-between gap-2 mt-8">
-            <div>
+            <div className="flex gap-2">
               <Button 
-                variant="outline" 
-                className="mr-2"
+                variant="outline"
                 onClick={() => setIsEditMode(true)}
               >
                 Edit Contact
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (contact) {
+                    deleteContactMutation.mutate(contact.id);
+                  }
+                }}
+                disabled={deleteContactMutation.isPending}
+              >
+                {deleteContactMutation.isPending ? "Deleting..." : "Delete Contact"}
               </Button>
             </div>
             <Button className="h-10" onClick={onClose}>Close</Button>
