@@ -444,15 +444,23 @@ export default function UniversalContactForm({
     try {
       // Handle editing existing contact
       if (isEditMode && initialContact?.id) {
-        const contactUpdateData = {
-          ...data,
+        // Extract only the fields that are in the Contact schema
+        const contactUpdateData: Partial<Contact> = {
+          fullName: data.fullName,
+          address: data.address,
+          city: data.city || null,
+          state: data.state || null,
+          zipCode: data.zipCode || null,
+          email: data.email || null,
+          phone: data.phone || null,
+          status: data.status,
+          notes: data.notes || null,
           appointment: appointmentData,
         };
-        delete contactUpdateData.id; // Remove ID from update payload
         
         updateContactMutation.mutate({
           id: initialContact.id,
-          contact: contactUpdateData as Partial<Contact>,
+          contact: contactUpdateData,
         });
         return;
       }
@@ -460,13 +468,27 @@ export default function UniversalContactForm({
       // Handle creating new contact
       let contactData: InsertContact;
       
+      // Create a clean object with only the fields that are in InsertContact
+      const cleanData = {
+        fullName: data.fullName,
+        address: data.address,
+        city: data.city || null,
+        state: data.state || null,
+        zipCode: data.zipCode || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        status: data.status,
+        notes: data.notes || null,
+      };
+      
       // If coordinates are provided (from map click), use them directly
       if (initialCoords) {
         contactData = {
-          ...data,
+          ...cleanData,
           latitude: String(initialCoords.lat),
           longitude: String(initialCoords.lng),
           appointment: appointmentData,
+          userId: user?.id || 0,
         };
         createContactMutation.mutate(contactData);
       } else {
@@ -477,11 +499,12 @@ export default function UniversalContactForm({
           if (geocodeResult) {
             // Create contact with coordinates
             contactData = {
-              ...data,
+              ...cleanData,
               latitude: geocodeResult.latitude,
               longitude: geocodeResult.longitude,
               address: geocodeResult.address, // Use formatted address from geocoding
               appointment: appointmentData,
+              userId: user?.id || 0,
             };
             createContactMutation.mutate(contactData);
           } else {
@@ -492,16 +515,18 @@ export default function UniversalContactForm({
               variant: "default",
             });
             contactData = {
-              ...data,
+              ...cleanData,
               appointment: appointmentData,
+              userId: user?.id || 0,
             };
             createContactMutation.mutate(contactData);
           }
         } catch (error) {
           console.error("Geocoding error:", error);
           contactData = {
-            ...data,
+            ...cleanData,
             appointment: appointmentData,
+            userId: user?.id || 0,
           };
           createContactMutation.mutate(contactData);
         }
