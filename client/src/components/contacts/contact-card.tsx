@@ -45,6 +45,15 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpReason, setFollowUpReason] = useState("");
   
+  // Sale form state
+  const [showSaleForm, setShowSaleForm] = useState(false);
+  const [saleAmount, setSaleAmount] = useState("");
+  const [saleDate, setSaleDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [saleProduct, setSaleProduct] = useState("");
+  const [saleNotes, setSaleNotes] = useState("");
+  const [saleStatus, setSaleStatus] = useState("completed");
+  const [salePaymentMethod, setSalePaymentMethod] = useState("Unknown");
+  
   // Get contact details
   const { data: contact, isLoading, isError } = useQuery<Contact>({
     queryKey: [`/api/contacts/${contactId}`],
@@ -124,6 +133,44 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
     },
   });
+  
+  // Record sale mutation
+  const recordSaleMutation = useMutation({
+    mutationFn: async (data: InsertSale) => {
+      const response = await apiRequest("POST", "/api/sales", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Reset form fields
+      setSaleAmount("");
+      setSaleProduct("");
+      setSaleNotes("");
+      setSaleDate(format(new Date(), "yyyy-MM-dd"));
+      setSaleStatus("completed");
+      setSalePaymentMethod("Unknown");
+      setShowSaleForm(false);
+      
+      // Invalidate sales queries to update UI
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/sales`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      
+      toast({
+        title: "Sale recorded",
+        description: "The sale has been recorded successfully",
+      });
+      
+      // Switch to the sales tab to show the new sale
+      setActiveTab("sales");
+    },
+    onError: (error) => {
+      console.error("Error recording sale:", error);
+      toast({
+        title: "Error",
+        description: "Failed to record sale. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Delete contact mutation
   const deleteContactMutation = useMutation({
@@ -191,6 +238,44 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       location: contact?.address || "",
       reminderSent: false,
       contactIds: [contactId],
+    });
+  };
+
+  // Handle sale submission
+  const handleRecordSale = () => {
+    if (!user?.id || !contactId) return;
+    
+    // Validate form fields
+    if (!saleAmount || !saleProduct) {
+      toast({
+        title: "Missing information",
+        description: "Please provide both amount and product details",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Convert amount to number
+    const amount = parseFloat(saleAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid sale amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create the sale record
+    recordSaleMutation.mutate({
+      contactId,
+      userId: user.id,
+      amount,
+      product: saleProduct,
+      saleDate: new Date(saleDate),
+      status: saleStatus,
+      paymentMethod: salePaymentMethod,
+      notes: saleNotes,
     });
   };
 
@@ -408,11 +493,76 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-sm font-medium">Sales</h3>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setShowSaleForm(true)}
+                      >
                         <DollarSign className="h-4 w-4 mr-1" />
                         Record Sale
                       </Button>
                     </div>
+                    
+                    {/* Sale Form */}
+                    {showSaleForm && (
+                      <div className="p-4 border border-green-200 bg-green-50 rounded-md space-y-3">
+                        <h4 className="font-medium text-green-700">Record Sale Details</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="sale-amount">Amount ($)</Label>
+                            <Input
+                              id="sale-amount"
+                              type="text"
+                              placeholder="0.00"
+                              value={saleAmount}
+                              onChange={(e) => setSaleAmount(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="sale-date">Sale Date</Label>
+                            <Input
+                              id="sale-date"
+                              type="date"
+                              value={saleDate}
+                              onChange={(e) => setSaleDate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="sale-product">Product/Service</Label>
+                          <Input
+                            id="sale-product"
+                            type="text"
+                            placeholder="What was sold?"
+                            value={saleProduct}
+                            onChange={(e) => setSaleProduct(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="sale-notes">Notes (Optional)</Label>
+                          <Textarea
+                            id="sale-notes"
+                            placeholder="Additional sale details..."
+                            value={saleNotes}
+                            onChange={(e) => setSaleNotes(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2 mt-3">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowSaleForm(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleRecordSale}
+                            disabled={recordSaleMutation.isPending}
+                          >
+                            {recordSaleMutation.isPending ? "Saving..." : "Save Sale"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-2 max-h-[350px] overflow-y-auto">
                       {sales.length > 0 ? (
