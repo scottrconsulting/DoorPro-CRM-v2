@@ -35,6 +35,20 @@ interface Customization {
   updatedAt?: string;
 }
 
+// Define the contact form state interface
+interface ContactFormState {
+  fullName: string;
+  address: string;
+  phone: string;
+  email: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  status: string;
+  notes: string;
+  appointment: string;
+}
+
 // Add Google Maps types
 declare global {
   interface Window {
@@ -76,7 +90,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setShowDeleteDialog(true);
   }, []);
   
-  const [newContactForm, setNewContactForm] = useState({
+  const [newContactForm, setNewContactForm] = useState<ContactFormState>({
     fullName: "",
     address: "",
     phone: "",
@@ -86,6 +100,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     zipCode: "",
     status: activeStatus,
     notes: "",
+    appointment: "",
     // We'll use the appointment string format in the contact schema
     // instead of separate appointmentDate and appointmentTime fields
   });
@@ -1035,17 +1050,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       <ContactForm
         isOpen={showNewContactDialog}
         onClose={() => {
-          // Clear the form when closing the dialog to prevent conflicts on next open
+          // Clear the form completely when closing the dialog to prevent conflicts on next open
           setNewContactForm({
-            fullName: "",
+            fullName: "", // Reset to empty to avoid auto-filling from previous contact
             address: "",
             phone: "",
             email: "",
             city: "",
             state: "",
             zipCode: "",
-            status: activeStatus,
+            status: activeStatus, // Keep the active status to match selected pin type
             notes: "",
+            appointment: "", // Clear appointment data
+            // Clear any other fields that might be persisting
           });
           setShowNewContactDialog(false);
         }}
@@ -1067,10 +1084,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         }}
         onSuccess={(newContact: Contact) => {
           // Log status for debugging
-          console.log("Map pin contact form opened with status:", newContactForm.status, 
-            "- Should show appointment fields:", newContactForm.status === "booked" || newContactForm.status === "check_back");
+          console.log("Contact created successfully:", newContact);
+          
           // Handle successful creation
           queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+          
+          // Reset form completely to prevent data persisting to next contact
+          setNewContactForm({
+            fullName: "",
+            address: "",
+            phone: "",
+            email: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            status: activeStatus,
+            notes: "",
+            appointment: "",
+          });
           
           // Cleanup map marker
           if (newHouseMarker) {
