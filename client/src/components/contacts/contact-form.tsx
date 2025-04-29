@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -132,50 +132,55 @@ export default function ContactForm({
     },
   });
   
+  // Add a ref to track initialization state
+  const hasInitializedRef = useRef(false);
+  
   // Only update conditional fields visibility when dialog opens - just once
   useEffect(() => {
-    if (isOpen) {
-      // Only do a one-time initialization when the form opens
-      // DO NOT reset the form continuously while it's open
-      
-      // Track initialization with a local ref to avoid TypeScript issues
-      const formValues = form.getValues();
-      const hasInitialized = formValues.fullName !== "";
+    if (isOpen && !hasInitializedRef.current) {
+      // Mark as initialized to prevent further resets
+      hasInitializedRef.current = true;
       
       // Check if there's an appointment in the initial contact
       const hasAppointment = initialContact?.appointment ? true : false;
+      const currentStatus = initialContact?.status || "not_visited";
       
-      if (!hasInitialized) {
-        // Only reset once when dialog first opens
-        form.reset({
-          fullName: initialContact?.fullName || "", 
-          address: initialContact?.address || "",
-          city: initialContact?.city || "",
-          state: initialContact?.state || "",
-          zipCode: initialContact?.zipCode || "",
-          phone: initialContact?.phone || "",
-          email: initialContact?.email || "",
-          status: initialContact?.status || "not_visited",
-          notes: initialContact?.notes || "",
-          scheduleFollowUp: hasAppointment,
-          appointmentDate: "",
-          appointmentTime: "",
-          saleAmount: "",
-          saleDate: new Date().toISOString().split('T')[0],
-          saleNotes: "",
-        });
+      // Initialize form with all values at once using setValue instead of reset
+      form.setValue("fullName", initialContact?.fullName || "");
+      form.setValue("address", initialContact?.address || "");
+      form.setValue("city", initialContact?.city || "");
+      form.setValue("state", initialContact?.state || "");
+      form.setValue("zipCode", initialContact?.zipCode || "");
+      form.setValue("phone", initialContact?.phone || "");
+      form.setValue("email", initialContact?.email || "");
+      form.setValue("status", currentStatus);
+      form.setValue("notes", initialContact?.notes || "");
+      form.setValue("scheduleFollowUp", hasAppointment);
+      
+      // Only set appointment fields if there's an appointment
+      if (hasAppointment && initialContact?.appointment) {
+        const appointmentParts = initialContact.appointment.split(" ");
+        if (appointmentParts.length >= 2) {
+          form.setValue("appointmentDate", appointmentParts[0]);
+          form.setValue("appointmentTime", appointmentParts[1]);
+        }
       }
       
-      const currentStatus = initialContact?.status || "not_visited";
-      // Set visibility flag for sales fields based on status
-      setShowSaleFields(currentStatus === "sold");
+      // Set default sale date for all forms
+      form.setValue("saleDate", new Date().toISOString().split('T')[0]);
       
-      // Set appointment visibility based on the scheduleFollowUp checkbox or existing appointment
+      // Set visibility flags
+      setShowSaleFields(currentStatus === "sold");
       setShowAppointmentFields(hasAppointment);
       
       console.log("Dialog opened with status:", currentStatus, 
         "- Has appointment:", hasAppointment,
         "- Shows sale fields:", currentStatus === "sold");
+    }
+    
+    // Reset the initialization flag when the dialog closes
+    if (!isOpen) {
+      hasInitializedRef.current = false;
     }
   }, [isOpen, initialContact, form]);
 
@@ -575,8 +580,8 @@ export default function ContactForm({
                   <FormLabel>Status</FormLabel>
                   <Select 
                     onValueChange={(value) => {
-                      // First update the form field
-                      field.onChange(value);
+                      // First update the form field without triggering reset
+                      form.setValue("status", value);
                       
                       // Show sale fields if status is "sold"
                       const needsSale = value === "sold";
@@ -623,7 +628,8 @@ export default function ContactForm({
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={(checked) => {
-                        field.onChange(checked);
+                        // Use form.setValue instead of field.onChange to prevent form reset
+                        form.setValue("scheduleFollowUp", !!checked);
                         setShowAppointmentFields(!!checked);
                       }}
                     />
