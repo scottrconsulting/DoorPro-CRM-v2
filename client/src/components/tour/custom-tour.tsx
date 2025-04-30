@@ -6,26 +6,41 @@ import { useTour } from '@/contexts/tour-context';
 export interface TourStep {
   title: string;
   content: React.ReactNode;
+  target?: string;
   image?: string;
+  condition?: () => boolean;
 }
 
 interface CustomTourProps {
   steps: TourStep[];
-  tourName: string;
-  isOpen: boolean;
+  tourName?: string;
+  isOpen?: boolean;
+  open?: boolean;
   onClose: () => void;
+  showCloseButton?: boolean;
+  showDoneButton?: boolean;
 }
 
-const CustomTour: React.FC<CustomTourProps> = ({ steps, tourName, isOpen, onClose }) => {
+const CustomTour: React.FC<CustomTourProps> = ({ 
+  steps, 
+  tourName = 'default', 
+  isOpen, 
+  open, 
+  onClose,
+  showCloseButton = true,
+  showDoneButton = true
+}) => {
+  // Use either isOpen or open, to keep backward compatibility
+  const isDialogOpen = isOpen !== undefined ? isOpen : (open !== undefined ? open : false);
   const [currentStep, setCurrentStep] = useState(0);
   const { endTour } = useTour();
   
   // Reset step counter when tour opens
   useEffect(() => {
-    if (isOpen) {
+    if (isDialogOpen) {
       setCurrentStep(0);
     }
-  }, [isOpen]);
+  }, [isDialogOpen]);
   
   // Complete the tour when all steps are done or when manually closed
   const completeTour = () => {
@@ -58,7 +73,7 @@ const CustomTour: React.FC<CustomTourProps> = ({ steps, tourName, isOpen, onClos
   const step = steps[currentStep];
   
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && completeTour()}>
+    <Dialog open={isDialogOpen} onOpenChange={(open) => !open && completeTour()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{step?.title}</DialogTitle>

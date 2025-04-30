@@ -604,6 +604,7 @@ export default function SchedulePage() {
       <CustomTour 
         steps={customScheduleTourSteps}
         open={showScheduleTour}
+        tourName="schedule"
         onClose={handleCloseScheduleTour}
         showCloseButton={true}
         showDoneButton={true}
