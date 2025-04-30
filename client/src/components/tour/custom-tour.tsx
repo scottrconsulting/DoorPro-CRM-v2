@@ -32,6 +32,17 @@ const CustomTour: React.FC<CustomTourProps> = ({
 }) => {
   // Use either isOpen or open, to keep backward compatibility
   const isDialogOpen = isOpen !== undefined ? isOpen : (open !== undefined ? open : false);
+  
+  // Debug the component's state
+  useEffect(() => {
+    console.log("CustomTour state:", { 
+      tourName, 
+      isOpen, 
+      open,
+      computedIsOpen: isDialogOpen,
+      stepsCount: steps.length
+    });
+  }, [isOpen, open, isDialogOpen, tourName, steps.length]);
   const [currentStep, setCurrentStep] = useState(0);
   const { endTour } = useTour();
   

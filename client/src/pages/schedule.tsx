@@ -589,12 +589,28 @@ export default function SchedulePage() {
   
   // Function to handle starting the schedule tour
   const handleStartScheduleTour = () => {
-    console.log("Starting schedule tour");
-    setShowScheduleTour(true);
+    console.log("Starting schedule tour - previous state:", showScheduleTour);
+    
+    // Force set to false first to ensure re-render triggers even if already true
+    setShowScheduleTour(false);
+    
+    // Use setTimeout to ensure state updates completely before setting to true
+    setTimeout(() => {
+      console.log("Setting tour state to true");
+      setShowScheduleTour(true);
+    }, 50);
+    
+    // Show feedback to user
+    toast({
+      title: "Tour started",
+      description: "Follow the steps to learn about the schedule features",
+      duration: 2000,
+    });
   };
   
   // Function to handle closing the schedule tour
   const handleCloseScheduleTour = () => {
+    console.log("Closing schedule tour");
     setShowScheduleTour(false);
   };
   
@@ -671,13 +687,13 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="sm"
             onClick={handleStartScheduleTour}
-            className="ml-2 flex items-center text-xs h-8"
+            className="ml-2 flex items-center h-8 p-1 rounded-full"
+            aria-label="Help"
           >
-            <HelpCircle className="h-3.5 w-3.5 mr-1" />
-            <span className="hidden sm:inline">Tour</span>
+            <HelpCircle className="h-5 w-5" />
           </Button>
           <HelpTooltip 
             content="Get help with managing your appointments and tasks. Click for a guided tour."
