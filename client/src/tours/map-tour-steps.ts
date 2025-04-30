@@ -1,8 +1,8 @@
 import { Step } from 'react-joyride';
 
-// Map-specific tour steps
+// Map-specific tour steps - Using the simplest possible selectors
 export const mapTourSteps: Step[] = [
-  // Step 1: Introduction
+  // Introduction - Step 1
   {
     target: 'body',
     content: 'Welcome to the Interactive Map! This tour will help you learn how to use the map features effectively.',
@@ -11,47 +11,48 @@ export const mapTourSteps: Step[] = [
     title: 'Map Feature Tour',
   },
   
-  // Step 2: My Location button - Using simplified selector
+  // My Location button - Step 2
+  // Using body first to avoid skipping and then we'll show content about My Location
   {
-    target: 'button.location-button',
-    content: 'Click this button to locate your current position on the map. Your location will be shown as a blue dot, and the map will automatically center on your position.',
+    target: 'body',
+    content: 'The "My Location" button (in the top right) locates your current position on the map. Your location will be shown as a blue dot, and the map will automatically center on your position.',
     placement: 'bottom',
-    title: 'My Location',
+    title: 'My Location Feature',
   },
   
-  // Step 3: Search functionality - Using simplified selector
+  // Search functionality - Step 3
   {
-    target: 'input[placeholder="Search for an address..."]',
-    content: 'Use this search box to find addresses. Enter an address and press Enter to search, then you can add it as a new contact.',
+    target: 'body',
+    content: 'The search box (in the top bar) lets you find addresses. Enter an address and press Enter to search, then you can add it as a new contact.',
     placement: 'bottom',
     title: 'Address Search',
   },
   
-  // Step 4: Map controls - Using class-based selector
+  // Map controls - Step 4
   {
-    target: '.map-controls button:first-child',
-    content: 'These controls let you switch between map views: Map (default street view), Satellite (aerial photos), Hybrid (combination), or Terrain (topographical features).',
+    target: 'body',
+    content: 'The map controls (Map, Satellite, Hybrid, Terrain buttons) let you switch between different map views to better visualize the terrain and buildings.',
     placement: 'right',
     title: 'Map Type Controls',
   },
   
-  // Step 5: Map interaction - Using the map container directly
+  // Map interaction - Step 5
   {
-    target: '.map-container',
+    target: 'body',
     content: 'Click anywhere on the map to add a new contact at that location. You can also click on existing pins to view contact details.',
     placement: 'top',
     title: 'Adding & Viewing Contacts',
   },
   
-  // Step 6: Status filter - Simplified selector
+  // Status filter - Step 6
   {
-    target: '.status-filter',
-    content: 'Filter contacts on the map by their status. This helps you focus on specific groups like leads, prospects, or customers.',
-    placement: 'top',
+    target: 'body',
+    content: 'The filter controls at the bottom of the map let you filter contacts by their status. This helps you focus on specific groups like leads, prospects, or customers.',
+    placement: 'bottom',
     title: 'Status Filtering',
   },
   
-  // Step 7: Tour complete
+  // Tour complete - Step 7
   {
     target: 'body',
     content: 'That\'s it! You\'ve completed the map tour. Remember that you can click on pins to view contact details and get directions to their locations.',

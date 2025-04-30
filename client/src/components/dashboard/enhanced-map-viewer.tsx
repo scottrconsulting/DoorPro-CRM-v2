@@ -889,8 +889,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
   return (
     <div className="relative w-full h-full">
-      {/* Map Tour Guide */}
-      <TourGuide steps={mapTourSteps} tourName="map" />
+{/* Map Tour Guide is moved to end of component */}
       
       {/* Map container */}
       <div 
@@ -1233,6 +1232,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Map Tour Guide - Placed as the last component */}
+      <TourGuide steps={mapTourSteps} tourName="map" />
     </div>
   );
 }
