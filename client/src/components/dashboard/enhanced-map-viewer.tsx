@@ -910,13 +910,17 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     <div className="relative w-full h-full">
 {/* Map Tour Guide is moved to end of component */}
       
-      {/* Map container */}
+      {/* Map container with improved touch behavior */}
       <div 
         ref={mapRef} 
-        className="w-full h-full map-container"
+        className="w-full h-full map-container relative"
         id="map-container"
         data-tour="map-container"
-      />
+      >
+        {/* Invisible overlays for touch scroll help */}
+        <div className="absolute left-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
+        <div className="absolute right-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
+      </div>
       
       {/* Loading overlay */}
       {loading && (

@@ -342,7 +342,7 @@ export default function Dashboard() {
           );
         case "map":
           return (
-            <div key="map" className="mb-6" data-tour="map-view">
+            <div key="map" id="map-view" className="mb-6" data-tour="map-view">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
                 <Button 
@@ -360,10 +360,35 @@ export default function Dashboard() {
                   <HelpCircle size={20} className="text-muted-foreground" />
                 </Button>
               </div>
-              <div className="rounded-lg h-[500px]">
-                <EnhancedMapViewer 
-                  onSelectContact={(contactId) => setSelectedContactId(contactId)} 
-                />
+              <div className="relative">
+                {/* Scroll button to jump below the map */}
+                <button 
+                  onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
+                  className="absolute top-0 right-0 z-30 bg-white/90 hover:bg-white flex items-center gap-1 py-1 px-3 rounded-md shadow-md text-sm"
+                  aria-label="Scroll below map"
+                >
+                  <span className="material-icons text-sm">arrow_downward</span> 
+                  <span className="hidden sm:inline">Scroll Below</span>
+                </button>
+                
+                <div className="rounded-lg h-[500px]">
+                  <EnhancedMapViewer 
+                    onSelectContact={(contactId) => setSelectedContactId(contactId)} 
+                  />
+                </div>
+                
+                {/* Anchor for scroll target */}
+                <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
+                
+                {/* Scroll button to jump above the map */}
+                <button 
+                  onClick={() => document.getElementById('map-view')?.scrollIntoView({behavior: 'smooth'})}
+                  className="absolute bottom-0 right-0 z-30 bg-white/90 hover:bg-white flex items-center gap-1 py-1 px-3 rounded-md shadow-md text-sm"
+                  aria-label="Scroll above map"
+                >
+                  <span className="material-icons text-sm">arrow_upward</span>
+                  <span className="hidden sm:inline">Scroll Above</span>
+                </button>
               </div>
             </div>
           );
