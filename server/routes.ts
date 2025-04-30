@@ -2139,6 +2139,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Task API routes
+  app.get("/api/tasks", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { status, dueDate, overdue } = req.query;
+      
+      let tasks;
+      
+      if (overdue === 'true') {
+        // Get overdue tasks
+        tasks = await storage.getOverdueTasks(user.id);
+      } else if (status) {
+        // Get tasks by status
+        tasks = await storage.getTasksByStatus(user.id, status as string);
+      } else if (dueDate) {
+        // Get tasks by due date
+        tasks = await storage.getTasksByDueDate(user.id, new Date(dueDate as string));
+      } else {
+        // Get all user tasks
+        tasks = await storage.getTasksByUser(user.id);
+      }
+      
+      return res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/contacts/:contactId/tasks", ensureAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId, 10);
+      
+      // Verify the contact exists
+      const contact = await storage.getContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      const tasks = await storage.getTasksByContact(contactId);
+      return res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching contact tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch contact tasks" });
+    }
+  });
+
+  app.post("/api/tasks", ensureAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const taskData = insertTaskSchema.parse({
+        ...req.body,
+        userId: user.id
+      });
+      
+      // If contactId is provided, verify the contact exists
+      if (taskData.contactId) {
+        const contact = await storage.getContact(taskData.contactId);
+        if (!contact) {
+          return res.status(404).json({ message: "Contact not found" });
+        }
+      }
+      
+      const task = await storage.createTask(taskData);
+      return res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating task:", error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Invalid task data", errors: (error as ZodError).errors });
+      }
+      return res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.patch("/api/tasks/:taskId", ensureAuthenticated, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId, 10);
+      if (isNaN(taskId)) {
+        return res.status(400).json({ message: "Invalid task ID" });
+      }
+      
+      const updates = req.body;
+      const task = await storage.updateTask(taskId, updates);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      return res.json(task);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      return res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/complete", ensureAuthenticated, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId, 10);
+      if (isNaN(taskId)) {
+        return res.status(400).json({ message: "Invalid task ID" });
+      }
+      
+      const task = await storage.completeTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      return res.json(task);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      return res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  app.delete("/api/tasks/:taskId", ensureAuthenticated, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId, 10);
+      if (isNaN(taskId)) {
+        return res.status(400).json({ message: "Invalid task ID" });
+      }
+      
+      const result = await storage.deleteTask(taskId);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      return res.json({ message: "Task deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      return res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+  
   // Reports routes (Pro feature)
   // Get all visits for a user
   app.get("/api/visits", ensureAuthenticated, async (req, res) => {
