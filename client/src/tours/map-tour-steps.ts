@@ -2,6 +2,7 @@ import { Step } from 'react-joyride';
 
 // Map-specific tour steps
 export const mapTourSteps: Step[] = [
+  // Step 1: Introduction
   {
     target: 'body',
     content: 'Welcome to the Interactive Map! This tour will help you learn how to use the map features effectively.',
@@ -9,36 +10,48 @@ export const mapTourSteps: Step[] = [
     disableBeacon: true,
     title: 'Map Feature Tour',
   },
+  
+  // Step 2: My Location button
   {
-    target: '.location-button', // This targets the My Location button
+    target: '.flex-shrink-0.location-button',
     content: 'Click this button to locate your current position on the map. Your location will be shown as a blue dot, and the map will automatically center on your position.',
     placement: 'bottom',
     title: 'My Location',
   },
+  
+  // Step 3: Search functionality
   {
-    target: '.map-search',
+    target: '.flex-grow.flex.items-stretch.gap-2.map-search',
     content: 'Use this search box to find addresses. Enter an address and press Enter to search, then you can add it as a new contact.',
     placement: 'bottom',
     title: 'Address Search',
   },
+  
+  // Step 4: Map controls
   {
-    target: '.map-controls',
+    target: '.hidden.sm\\:flex.items-stretch.gap-1.ml-2.border-l.pl-2.map-controls',
     content: 'These controls let you switch between map views: Map (default street view), Satellite (aerial photos), Hybrid (combination), or Terrain (topographical features).',
     placement: 'right',
     title: 'Map Type Controls',
   },
+  
+  // Step 5: Map interaction
   {
-    target: '.map-container',
+    target: '.w-full.h-full.map-container',
     content: 'Click anywhere on the map to add a new contact at that location. You can also click on existing pins to view contact details.',
     placement: 'top',
     title: 'Adding & Viewing Contacts',
   },
+  
+  // Step 6: Status filter
   {
-    target: '.status-filter',
+    target: '.absolute.bottom-4.left-1\\/2.transform.-translate-x-1\\/2.bg-white.p-1.rounded-lg.shadow-lg.flex.items-center.gap-1.flex-wrap.justify-center.z-10.status-filter',
     content: 'Filter contacts on the map by their status. This helps you focus on specific groups like leads, prospects, or customers.',
-    placement: 'bottom',
+    placement: 'top',
     title: 'Status Filtering',
   },
+  
+  // Step 7: Tour complete
   {
     target: 'body',
     content: 'That\'s it! You\'ve completed the map tour. Remember that you can click on pins to view contact details and get directions to their locations.',
