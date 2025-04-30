@@ -248,12 +248,16 @@ export default function ContactForm({
   // Create a sale record
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: any) => {
-      const response = await apiRequest("POST", `/api/contacts/${saleData.contactId}/sales`, saleData);
+      // Use the main sales API endpoint for consistent data
+      const response = await apiRequest("POST", `/api/sales`, saleData);
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate sales queries to refresh data
+      // Invalidate both sales endpoints to ensure dashboard updates
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      if (initialContact?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/contacts/${initialContact.id}/sales`] });
+      }
       
       toast({
         title: "Success",
@@ -304,6 +308,8 @@ export default function ContactForm({
         // Format the appointment field as "YYYY-MM-DD HH:MM" string
         const appointmentStr = `${formData.appointmentDate} ${formData.appointmentTime}`;
         cleanData.appointment = appointmentStr;
+        
+        // We'll later create a schedule entry for this appointment
       }
       
       // Store sale details in notes field for reference
