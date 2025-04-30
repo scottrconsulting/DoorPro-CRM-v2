@@ -349,7 +349,8 @@ export default function Dashboard() {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => {
-                    if (window.handleStartMapTour) {
+                    // Use the global function exposed from the EnhancedMapViewer component
+                    if (typeof window.handleStartMapTour === 'function') {
                       window.handleStartMapTour();
                     }
                   }}
