@@ -25,6 +25,8 @@ import ContactCard from "@/components/contacts/contact-card";
 import { useTour } from "@/contexts/tour-context";
 import { HelpCircle } from "lucide-react";
 import HelpTooltip from "@/components/tour/help-tooltip";
+import CustomTour from "@/components/tour/custom-tour";
+import { customContactsTourSteps } from "@/tours/custom-contacts-tour-steps";
 
 export default function Contacts() {
   console.log("Contacts component is rendering");
@@ -242,7 +244,19 @@ export default function Contacts() {
   }));
 
   // Get tour functionality
-  const { startTour } = useTour();
+  const { startTour, endTour } = useTour();
+  const [showContactsTour, setShowContactsTour] = useState(false);
+  
+  // Function to handle starting the contacts tour
+  const handleStartContactsTour = () => {
+    console.log("Starting contacts tour");
+    setShowContactsTour(true);
+  };
+  
+  // Function to handle closing the contacts tour
+  const handleCloseContactsTour = () => {
+    setShowContactsTour(false);
+  };
   
   return (
     <div className="p-4 md:p-6">

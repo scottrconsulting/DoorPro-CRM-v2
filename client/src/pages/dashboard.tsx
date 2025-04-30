@@ -421,7 +421,7 @@ export default function Dashboard() {
             variant="ghost" 
             size="icon" 
             className="mr-2"
-            onClick={() => startTour('dashboard')}
+            onClick={handleStartDashboardTour}
             aria-label="Help"
           >
             <HelpCircle size={20} className="text-muted-foreground" />
@@ -475,6 +475,14 @@ export default function Dashboard() {
           onClose={() => setSelectedContactId(null)}
         />
       )}
+      
+      {/* Dashboard Tour */}
+      <CustomTour 
+        steps={customDashboardTourSteps}
+        tourName="dashboard"
+        isOpen={showDashboardTour}
+        onClose={handleCloseDashboardTour}
+      />
     </div>
   );
 }
