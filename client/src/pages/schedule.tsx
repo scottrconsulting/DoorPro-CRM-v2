@@ -120,8 +120,8 @@ export default function SchedulePage() {
     userId: task.userId,
     title: task.title,
     description: task.description || "",
-    startTime: task.dueDate,
-    endTime: task.dueDate, // Tasks don't have end time, so we use the same value
+    startTime: task.dueDate || new Date(), // Ensure there's always a valid date
+    endTime: task.dueDate || new Date(), // Tasks don't have end time, so we use the same value
     type: "task",
     location: "",
     reminderSent: false,
@@ -131,7 +131,8 @@ export default function SchedulePage() {
     contactIds: task.contactId ? [task.contactId] : [],
     isTask: true, // Add a flag to identify as task for rendering
     priority: task.priority || "medium",
-    completed: task.completed || false
+    completed: task.completed || false,
+    contactId: task.contactId // Keep original contactId for task-specific operations
   }));
   
   // Combine schedules and tasks
@@ -413,7 +414,7 @@ export default function SchedulePage() {
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // Delete mutation
+  // Delete mutation for regular schedules
   const deleteScheduleMutation = useMutation({
     mutationFn: async (scheduleId: number) => {
       const res = await apiRequest("DELETE", `/api/schedules/${scheduleId}`);
@@ -448,17 +449,59 @@ export default function SchedulePage() {
     },
   });
   
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const res = await apiRequest("DELETE", `/api/tasks/${taskId}`);
+      return res.json();
+    },
+    onSuccess: async () => {
+      // Force an immediate refetch
+      await refetchTasks();
+      
+      // Also invalidate the query cache
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: "Task deleted",
+        description: "The task has been deleted",
+      });
+      
+      setShowDeleteDialog(false);
+      setScheduleToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting task",
+        description: "There was an error deleting the task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Handle delete button click
-  const handleDeleteSchedule = (e: React.MouseEvent, scheduleId: number) => {
+  const handleDeleteSchedule = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
-    setScheduleToDelete(scheduleId);
+    setScheduleToDelete(item.id);
+    
+    // Store whether this is a task or not for the confirmation dialog
+    const isTaskItem = item.type === "task" || 'isTask' in item;
+    setItemToDeleteIsTask(isTaskItem);
+    
     setShowDeleteDialog(true);
   };
+  
+  // Track if the item being deleted is a task
+  const [itemToDeleteIsTask, setItemToDeleteIsTask] = useState(false);
   
   // Confirm delete
   const confirmDeleteSchedule = () => {
     if (scheduleToDelete) {
-      deleteScheduleMutation.mutate(scheduleToDelete);
+      if (itemToDeleteIsTask) {
+        deleteTaskMutation.mutate(scheduleToDelete);
+      } else {
+        deleteScheduleMutation.mutate(scheduleToDelete);
+      }
     }
   };
   
@@ -491,11 +534,18 @@ export default function SchedulePage() {
   };
   
   // Handle clicking a schedule item to view contact details
-  const handleScheduleItemClick = (schedule: Schedule) => {
-    // If there's a contact associated with this schedule item
-    if (schedule.contactIds && schedule.contactIds.length > 0) {
+  const handleScheduleItemClick = (item: any) => {
+    // Check if this is a task with a direct contactId
+    if ('isTask' in item && item.contactId) {
+      setSelectedContactId(item.contactId);
+      setShowContactDetail(true);
+      return;
+    }
+    
+    // For regular schedules, check contactIds array
+    if (item.contactIds && item.contactIds.length > 0) {
       // Get the first associated contact
-      setSelectedContactId(schedule.contactIds[0]);
+      setSelectedContactId(item.contactIds[0]);
       setShowContactDetail(true);
     } else {
       toast({
@@ -629,9 +679,10 @@ export default function SchedulePage() {
               type="button"
               onClick={() => {
                 refetchSchedules();
+                refetchTasks();
                 toast({
                   title: "Refreshed",
-                  description: "Schedule data has been refreshed",
+                  description: "Schedule and task data has been refreshed",
                 });
               }}
               className="p-1.5 rounded-md text-gray-500 hover:text-primary-600 hover:bg-gray-100 transition-colors"
@@ -997,7 +1048,7 @@ export default function SchedulePage() {
                           className="absolute top-2 right-2 text-neutral-400 hover:text-red-500 focus:outline-none z-10"
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent triggering the parent click
-                            handleDeleteSchedule(e, schedule.id);
+                            handleDeleteSchedule(e, schedule);
                           }}
                           aria-label="Delete schedule item"
                         >
@@ -1020,10 +1071,39 @@ export default function SchedulePage() {
                               </div>
                             )}
                           </div>
-                          <div>
-                            <Badge variant="outline" className="capitalize text-xs">
-                              {schedule.type === "appointment" ? "Booked" : schedule.type.replace("_", " ")}
-                            </Badge>
+                          <div className="flex space-x-2">
+                            {/* Task-specific badges if this is a task */}
+                            {'isTask' in schedule ? (
+                              <>
+                                <Badge variant="outline" className="capitalize text-xs bg-purple-50 text-purple-700 border-purple-300">
+                                  Task
+                                </Badge>
+                                
+                                {/* Task priority badge */}
+                                {schedule.priority && (
+                                  <Badge variant="outline" className={cn(
+                                    "capitalize text-xs",
+                                    schedule.priority === "high" ? "bg-red-50 text-red-700 border-red-300" :
+                                    schedule.priority === "medium" ? "bg-yellow-50 text-yellow-700 border-yellow-300" :
+                                    "bg-blue-50 text-blue-700 border-blue-300"
+                                  )}>
+                                    {schedule.priority} priority
+                                  </Badge>
+                                )}
+                                
+                                {/* Task completion status */}
+                                <Badge variant={schedule.completed ? "default" : "outline"} className={cn(
+                                  "capitalize text-xs",
+                                  schedule.completed ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                )}>
+                                  {schedule.completed ? "Completed" : "Pending"}
+                                </Badge>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="capitalize text-xs">
+                                {schedule.type === "appointment" ? "Booked" : schedule.type.replace("_", " ")}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         
@@ -1089,13 +1169,15 @@ export default function SchedulePage() {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Delete Schedule Confirmation Dialog */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+            <AlertDialogTitle>
+              {itemToDeleteIsTask ? "Delete Task" : "Delete Schedule"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this schedule item? This action cannot be undone.
+              Are you sure you want to delete this {itemToDeleteIsTask ? "task" : "schedule item"}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1104,7 +1186,7 @@ export default function SchedulePage() {
               onClick={confirmDeleteSchedule}
               className="bg-red-500 hover:bg-red-600"
             >
-              {deleteScheduleMutation.isPending ? (
+              {deleteScheduleMutation.isPending || deleteTaskMutation.isPending ? (
                 <span className="flex items-center">
                   <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-r-transparent rounded-full"></span>
                   Deleting...
