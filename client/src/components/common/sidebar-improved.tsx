@@ -125,14 +125,6 @@ export default function SidebarImproved() {
           />
           
           <NavItem 
-            href="/routes" 
-            icon="directions" 
-            label="Routes" 
-            isActive={isActive("/routes")} 
-            collapsed={collapsed} 
-          />
-          
-          <NavItem 
             href="/reports" 
             icon="bar_chart" 
             label="Reports" 

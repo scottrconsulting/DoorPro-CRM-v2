@@ -110,16 +110,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <span>Schedule</span>
             </Link>
             <Link 
-              href="/routes" 
-              onClick={onClose}
-              className={`flex items-center px-4 py-2 ${isActive("/routes") 
-                ? "text-foreground bg-muted border-l-4 border-primary" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-            >
-              <span className={`material-icons mr-3 ${isActive("/routes") ? "text-primary" : "text-muted-foreground"}`}>directions</span>
-              <span>Routes</span>
-            </Link>
-            <Link 
               href="/reports" 
               onClick={onClose}
               className={`flex items-center px-4 py-2 ${isActive("/reports") 
