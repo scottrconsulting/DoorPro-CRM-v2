@@ -885,7 +885,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   
   // Function to start the map tour
   const handleStartMapTour = () => {
+    console.log("Map tour button clicked - setting showMapTour to true");
     setShowMapTour(true);
+    console.log("Current showMapTour state:", showMapTour); // This will show the previous state due to React's async state updates
   };
   
   // Function to close the map tour
