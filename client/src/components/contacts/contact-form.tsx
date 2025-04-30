@@ -72,9 +72,11 @@ const contactFormSchema = z.object({
   // Add schedule follow-up checkbox
   scheduleFollowUp: z.boolean().default(false),
   // Add appointment fields
+  appointmentTitle: z.string().optional(),
   appointmentDate: z.string().optional(),
   appointmentTime: z.string().optional(),
   // Add sale fields
+  saleProduct: z.string().optional(),
   saleAmount: z.union([
     z.string().regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount"),
     z.string().length(0),
@@ -123,9 +125,11 @@ export default function ContactForm({
       // Add scheduling checkbox
       scheduleFollowUp: false,
       // Add appointment fields with default empty values
+      appointmentTitle: "",
       appointmentDate: "",
       appointmentTime: "",
       // Add sale fields with default empty values
+      saleProduct: "",
       saleAmount: "",
       saleDate: new Date().toISOString().split('T')[0], // Default to today
       saleNotes: "",
@@ -728,7 +732,25 @@ export default function ContactForm({
                 <h3 className="text-md font-semibold text-blue-700">
                   {form.getValues().status === "booked" ? "Schedule Appointment" : "Schedule Follow-up"}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="appointmentTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="Enter appointment title..."
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                   <FormField
                     control={form.control}
                     name="appointmentDate"
@@ -774,7 +796,25 @@ export default function ContactForm({
                 <h3 className="text-md font-semibold text-green-700">
                   Record Sale Details
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="saleProduct"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product/Service</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="What was sold?"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                   <FormField
                     control={form.control}
                     name="saleAmount"
