@@ -387,12 +387,15 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     }
     
     // Create the task
+    // Parse the date properly to avoid validation errors
+    const dueDate = new Date(taskDueDate + "T00:00:00");
+    
     createTaskMutation.mutate({
       contactId,
       userId: user.id,
       title: taskTitle,
       description: taskDescription,
-      dueDate: new Date(taskDueDate),
+      dueDate, // Use properly parsed date
       priority: taskPriority,
       completed: false,
     });

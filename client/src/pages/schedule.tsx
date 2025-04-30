@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Schedule, InsertSchedule, Contact } from "@shared/schema";
+import { Schedule, InsertSchedule, Contact, Task } from "@shared/schema";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, set } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -85,7 +85,7 @@ export default function SchedulePage() {
   // Fetch schedules with advanced options for better refresh
   const { 
     data: schedules = [], 
-    isLoading,
+    isLoading: schedulesLoading,
     refetch: refetchSchedules
   } = useQuery<Schedule[]>({
     queryKey: ["/api/schedules"],
@@ -94,26 +94,66 @@ export default function SchedulePage() {
     refetchOnWindowFocus: true
   });
   
+  // Fetch tasks
+  const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    refetch: refetchTasks
+  } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+    staleTime: 10000, // Consider data stale after 10 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  });
+  
+  // Combined loading state
+  const isLoading = schedulesLoading || tasksLoading;
+  
   // Fetch contacts
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
   });
 
-  // Group schedules by date - using the date in local timezone for display
-  const schedulesByDate = schedules.reduce((acc, schedule) => {
-    // For debugging, log the schedule to see the dates
-    console.log('Schedule Processing:', { 
-      id: schedule.id, 
-      title: schedule.title,
-      rawStartTime: schedule.startTime,
-      isoString: new Date(schedule.startTime).toISOString(),
-      localDate: new Date(schedule.startTime).toString(),
-      fixedIsoLocalDate: new Date(schedule.startTime).toLocaleDateString()
+  // Convert tasks to a schedule-like format for display
+  const convertedTasks = tasks.map(task => ({
+    id: task.id,
+    userId: task.userId,
+    title: task.title,
+    description: task.description || "",
+    startTime: task.dueDate,
+    endTime: task.dueDate, // Tasks don't have end time, so we use the same value
+    type: "task",
+    location: "",
+    reminderSent: false,
+    confirmationStatus: task.completed ? "completed" : "pending",
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    contactIds: task.contactId ? [task.contactId] : [],
+    isTask: true, // Add a flag to identify as task for rendering
+    priority: task.priority || "medium",
+    completed: task.completed || false
+  }));
+  
+  // Combine schedules and tasks
+  const combinedItems = [...schedules, ...convertedTasks];
+  
+  // Group schedules and tasks by date - using the date in local timezone for display
+  const schedulesByDate = combinedItems.reduce((acc, item) => {
+    // For debugging, log the item to see the dates
+    console.log('Schedule/Task Processing:', { 
+      id: item.id, 
+      title: item.title,
+      type: item.type,
+      isTask: 'isTask' in item,
+      rawStartTime: item.startTime,
+      isoString: new Date(item.startTime).toISOString(),
+      localDate: new Date(item.startTime).toString(),
+      fixedIsoLocalDate: new Date(item.startTime).toLocaleDateString()
     });
     
     // Extract the date directly from the ISO string but preserving the intended date
     // This is critical to handle timezone shifts correctly
-    const scheduleDateStr = schedule.startTime.toString();
+    const scheduleDateStr = item.startTime.toString();
     
     // First try to extract the date part from an ISO string if it has the format
     let intendedDate;
@@ -123,18 +163,18 @@ export default function SchedulePage() {
       intendedDate = new Date(datePart + 'T00:00:00');
     } else {
       // Fallback if not in expected format
-      intendedDate = new Date(schedule.startTime);
+      intendedDate = new Date(item.startTime);
     }
     
     const dateString = format(intendedDate, "yyyy-MM-dd");
-    console.log(`Schedule ${schedule.id} (${schedule.title}) - Using date: ${dateString}`);
+    console.log(`Item ${item.id} (${item.title}) - Using date: ${dateString}`);
     
     if (!acc[dateString]) {
       acc[dateString] = [];
     }
-    acc[dateString].push(schedule);
+    acc[dateString].push(item);
     return acc;
-  }, {} as Record<string, Schedule[]>);
+  }, {} as Record<string, any[]>);
   
   // Today's date in YYYY-MM-DD format
   const today = new Date();
@@ -947,6 +987,7 @@ export default function SchedulePage() {
                           schedule.type === "route" && "border-blue-500 bg-blue-50",
                           (schedule.type === "follow_up" || schedule.type === "follow-up") && "border-yellow-500 bg-yellow-50",
                           schedule.type === "appointment" && "border-blue-500 bg-blue-50",
+                          schedule.type === "task" && "border-purple-500 bg-purple-50",
                           schedule.type === "presentation" && "border-orange-500 bg-orange-50"
                         )}
                         onClick={() => handleScheduleItemClick(schedule)}
