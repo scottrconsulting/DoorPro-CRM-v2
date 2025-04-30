@@ -92,7 +92,7 @@ export default function SidebarImproved() {
         )}
       </div>
       
-      <div className="flex flex-col flex-grow overflow-y-auto">
+      <div className="flex flex-col flex-grow overflow-y-auto" data-tour="navigation">
         <div className="py-2">
           {!collapsed && (
             <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

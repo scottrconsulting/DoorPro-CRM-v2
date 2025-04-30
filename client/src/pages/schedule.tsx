@@ -9,7 +9,7 @@ import { Schedule, InsertSchedule, Contact, Task } from "@shared/schema";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, set } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import TourGuide from "@/components/tour/tour-guide";
+import { scheduleTourSteps } from "@/tours/tour-steps";
+import { useTour } from "@/contexts/tour-context";
+import HelpTooltip from "@/components/tour/help-tooltip";
 
 export default function SchedulePage() {
   const { toast } = useToast();
