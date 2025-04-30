@@ -190,17 +190,12 @@ export default function ContactForm({
   // Create contact mutation
   const createContactMutation = useMutation({
     mutationFn: async (data: InsertContact) => {
-      // Use a custom header to identify this as a contact form submission
-      const headers = new Headers();
-      headers.append('x-contact-form-submission', 'true');
-      headers.append('Content-Type', 'application/json');
-      
-      // Use fetch directly instead of apiRequest for this special case
-      const response = await fetch('/api/contacts', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(data),
-        credentials: 'include'
+      // Go back to using the apiRequest utility which handles auth properly
+      // But add our custom header to identify contact form submissions
+      const response = await apiRequest("POST", "/api/contacts", data, {
+        headers: {
+          'x-contact-form-submission': 'true'
+        }
       });
       
       return response.json();
