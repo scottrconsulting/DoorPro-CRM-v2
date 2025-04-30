@@ -21,12 +21,27 @@ import {
 } from "@shared/schema";
 import { useTour } from "@/contexts/tour-context";
 import { HelpCircle } from "lucide-react";
+import CustomTour from "@/components/tour/custom-tour";
+import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
+import { customDashboardTourSteps } from "@/tours/custom-dashboard-tour-steps";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
-  const { startTour, completedTours } = useTour();
+  const { startTour, completedTours, endTour } = useTour();
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
+  const [showDashboardTour, setShowDashboardTour] = useState(false);
+  
+  // Function to handle starting the dashboard tour
+  const handleStartDashboardTour = () => {
+    console.log("Starting dashboard tour");
+    setShowDashboardTour(true);
+  };
+  
+  // Function to handle closing the dashboard tour
+  const handleCloseDashboardTour = () => {
+    setShowDashboardTour(false);
+  };
 
   // Show welcome message for new users
   useEffect(() => {
