@@ -402,7 +402,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     });
   };
   
-  // Handle task creation
+  // Handle task creation - simplified approach
   const handleCreateTask = () => {
     if (!user?.id || !contactId) return;
     
@@ -416,33 +416,55 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       return;
     }
     
-    // Create the task
-    // Format the date as an ISO string for proper database storage
-    // This ensures the date is sent in the format expected by the API
+    // Simple task object with just the essentials
+    const newTask = {
+      contactId: contactId,
+      userId: user.id,
+      title: taskTitle,
+      description: taskDescription || "",
+      status: "pending",
+      priority: taskPriority || "medium",
+      completed: false
+    };
     
-    try {
-      // Important: Do NOT create a Date object client-side - send as string
-      // Let the server handle the date conversion through the schema transformer
-      console.log("Creating task with due date:", taskDueDate);
-      
-      createTaskMutation.mutate({
-        contactId,
-        userId: user.id,
-        title: taskTitle,
-        description: taskDescription || "",
-        // @ts-ignore: Server will convert string to Date through schema transformer
-        dueDate: taskDueDate,
-        priority: taskPriority || "medium",
-        completed: false,
-      });
-    } catch (error) {
-      console.error("Error parsing task date:", error);
-      toast({
-        title: "Error",
-        description: "There was a problem with the task date format.",
-        variant: "destructive",
-      });
+    // Add the due date if provided
+    if (taskDueDate) {
+      try {
+        // @ts-ignore - let the server handle the date conversion
+        newTask.dueDate = taskDueDate;
+      } catch (e) {
+        console.log("Date conversion handled by server");
+      }
     }
+    
+    console.log("Creating task:", newTask);
+    
+    createTaskMutation.mutate(newTask, {
+      onSuccess: () => {
+        toast({
+          title: "Task created",
+          description: "Task has been added successfully",
+        });
+        
+        // Reset form fields
+        setTaskTitle("");
+        setTaskDescription("");
+        setTaskDueDate("");
+        setTaskPriority("medium");
+        
+        // Refresh the tasks list
+        queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      },
+      onError: (error) => {
+        console.error("Failed to create task:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create task. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
   };
   
   // Handle completing a task

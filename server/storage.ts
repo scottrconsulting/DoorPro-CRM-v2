@@ -1113,28 +1113,29 @@ export class DatabaseStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     try {
-      // Ensure dueDate is a valid date object
-      let taskData = {...insertTask};
+      // Set defaults for required fields if not provided
+      const taskWithDefaults = {
+        ...insertTask,
+        status: insertTask.status || "pending",
+        priority: insertTask.priority || "medium",
+        completed: insertTask.completed === undefined ? false : insertTask.completed
+      };
       
-      // Convert dueDate to a proper Date if it's not already one
-      if (taskData.dueDate && !(taskData.dueDate instanceof Date)) {
-        // If it's a string in ISO format, parse it
-        if (typeof taskData.dueDate === 'string') {
-          taskData.dueDate = new Date(taskData.dueDate);
-          console.log("Converted string date to Date object:", taskData.dueDate);
-        } else {
-          // Default to current date if conversion fails
-          console.log("Invalid task due date format, using current date");
-          taskData.dueDate = new Date();
-        }
+      // Always create a new Date object for the due date field
+      if (!taskWithDefaults.dueDate) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(12, 0, 0, 0);
+        taskWithDefaults.dueDate = tomorrow;
       }
       
-      console.log("Inserting task with date:", taskData.dueDate);
-      const result = await db.insert(tasks).values(taskData).returning();
+      console.log("Creating task with values:", JSON.stringify(taskWithDefaults, null, 2));
+      
+      const result = await db.insert(tasks).values(taskWithDefaults).returning();
       return result[0];
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating task:", error);
-      throw new Error('Failed to create task');
+      throw new Error(`Failed to create task: ${error.message || 'Unknown error'}`);
     }
   }
 
