@@ -276,7 +276,7 @@ export default function Contacts() {
             variant="ghost" 
             size="icon" 
             className="mr-2"
-            onClick={() => startTour('contacts')}
+            onClick={handleStartContactsTour}
             aria-label="Help"
           >
             <HelpCircle size={20} className="text-muted-foreground" />
@@ -567,6 +567,14 @@ export default function Contacts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Contacts Tour */}
+      <CustomTour 
+        steps={customContactsTourSteps}
+        tourName="contacts"
+        isOpen={showContactsTour}
+        onClose={handleCloseContactsTour}
+      />
     </div>
   );
 }
