@@ -686,10 +686,10 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="sm"
             onClick={handleStartScheduleTour}
-            className="ml-2 flex items-center h-8 w-8 p-1 justify-center rounded-full hover:bg-gray-100"
+            className="ml-2 flex items-center p-0"
             aria-label="Help"
             title="Get help with managing your appointments and tasks"
           >
