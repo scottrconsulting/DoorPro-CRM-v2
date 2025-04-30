@@ -879,12 +879,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }));
   }, [activeStatus]);
 
-  // Tour functionality
-  const { startTour } = useTour();
+  // Custom Tour functionality
+  const { endTour } = useTour();
+  const [showMapTour, setShowMapTour] = useState(false);
   
   // Function to start the map tour
   const handleStartMapTour = () => {
-    startTour('map');
+    setShowMapTour(true);
+  };
+  
+  // Function to close the map tour
+  const handleCloseMapTour = () => {
+    setShowMapTour(false);
   };
 
   return (
