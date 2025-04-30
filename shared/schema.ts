@@ -362,10 +362,39 @@ export const insertTaskSchema = createInsertSchema(tasks)
     updatedAt: true,
   })
   .transform((data) => {
-    // If a string date was provided, convert it to a Date object
-    if (data.dueDate && typeof data.dueDate === 'string') {
-      data.dueDate = new Date(data.dueDate);
+    // Handle empty or missing values
+    if (!data.status) data.status = "pending";
+    if (!data.priority) data.priority = "medium";
+    if (!data.completed) data.completed = false;
+    
+    // Handle date conversion
+    try {
+      // If a string date was provided, convert it to a Date object
+      if (data.dueDate && typeof data.dueDate === 'string') {
+        // Make sure we have a time component to avoid timezone issues
+        if (data.dueDate.indexOf('T') >= 0) {
+          data.dueDate = new Date(data.dueDate);
+        } else {
+          // For date-only strings like "2025-04-30", add time component
+          data.dueDate = new Date(data.dueDate + 'T12:00:00');
+        }
+        console.log("Parsed date in schema:", data.dueDate);
+      } else if (!data.dueDate) {
+        // Default to tomorrow if no date provided
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(12, 0, 0, 0);
+        data.dueDate = tomorrow;
+      }
+    } catch (error) {
+      console.error("Date parsing error in schema:", error);
+      // Set to tomorrow as fallback
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(12, 0, 0, 0);
+      data.dueDate = tomorrow;
     }
+    
     return data;
   });
 

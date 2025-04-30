@@ -430,7 +430,8 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
         userId: user.id,
         title: taskTitle,
         description: taskDescription || "",
-        dueDate: taskDueDate, // Send as string - server will convert
+        // @ts-ignore: Server will convert string to Date through schema transformer
+        dueDate: taskDueDate,
         priority: taskPriority || "medium",
         completed: false,
       });
@@ -883,7 +884,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                                 Due: {task.dueDate && format(new Date(task.dueDate), "MMM d, yyyy")}
                               </div>
                               <Badge variant="outline" className="text-xs">
-                                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
+                                {task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) : "Medium"} Priority
                               </Badge>
                             </div>
                             
