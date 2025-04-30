@@ -29,8 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import TourGuide from "@/components/tour/tour-guide";
-import { scheduleTourSteps } from "@/tours/tour-steps";
 import { useTour } from "@/contexts/tour-context";
 import HelpTooltip from "@/components/tour/help-tooltip";
 
@@ -588,8 +586,7 @@ export default function SchedulePage() {
   
   return (
     <div className="container mx-auto py-6">
-      {/* Tour Guide Component */}
-      <TourGuide steps={scheduleTourSteps} tourName="schedule" />
+      {/* Custom tour will be handled by contexts */}
       {/* Debug panel for auth troubleshooting */}
       {debugVisible && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md">

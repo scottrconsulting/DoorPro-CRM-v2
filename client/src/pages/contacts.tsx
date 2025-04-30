@@ -21,8 +21,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
 import ContactForm from "@/components/contacts/contact-form";
 import ContactCard from "@/components/contacts/contact-card";
-import TourGuide from "@/components/tour/tour-guide";
-import { contactsTourSteps } from "@/tours/tour-steps";
+
 import { useTour } from "@/contexts/tour-context";
 import { HelpCircle } from "lucide-react";
 import HelpTooltip from "@/components/tour/help-tooltip";
@@ -247,8 +246,7 @@ export default function Contacts() {
   
   return (
     <div className="p-4 md:p-6">
-      {/* Tour Guide Component */}
-      <TourGuide steps={contactsTourSteps} tourName="contacts" />
+      {/* Custom tour will be handled by contexts */}
       
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
