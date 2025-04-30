@@ -358,3 +358,17 @@ function mapHexToGoogleColor(hexColor: string): string {
     return "blue"; // Fallback color if parsing fails
   }
 }
+// Check if user is within active work radius of any pins
+export function isWithinWorkRadius(
+  userLocation: { lat: number; lng: number },
+  pins: { lat: number; lng: number }[],
+  radiusMiles: number = 0.1
+): boolean {
+  if (!userLocation || !pins || pins.length === 0) return false;
+  
+  return pins.some(pin => {
+    const distance = calculateDistance(userLocation, pin);
+    // Convert km to miles (calculateDistance returns km)
+    return (distance * 0.621371) <= radiusMiles;
+  });
+}

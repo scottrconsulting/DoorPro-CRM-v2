@@ -148,11 +148,25 @@ export default function Dashboard() {
       return isNaN(amount) ? sum : sum + amount;
     }, 0);
     
-    // Calculate time worked (from all visits timing)
+    // Calculate time worked based on active time near pins
     const totalMinutesWorked = visits.reduce((total, visit) => {
-      // This is a simple calculation - we'll assume 15 min per visit
-      // In a real app, you'd use actual time tracking data
-      return total + 15;
+      if (!visit.visitDate || !visit.latitude || !visit.longitude) return total;
+      
+      const visitLocation = {
+        lat: parseFloat(visit.latitude),
+        lng: parseFloat(visit.longitude)
+      };
+      
+      // Only count time if the visit was made while within work radius
+      const wasWithinRadius = isWithinWorkRadius(
+        visitLocation,
+        visits.map(v => ({
+          lat: parseFloat(v.latitude || '0'),
+          lng: parseFloat(v.longitude || '0')
+        }))
+      );
+      
+      return total + (wasWithinRadius ? 15 : 0);
     }, 0);
     
     const hoursWorked = Math.floor(totalMinutesWorked / 60);
