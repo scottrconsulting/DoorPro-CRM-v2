@@ -19,8 +19,6 @@ import {
   STATISTICS_METRIC_LABELS,
   STATISTICS_METRIC_ICONS 
 } from "@shared/schema";
-import TourGuide from "@/components/tour/tour-guide";
-import { dashboardTourSteps } from "@/tours/tour-steps";
 import { useTour } from "@/contexts/tour-context";
 import { HelpCircle } from "lucide-react";
 
