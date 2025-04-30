@@ -7,8 +7,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Contact, InsertContact, InsertVisit, InsertSchedule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import TourGuide from "@/components/tour/tour-guide";
-import { mapTourSteps } from "@/tours/map-tour-steps";
+import CustomTour from "@/components/tour/custom-tour";
+import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
 import { useTour } from "@/contexts/tour-context";
 import ContactForm from "@/components/contacts/contact-form";
 import ContactCard from "@/components/contacts/contact-card";
@@ -1239,8 +1239,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Map Tour Guide - Placed as the last component */}
-      <TourGuide steps={mapTourSteps} tourName="map" />
+      {/* Custom Map Tour Dialog - Placed as the last component */}
+      <CustomTour 
+        steps={customMapTourSteps} 
+        tourName="map"
+        isOpen={showMapTour}
+        onClose={handleCloseMapTour}
+      />
     </div>
   );
 }
