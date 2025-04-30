@@ -896,6 +896,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       <div 
         ref={mapRef} 
         className="w-full h-full map-container"
+        id="map-container"
+        data-tour="map-container"
       />
       
       {/* Map help button */}
@@ -925,7 +927,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         {/* Main search bar and controls - Responsive layout */}
         <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
           {/* Search input and button - Always visible */}
-          <div className="flex-grow flex items-stretch gap-2 map-search">
+          <div className="flex-grow flex items-stretch gap-2 map-search" id="map-search-container" data-tour="map-search">
             <Input
               type="text"
               placeholder="Search for an address..."
@@ -953,12 +955,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               size="sm"
               onClick={handleMyLocationClick}
               className="text-xs whitespace-nowrap flex-shrink-0 location-button"
+              id="my-location-button"
+              data-tour="my-location"
             >
               My Location
             </Button>
           
             {/* Map Type Controls - Responsive handling */}
-            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2 map-controls">
+            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1061,7 +1065,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       )}
       
       {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter" id="status-filter" data-tour="status-filter">
         {/* Toggle button for showing/hiding the legend */}
         <Button
           variant="ghost"

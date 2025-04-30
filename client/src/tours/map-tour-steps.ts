@@ -13,7 +13,7 @@ export const mapTourSteps: Step[] = [
   
   // Step 2: My Location button
   {
-    target: '.flex-shrink-0.location-button',
+    target: '#my-location-button',
     content: 'Click this button to locate your current position on the map. Your location will be shown as a blue dot, and the map will automatically center on your position.',
     placement: 'bottom',
     title: 'My Location',
@@ -21,7 +21,7 @@ export const mapTourSteps: Step[] = [
   
   // Step 3: Search functionality
   {
-    target: '.flex-grow.flex.items-stretch.gap-2.map-search',
+    target: '#map-search-container',
     content: 'Use this search box to find addresses. Enter an address and press Enter to search, then you can add it as a new contact.',
     placement: 'bottom',
     title: 'Address Search',
@@ -29,7 +29,7 @@ export const mapTourSteps: Step[] = [
   
   // Step 4: Map controls
   {
-    target: '.hidden.sm\\:flex.items-stretch.gap-1.ml-2.border-l.pl-2.map-controls',
+    target: '#map-controls',
     content: 'These controls let you switch between map views: Map (default street view), Satellite (aerial photos), Hybrid (combination), or Terrain (topographical features).',
     placement: 'right',
     title: 'Map Type Controls',
@@ -37,7 +37,7 @@ export const mapTourSteps: Step[] = [
   
   // Step 5: Map interaction
   {
-    target: '.w-full.h-full.map-container',
+    target: '#map-container',
     content: 'Click anywhere on the map to add a new contact at that location. You can also click on existing pins to view contact details.',
     placement: 'top',
     title: 'Adding & Viewing Contacts',
@@ -45,7 +45,7 @@ export const mapTourSteps: Step[] = [
   
   // Step 6: Status filter
   {
-    target: '.absolute.bottom-4.left-1\\/2.transform.-translate-x-1\\/2.bg-white.p-1.rounded-lg.shadow-lg.flex.items-center.gap-1.flex-wrap.justify-center.z-10.status-filter',
+    target: '#status-filter',
     content: 'Filter contacts on the map by their status. This helps you focus on specific groups like leads, prospects, or customers.',
     placement: 'top',
     title: 'Status Filtering',
