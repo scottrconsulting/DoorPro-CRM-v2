@@ -2203,10 +2203,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks", ensureAuthenticated, async (req, res) => {
     try {
       const user = req.user as any;
-      const taskData = insertTaskSchema.parse({
-        ...req.body,
-        userId: user.id
-      });
+      
+      // Pre-process the request body to handle date conversion before schema validation
+      const requestData = { ...req.body, userId: user.id };
+      
+      // Convert dueDate string to a proper Date object if needed
+      if (requestData.dueDate && typeof requestData.dueDate === 'string') {
+        try {
+          // If it's just a date string (e.g., "2025-04-29"), add time
+          if (!requestData.dueDate.includes('T')) {
+            requestData.dueDate = new Date(`${requestData.dueDate}T12:00:00Z`);
+          } else {
+            requestData.dueDate = new Date(requestData.dueDate);
+          }
+          console.log("Converted date string to Date object:", requestData.dueDate);
+        } catch (dateError) {
+          console.error("Error parsing date:", dateError);
+          // Set default date if parsing fails
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(12, 0, 0, 0);
+          requestData.dueDate = tomorrow;
+        }
+      }
+      
+      // Now validate the data with the schema
+      const taskData = insertTaskSchema.parse(requestData);
       
       // If contactId is provided, verify the contact exists
       if (taskData.contactId) {
@@ -2216,14 +2238,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log("Creating task with data:", JSON.stringify(taskData));
       const task = await storage.createTask(taskData);
-      return res.status(201).json(task);
+      
+      return res.status(201).json({
+        ...task,
+        message: "Task created successfully"
+      });
     } catch (error) {
       console.error("Error creating task:", error);
       if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Invalid task data", errors: (error as ZodError).errors });
+        return res.status(400).json({ 
+          message: "Invalid task data", 
+          errors: (error as ZodError).errors 
+        });
       }
-      return res.status(500).json({ message: "Failed to create task" });
+      return res.status(500).json({ 
+        message: "Failed to create task",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

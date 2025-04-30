@@ -427,13 +427,25 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       completed: false
     };
     
-    // Add the due date if provided
+    // Convert the string date to a proper Date object
     if (taskDueDate) {
       try {
-        // @ts-ignore - let the server handle the date conversion
-        newTask.dueDate = taskDueDate;
+        // Create a Date object from the input value (yyyy-MM-dd)
+        const [year, month, day] = taskDueDate.split('-').map(Number);
+        // Note: JS months are 0-based
+        const dateObj = new Date(year, month - 1, day, 12, 0, 0);
+        console.log(`Creating Date from ${taskDueDate}:`, dateObj);
+        
+        // @ts-ignore - this will be a proper Date object now
+        newTask.dueDate = dateObj;
       } catch (e) {
-        console.log("Date conversion handled by server");
+        console.error("Error converting date:", e);
+        // Create a default date (tomorrow)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(12, 0, 0, 0);
+        // @ts-ignore
+        newTask.dueDate = tomorrow;
       }
     }
     
