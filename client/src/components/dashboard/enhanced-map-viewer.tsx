@@ -196,47 +196,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           visitDate: new Date()
         });
         
-        // Create a schedule entry if the contact has appointment/follow-up details
-        if (createdContact.appointment) {
-          const [apptDate, apptTime] = createdContact.appointment.split(' ');
-          if (apptDate && apptTime) {
-            const startDateTime = new Date(`${apptDate}T${apptTime}`);
-            
-            if (createdContact.status === "booked") {
-              // Create an appointment schedule entry
-              const endDateTime = new Date(startDateTime);
-              endDateTime.setMinutes(endDateTime.getMinutes() + 60); // Default to 1 hour appointment
-              
-              createScheduleEntry({
-                userId: user.id,
-                title: `Appointment with ${createdContact.fullName}`,
-                description: `Sales appointment at ${createdContact.address}`,
-                startTime: startDateTime,
-                endTime: endDateTime,
-                type: "appointment",
-                location: createdContact.address,
-                reminderSent: false,
-                contactIds: [createdContact.id]
-              });
-            } else if (createdContact.status === "check_back") {
-              // Create a follow-up schedule entry
-              const endDateTime = new Date(startDateTime);
-              endDateTime.setMinutes(endDateTime.getMinutes() + 30); // Default to 30 min follow-up
-              
-              createScheduleEntry({
-                userId: user.id,
-                title: `Follow-up with ${createdContact.fullName}`,
-                description: `Check back at ${createdContact.address}`,
-                startTime: startDateTime,
-                endTime: endDateTime,
-                type: "follow_up",
-                location: createdContact.address,
-                reminderSent: false,
-                contactIds: [createdContact.id]
-              });
-            }
-          }
-        }
+        // NOTE: We're now letting the contact form handle appointment creation
+        // to avoid creating duplicate appointment entries in the schedule.
+        // The visit record is still created here, but appointment scheduling
+        // is handled by the contact form component when adding/editing contacts.
       }
     },
     onError: (error) => {
