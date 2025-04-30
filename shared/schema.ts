@@ -355,11 +355,19 @@ export const insertSaleSchema = createInsertSchema(sales).omit({
   updatedAt: true,
 });
 
-export const insertTaskSchema = createInsertSchema(tasks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertTaskSchema = createInsertSchema(tasks)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .transform((data) => {
+    // If a string date was provided, convert it to a Date object
+    if (data.dueDate && typeof data.dueDate === 'string') {
+      data.dueDate = new Date(data.dueDate);
+    }
+    return data;
+  });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,

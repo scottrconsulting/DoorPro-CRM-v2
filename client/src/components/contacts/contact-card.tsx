@@ -420,12 +420,14 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     // Format the date as an ISO string for proper database storage
     // This ensures the date is sent in the format expected by the API
     
+    // Send the ISO string date format directly
+    // Our schema transformer will convert it to a Date object
     createTaskMutation.mutate({
       contactId,
       userId: user.id,
       title: taskTitle,
       description: taskDescription,
-      dueDate: new Date(taskDueDate + "T00:00:00").toISOString(), // Send as ISO string
+      dueDate: taskDueDate + "T00:00:00Z", // ISO string format - schema will convert
       priority: taskPriority,
       completed: false,
     });
