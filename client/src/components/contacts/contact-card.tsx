@@ -420,17 +420,28 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     // Format the date as an ISO string for proper database storage
     // This ensures the date is sent in the format expected by the API
     
-    // Send the ISO string date format directly
-    // Our schema transformer will convert it to a Date object
-    createTaskMutation.mutate({
-      contactId,
-      userId: user.id,
-      title: taskTitle,
-      description: taskDescription,
-      dueDate: taskDueDate + "T00:00:00Z", // ISO string format - schema will convert
-      priority: taskPriority,
-      completed: false,
-    });
+    try {
+      // Parse date string into a proper Date object on the client side
+      const taskDate = new Date(taskDueDate + "T12:00:00Z");
+      console.log("Creating task with date:", taskDate);
+      
+      createTaskMutation.mutate({
+        contactId,
+        userId: user.id,
+        title: taskTitle,
+        description: taskDescription,
+        dueDate: taskDate, // Send as proper Date object
+        priority: taskPriority,
+        completed: false,
+      });
+    } catch (error) {
+      console.error("Error parsing task date:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem with the task date format.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle completing a task

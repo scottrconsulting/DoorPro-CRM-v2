@@ -1113,7 +1113,24 @@ export class DatabaseStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     try {
-      const result = await db.insert(tasks).values(insertTask).returning();
+      // Ensure dueDate is a valid date object
+      let taskData = {...insertTask};
+      
+      // Convert dueDate to a proper Date if it's not already one
+      if (taskData.dueDate && !(taskData.dueDate instanceof Date)) {
+        // If it's a string in ISO format, parse it
+        if (typeof taskData.dueDate === 'string') {
+          taskData.dueDate = new Date(taskData.dueDate);
+          console.log("Converted string date to Date object:", taskData.dueDate);
+        } else {
+          // Default to current date if conversion fails
+          console.log("Invalid task due date format, using current date");
+          taskData.dueDate = new Date();
+        }
+      }
+      
+      console.log("Inserting task with date:", taskData.dueDate);
+      const result = await db.insert(tasks).values(taskData).returning();
       return result[0];
     } catch (error) {
       console.error("Error creating task:", error);
