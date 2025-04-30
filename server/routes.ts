@@ -14,12 +14,14 @@ import {
   insertChatConversationSchema,
   insertChatParticipantSchema,
   insertChatMessageSchema,
+  insertTaskSchema,
   PIN_COLORS,
   CONTACT_STATUSES,
   QUICK_ACTIONS,
   DASHBOARD_WIDGETS,
   DASHBOARD_WIDGET_LABELS,
-  chatParticipants
+  chatParticipants,
+  tasks
 } from "@shared/schema";
 import { ZodError } from "zod";
 import session from "express-session";
