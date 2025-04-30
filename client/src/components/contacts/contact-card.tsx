@@ -54,6 +54,13 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const [saleStatus, setSaleStatus] = useState("completed");
   const [salePaymentMethod, setSalePaymentMethod] = useState("Unknown");
   
+  // Task form state
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [taskPriority, setTaskPriority] = useState("medium");
+  
   // Get contact details
   const { data: contact, isLoading, isError } = useQuery<Contact>({
     queryKey: [`/api/contacts/${contactId}`],
@@ -172,6 +179,92 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     },
   });
 
+  // Create task mutation
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: InsertTask) => {
+      const response = await apiRequest("POST", "/api/tasks", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Reset form fields
+      setTaskTitle("");
+      setTaskDescription("");
+      setTaskDueDate(format(new Date(), "yyyy-MM-dd"));
+      setTaskPriority("medium");
+      setShowTaskForm(false);
+      
+      // Invalidate tasks queries to update UI
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: "Task created",
+        description: "Your task has been created successfully",
+      });
+      
+      // Switch to the tasks tab to show the new task
+      setActiveTab("tasks");
+    },
+    onError: (error) => {
+      console.error("Error creating task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Complete task mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const response = await apiRequest("POST", `/api/tasks/${taskId}/complete`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: "Task completed",
+        description: "Task marked as completed successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error completing task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete the task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      await apiRequest("DELETE", `/api/tasks/${taskId}`);
+      return taskId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: "Task deleted",
+        description: "Task has been deleted successfully",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete contact mutation
   const deleteContactMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -277,6 +370,44 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       paymentMethod: salePaymentMethod,
       notes: saleNotes,
     });
+  };
+  
+  // Handle task creation
+  const handleCreateTask = () => {
+    if (!user?.id || !contactId) return;
+    
+    // Validate form fields
+    if (!taskTitle) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a task title",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create the task
+    createTaskMutation.mutate({
+      contactId,
+      userId: user.id,
+      title: taskTitle,
+      description: taskDescription,
+      dueDate: new Date(taskDueDate),
+      priority: taskPriority,
+      completed: false,
+    });
+  };
+  
+  // Handle completing a task
+  const handleCompleteTask = (taskId: number) => {
+    if (!taskId) return;
+    completeTaskMutation.mutate(taskId);
+  };
+  
+  // Handle deleting a task
+  const handleDeleteTask = (taskId: number) => {
+    if (!taskId) return;
+    deleteTaskMutation.mutate(taskId);
   };
 
   // Handle contact edit
@@ -601,11 +732,86 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-sm font-medium">Tasks</h3>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setActiveTab("tasks");
+                          setShowTaskForm(true);
+                        }}
+                      >
                         <FileText className="h-4 w-4 mr-1" />
                         Add Task
                       </Button>
                     </div>
+                    
+                    {/* Task Creation Form */}
+                    {showTaskForm && (
+                      <div className="p-4 border border-blue-200 bg-blue-50 rounded-md space-y-3">
+                        <h4 className="font-medium text-blue-700">Create New Task</h4>
+                        
+                        <div>
+                          <Label htmlFor="task-title">Title</Label>
+                          <Input
+                            id="task-title"
+                            placeholder="Task title..."
+                            value={taskTitle}
+                            onChange={(e) => setTaskTitle(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="task-description">Description</Label>
+                          <Textarea
+                            id="task-description"
+                            placeholder="Task description..."
+                            value={taskDescription}
+                            onChange={(e) => setTaskDescription(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="task-due-date">Due Date</Label>
+                            <Input
+                              id="task-due-date"
+                              type="date"
+                              value={taskDueDate}
+                              onChange={(e) => setTaskDueDate(e.target.value)}
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="task-priority">Priority</Label>
+                            <select
+                              id="task-priority"
+                              value={taskPriority}
+                              onChange={(e) => setTaskPriority(e.target.value)}
+                              className="w-full h-10 px-3 py-2 rounded-md border border-input"
+                            >
+                              <option value="low">Low</option>
+                              <option value="medium">Medium</option>
+                              <option value="high">High</option>
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end gap-2 mt-3">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowTaskForm(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleCreateTask}
+                            disabled={createTaskMutation.isPending}
+                          >
+                            {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-2 max-h-[350px] overflow-y-auto">
                       {tasks.length > 0 ? (
@@ -616,17 +822,47 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                           >
                             <div className="flex justify-between">
                               <span className="font-medium">{task.title}</span>
-                              <Badge 
-                                variant={task.completed ? "default" : "secondary"} 
-                                className={`text-xs ${task.completed ? "bg-green-100 text-green-800" : ""}`}
-                              >
-                                {task.completed ? "Completed" : "Pending"}
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  variant={task.completed ? "default" : "secondary"} 
+                                  className={`text-xs ${task.completed ? "bg-green-100 text-green-800" : ""}`}
+                                >
+                                  {task.completed ? "Completed" : "Pending"}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center mt-1">
+                              <div className="text-xs text-gray-500">
+                                Due: {task.dueDate && format(new Date(task.dueDate), "MMM d, yyyy")}
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
                               </Badge>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Due: {task.dueDate && format(new Date(task.dueDate), "MMM d, yyyy")}
-                            </div>
+                            
                             {task.description && <p className="text-sm mt-1">{task.description}</p>}
+                            
+                            <div className="flex justify-end mt-2 gap-2">
+                              {!task.completed && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="px-2 py-1 h-8 text-xs"
+                                  onClick={() => handleCompleteTask(task.id)}
+                                >
+                                  Mark Complete
+                                </Button>
+                              )}
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="px-2 py-1 h-8 text-xs text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteTask(task.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </div>
                         ))
                       ) : (
