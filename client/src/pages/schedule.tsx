@@ -682,14 +682,14 @@ export default function SchedulePage() {
         </div>
       )}
     
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-gray-900" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 px-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
           <Button 
             variant="ghost" 
             size="sm"
             onClick={handleStartScheduleTour}
-            className="ml-2 flex items-center p-0"
+            className="flex items-center p-0 flex-shrink-0"
             aria-label="Help"
             title="Get help with managing your appointments and tasks"
           >
@@ -697,14 +697,14 @@ export default function SchedulePage() {
           </Button>
         </div>
         
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
           {/* View mode selector */}
-          <div className="flex items-center gap-3" data-tour="schedule-filters">
-            <div className="flex bg-gray-100 rounded-md p-1">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-center sm:justify-start w-full" data-tour="schedule-filters">
+            <div className="flex bg-gray-100 rounded-md p-1 flex-shrink-0">
               <button 
                 type="button"
                 onClick={() => setViewMode('today')} 
-                className={`px-3 py-1.5 text-sm font-medium rounded-md ${viewMode === 'today' 
+                className={`px-2 sm:px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap ${viewMode === 'today' 
                   ? 'bg-white shadow-sm text-primary-700' 
                   : 'text-gray-600 hover:text-gray-900'}`}
               >
