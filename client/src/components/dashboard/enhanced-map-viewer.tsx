@@ -909,12 +909,15 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       
       {/* Map help button */}
       <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-secondary/80"
+        variant="outline"
+        size="sm"
+        className="absolute top-1 right-1 z-10 bg-white shadow-md"
         onClick={handleStartMapTour}
       >
-        <span className="material-icons text-sm">help_outline</span>
+        <span className="flex items-center gap-1">
+          <span className="material-icons text-sm">help_outline</span>
+          Map Tour
+        </span>
       </Button>
       
       {/* Loading overlay */}
