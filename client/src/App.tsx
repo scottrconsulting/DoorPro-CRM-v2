@@ -31,6 +31,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDirectAuth } from "@/hooks/use-direct-auth";
 import { useEffect, useState } from "react";
 
+// Import our tour provider
+import { TourProvider } from "@/contexts/tour-context";
+
 // Import our new simple protected route
 import SimpleProtectedRoute from "./components/SimpleProtectedRoute";
 
@@ -46,84 +49,86 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
         <TooltipProvider>
-          <Router>
-            <Toaster />
-            {mounted && (
-              <Switch>
-                <Route path="/auto-login">
-                  <AutoLogin />
-                </Route>
-                <Route path="/login">
-                  <DirectLogin />
-                </Route>
-                <Route path="/direct-login">
-                  <DirectLogin />
-                </Route>
-                <Route path="/register">
-                  <Register />
-                </Route>
-                <Route path="/forgot-password">
-                  <ForgotPassword />
-                </Route>
-                <Route path="/reset-password">
-                  <ResetPassword />
-                </Route>
-                <Route path="/*">
-                  <SimpleProtectedRoute>
-                    <AppShell>
-                      <Switch>
-                        <Route path="/">
-                          <Dashboard />
-                        </Route>
-                        {/* Temporarily hidden until core features are stable */}
-                        <Route path="/territories">
-                          <NotFound />
-                        </Route>
-                        <Route path="/contacts/:id">
-                          <ContactDetail />
-                        </Route>
-                        <Route path="/contacts">
-                          <Contacts />
-                        </Route>
-                        <Route path="/schedule">
-                          <Schedule />
-                        </Route>
-                        {/* Temporarily hidden until core features are stable */}
-                        <Route path="/teams">
-                          <NotFound />
-                        </Route>
-                        <Route path="/reports">
-                          <Reports />
-                        </Route>
-                        <Route path="/upgrade">
-                          <Upgrade />
-                        </Route>
-                        <Route path="/settings">
-                          <Settings />
-                        </Route>
-                        <Route path="/customize">
-                          <Customize />
-                        </Route>
-                        <Route path="/customize-message-templates">
-                          <CustomizeMessageTemplates />
-                        </Route>
-                        {/* Temporarily hidden until core features are stable */}
-                        <Route path="/chat">
-                          <NotFound />
-                        </Route>
-                        <Route path="/routes">
-                          <Routes />
-                        </Route>
-                        <Route>
-                          <NotFound />
-                        </Route>
-                      </Switch>
-                    </AppShell>
-                  </SimpleProtectedRoute>
-                </Route>
-              </Switch>
-            )}
-          </Router>
+          <TourProvider>
+            <Router>
+              <Toaster />
+              {mounted && (
+                <Switch>
+                  <Route path="/auto-login">
+                    <AutoLogin />
+                  </Route>
+                  <Route path="/login">
+                    <DirectLogin />
+                  </Route>
+                  <Route path="/direct-login">
+                    <DirectLogin />
+                  </Route>
+                  <Route path="/register">
+                    <Register />
+                  </Route>
+                  <Route path="/forgot-password">
+                    <ForgotPassword />
+                  </Route>
+                  <Route path="/reset-password">
+                    <ResetPassword />
+                  </Route>
+                  <Route path="/*">
+                    <SimpleProtectedRoute>
+                      <AppShell>
+                        <Switch>
+                          <Route path="/">
+                            <Dashboard />
+                          </Route>
+                          {/* Temporarily hidden until core features are stable */}
+                          <Route path="/territories">
+                            <NotFound />
+                          </Route>
+                          <Route path="/contacts/:id">
+                            <ContactDetail />
+                          </Route>
+                          <Route path="/contacts">
+                            <Contacts />
+                          </Route>
+                          <Route path="/schedule">
+                            <Schedule />
+                          </Route>
+                          {/* Temporarily hidden until core features are stable */}
+                          <Route path="/teams">
+                            <NotFound />
+                          </Route>
+                          <Route path="/reports">
+                            <Reports />
+                          </Route>
+                          <Route path="/upgrade">
+                            <Upgrade />
+                          </Route>
+                          <Route path="/settings">
+                            <Settings />
+                          </Route>
+                          <Route path="/customize">
+                            <Customize />
+                          </Route>
+                          <Route path="/customize-message-templates">
+                            <CustomizeMessageTemplates />
+                          </Route>
+                          {/* Temporarily hidden until core features are stable */}
+                          <Route path="/chat">
+                            <NotFound />
+                          </Route>
+                          <Route path="/routes">
+                            <Routes />
+                          </Route>
+                          <Route>
+                            <NotFound />
+                          </Route>
+                        </Switch>
+                      </AppShell>
+                    </SimpleProtectedRoute>
+                  </Route>
+                </Switch>
+              )}
+            </Router>
+          </TourProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

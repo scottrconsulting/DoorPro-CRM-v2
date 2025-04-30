@@ -25,7 +25,7 @@ export const dashboardTourSteps: Step[] = [
   },
   {
     target: '.my-location-button',
-    content: 'Click here to center the map on your current location. This helps when you're out in the field.',
+    content: "Click here to center the map on your current location. This helps when you're out in the field.",
     placement: 'left',
   },
   {
@@ -50,7 +50,7 @@ export const contactsTourSteps: Step[] = [
   },
   {
     target: '.add-contact-button',
-    content: 'Click here to add a new contact. You'll need to fill in details like name, address, and contact information.',
+    content: "Click here to add a new contact. You'll need to fill in details like name, address, and contact information.",
     placement: 'bottom',
   },
   {
@@ -110,12 +110,12 @@ export const contactDetailTourSteps: Step[] = [
   },
   {
     target: '.edit-contact-button',
-    content: 'Edit the contact's information if anything changes.',
+    content: "Edit the contact's information if anything changes.",
     placement: 'left',
   },
   {
     target: '.contact-map',
-    content: 'This map shows the contact's location. You can get directions from here.',
+    content: "This map shows the contact's location. You can get directions from here.",
     placement: 'top',
   },
 ];
