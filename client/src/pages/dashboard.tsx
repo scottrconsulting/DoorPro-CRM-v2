@@ -361,10 +361,10 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="relative">
-                {/* Scroll button to jump below the map */}
+                {/* Scroll button to jump below the map - more visible and better positioned */}
                 <button 
                   onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
-                  className="absolute top-0 right-0 z-30 bg-white/90 hover:bg-white flex items-center gap-1 py-1 px-3 rounded-md shadow-md text-sm"
+                  className="absolute top-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
                   aria-label="Scroll below map"
                 >
                   <span className="material-icons text-sm">arrow_downward</span> 
@@ -380,10 +380,17 @@ export default function Dashboard() {
                 {/* Anchor for scroll target */}
                 <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
                 
-                {/* Scroll button to jump above the map */}
+                {/* Scroll button to jump above the map with offset */}
                 <button 
-                  onClick={() => document.getElementById('map-view')?.scrollIntoView({behavior: 'smooth'})}
-                  className="absolute bottom-0 right-0 z-30 bg-white/90 hover:bg-white flex items-center gap-1 py-1 px-3 rounded-md shadow-md text-sm"
+                  onClick={() => {
+                    const mapView = document.getElementById('map-view');
+                    if (mapView) {
+                      // Calculate position with offset (scrolling higher than the element)
+                      const topPosition = mapView.getBoundingClientRect().top + window.pageYOffset - 100;
+                      window.scrollTo({top: topPosition, behavior: 'smooth'});
+                    }
+                  }}
+                  className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
                   aria-label="Scroll above map"
                 >
                   <span className="material-icons text-sm">arrow_upward</span>
