@@ -891,6 +891,16 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     console.log("Current showMapTour state:", showMapTour); // This will show the previous state due to React's async state updates
   };
   
+  // Expose the handleStartMapTour function to the window object
+  useEffect(() => {
+    window.handleStartMapTour = handleStartMapTour;
+    
+    return () => {
+      // Clean up when component unmounts
+      delete window.handleStartMapTour;
+    };
+  }, []);
+  
   // Function to close the map tour
   const handleCloseMapTour = () => {
     setShowMapTour(false);
@@ -907,19 +917,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         id="map-container"
         data-tour="map-container"
       />
-      
-      {/* Map help button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-24 right-4 z-10 bg-white shadow-md"
-        onClick={handleStartMapTour}
-      >
-        <span className="flex items-center gap-1">
-          <span className="material-icons text-sm">help_outline</span>
-          Map Tour
-        </span>
-      </Button>
       
       {/* Loading overlay */}
       {loading && (
