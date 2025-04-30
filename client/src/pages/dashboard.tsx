@@ -380,15 +380,11 @@ export default function Dashboard() {
                 {/* Anchor for scroll target */}
                 <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
                 
-                {/* Scroll button to jump above the map with offset */}
+                {/* Scroll button to jump above the map - simple implementation */}
                 <button 
                   onClick={() => {
-                    const mapView = document.getElementById('map-view');
-                    if (mapView) {
-                      // Calculate position with offset (scrolling higher than the element)
-                      const topPosition = mapView.getBoundingClientRect().top + window.pageYOffset - 100;
-                      window.scrollTo({top: topPosition, behavior: 'smooth'});
-                    }
+                    // Use a simple approach for more reliable scrolling
+                    window.scrollTo({top: 0, behavior: 'smooth'});
                   }}
                   className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
                   aria-label="Scroll above map"
