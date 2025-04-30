@@ -343,6 +343,10 @@ export default function ContactForm({
         // Include sale details in notes for historical reference
         let saleInfo = "";
         
+        if (formData.saleProduct) {
+          saleInfo += `Product/Service: ${formData.saleProduct}\n`;
+        }
+
         if (formData.saleAmount) {
           saleInfo += `Sale Amount: $${formData.saleAmount}\n`;
         }
@@ -431,7 +435,7 @@ export default function ContactForm({
           // Create the schedule entry
           createScheduleMutation.mutate({
             userId: user.id,
-            title: `Appointment with ${initialContact.fullName}`,
+            title: formData.appointmentTitle || `Appointment with ${initialContact.fullName}`,
             description: formData.notes || "",
             startTime: startTime.toISOString(),
             endTime: endTime.toISOString(),
@@ -449,7 +453,7 @@ export default function ContactForm({
             contactId: initialContact.id,
             userId: user.id,
             amount: parseFloat(formData.saleAmount),
-            product: formData.saleNotes || "Unknown product",
+            product: formData.saleProduct || "Unknown product",
             saleDate: formData.saleDate || new Date().toISOString().split('T')[0],
             status: "completed",
             paymentMethod: "Unknown",
@@ -476,7 +480,7 @@ export default function ContactForm({
               // Create the schedule entry
               createScheduleMutation.mutate({
                 userId: user.id,
-                title: `Appointment with ${newContact.fullName}`,
+                title: formData.appointmentTitle || `Appointment with ${newContact.fullName}`,
                 description: formData.notes || "",
                 startTime: startTime.toISOString(),
                 endTime: endTime.toISOString(),
@@ -494,7 +498,7 @@ export default function ContactForm({
                 contactId: newContact.id,
                 userId: user.id,
                 amount: parseFloat(formData.saleAmount),
-                product: formData.saleNotes || "Unknown product",
+                product: formData.saleProduct || "Unknown product",
                 saleDate: formData.saleDate || new Date().toISOString().split('T')[0],
                 status: "completed",
                 paymentMethod: "Unknown",
