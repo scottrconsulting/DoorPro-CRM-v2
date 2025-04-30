@@ -343,7 +343,22 @@ export default function Dashboard() {
         case "map":
           return (
             <div key="map" className="mb-6" data-tour="map-view">
-              <h2 className="font-semibold text-xl mb-3">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => {
+                    if (window.handleStartMapTour) {
+                      window.handleStartMapTour();
+                    }
+                  }}
+                  aria-label="Map Help"
+                  className="h-8 w-8"
+                >
+                  <HelpCircle size={20} className="text-muted-foreground" />
+                </Button>
+              </div>
               <div className="rounded-lg h-[500px]">
                 <EnhancedMapViewer 
                   onSelectContact={(contactId) => setSelectedContactId(contactId)} 
