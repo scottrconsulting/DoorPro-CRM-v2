@@ -21,6 +21,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { FREE_PLAN_LIMITS, UserRole } from "@/lib/auth";
 import ContactForm from "@/components/contacts/contact-form";
 import ContactCard from "@/components/contacts/contact-card";
+import TourGuide from "@/components/tour/tour-guide";
+import { contactsTourSteps } from "@/tours/tour-steps";
+import { useTour } from "@/contexts/tour-context";
+import { HelpCircle } from "lucide-react";
+import HelpTooltip from "@/components/tour/help-tooltip";
 
 export default function Contacts() {
   console.log("Contacts component is rendering");
@@ -237,8 +242,14 @@ export default function Contacts() {
       .join(' ')
   }));
 
+  // Get tour functionality
+  const { startTour } = useTour();
+  
   return (
     <div className="p-4 md:p-6">
+      {/* Tour Guide Component */}
+      <TourGuide steps={contactsTourSteps} tourName="contacts" />
+      
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold font-sans text-neutral-800">Contacts</h1>
@@ -248,11 +259,20 @@ export default function Contacts() {
               : `Showing ${filteredContacts.length} of ${contacts.length} contacts`}
           </p>
         </div>
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex items-center">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="mr-2"
+            onClick={() => startTour('contacts')}
+            aria-label="Help"
+          >
+            <HelpCircle size={20} className="text-muted-foreground" />
+          </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
             disabled={isAtContactLimit}
-            className="flex items-center"
+            className="flex items-center add-contact-button"
           >
             <span className="material-icons text-sm mr-1">add</span>
             Add Contact
@@ -268,7 +288,7 @@ export default function Contacts() {
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-grow">
+          <div className="relative flex-grow search-contacts-wrapper">
             <Input
               type="text"
               placeholder="Search contacts..."
@@ -277,9 +297,14 @@ export default function Contacts() {
               className="pl-10"
             />
             <span className="material-icons absolute left-3 top-2 text-neutral-400">search</span>
+            <HelpTooltip 
+              content="Search by name, address, email, or phone number" 
+              side="top" 
+              className="absolute right-2 top-2"
+            />
           </div>
           
-          <div className="w-full md:w-64">
+          <div className="w-full md:w-64 relative status-filter-wrapper">
             <Select
               value={filterStatus || ""}
               onValueChange={(value) => setFilterStatus(value || null)}
@@ -296,6 +321,12 @@ export default function Contacts() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="absolute right-10 top-2.5">
+              <HelpTooltip 
+                content="Filter contacts by their current status (Interested, Converted, etc.)" 
+                side="top"
+              />
+            </div>
           </div>
           
           <div className="flex gap-2">

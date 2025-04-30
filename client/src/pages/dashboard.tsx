@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Contact, Visit, Customization, Sale } from "@shared/schema";
@@ -18,10 +18,24 @@ import {
   STATISTICS_METRIC_LABELS,
   STATISTICS_METRIC_ICONS 
 } from "@shared/schema";
+import TourGuide from "@/components/tour/tour-guide";
+import { dashboardTourSteps } from "@/tours/tour-steps";
+import { useTour } from "@/contexts/tour-context";
+import { HelpCircle } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const { startTour, completedTours } = useTour();
+  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
+
+  // Show welcome message for new users
+  useEffect(() => {
+    // Check if this is the user's first time (no completed tours)
+    if (Object.keys(completedTours).length === 0) {
+      setShowWelcomeMessage(true);
+    }
+  }, [completedTours]);
 
   // Fetch data for dashboard statistics
   const { data: contacts = [], refetch: refetchContacts } = useQuery<Contact[]>({
@@ -345,6 +359,35 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-6">
+      {/* Tour Guide Component */}
+      <TourGuide steps={dashboardTourSteps} tourName="dashboard" />
+      
+      {/* Welcome Banner for New Users */}
+      {showWelcomeMessage && (
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="mr-4 bg-primary/20 rounded-full p-2">
+                <span className="material-icons text-primary">emoji_objects</span>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">Welcome to DoorPro CRM!</h3>
+                <p className="text-muted-foreground">New here? Take a quick tour to learn how to get the most out of DoorPro.</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                startTour('dashboard');
+                setShowWelcomeMessage(false);
+              }}
+              className="ml-4 md:ml-0"
+            >
+              Start Tour
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold font-sans text-foreground">
@@ -352,6 +395,15 @@ export default function Dashboard() {
           </h1>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="mr-2"
+            onClick={() => startTour('dashboard')}
+            aria-label="Help"
+          >
+            <HelpCircle size={20} className="text-muted-foreground" />
+          </Button>
           <Link href="/contacts">
             <Button variant="outline" className="flex items-center">
               <span className="material-icons text-sm mr-1">add</span> Add Contact
