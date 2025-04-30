@@ -768,32 +768,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
               visitDate: new Date()
             });
             
-            console.log(`Creating schedule for ${contact.status} contact: ${contact.fullName} at ${appointmentDateTime}`);
+            // Check if this appointment was created from the contact form
+            // If the appointment was explicitly set, the frontend will create 
+            // the schedule entry. Only create it from the backend if:
+            // - It was created from the map interface (which doesn't handle schedules itself)
+            // - It's not coming from a form submission with explicit appointment fields
+            const isFromContactForm = req.body.usingContactForm === true || 
+                                     req.body.appointmentDate || 
+                                     req.headers['x-contact-form-submission'] === 'true';
             
-            // Always create a schedule entry for booked or check_back status
-            // Add a schedule entry for this appointment
-            const endDateTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour appointment
-            
-            const scheduleData = {
-              userId: user.id,
-              title: contact.status === 'booked' ? `Appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`,
-              description: contact.notes || 
-                (contact.status === 'booked' ? `Scheduled appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`),
-              startTime: appointmentDateTime,
-              endTime: endDateTime,
-              type: contact.status === 'booked' ? 'appointment' : 'follow_up',
-              location: contact.address,
-              contactIds: [contact.id],
-              reminderTime: new Date(appointmentDateTime.getTime() - (confirmOptions.reminderTime * 60 * 1000)),
-              confirmationMethod: confirmOptions.email && confirmOptions.sms ? 'both' : 
-                                confirmOptions.email ? 'email' : 
-                                confirmOptions.sms ? 'sms' : 'none',
-              confirmationStatus: 'pending'
-            };
-            
-            console.log("Creating schedule with data:", JSON.stringify(scheduleData, null, 2));
-            const schedule = await storage.createSchedule(scheduleData);
-            console.log("Schedule created:", JSON.stringify(schedule, null, 2));
+            // Only create schedule entry if not from contact form
+            if (!isFromContactForm) {
+              console.log(`Creating schedule for ${contact.status} contact: ${contact.fullName} at ${appointmentDateTime} (backend only)`);
+              
+              // Always create a schedule entry for booked or check_back status
+              // Add a schedule entry for this appointment
+              const endDateTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour appointment
+              
+              const scheduleData = {
+                userId: user.id,
+                title: contact.status === 'booked' ? `Appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`,
+                description: contact.notes || 
+                  (contact.status === 'booked' ? `Scheduled appointment with ${contact.fullName}` : `Follow-up with ${contact.fullName}`),
+                startTime: appointmentDateTime,
+                endTime: endDateTime,
+                type: contact.status === 'booked' ? 'appointment' : 'follow_up',
+                location: contact.address,
+                contactIds: [contact.id],
+                reminderTime: new Date(appointmentDateTime.getTime() - (confirmOptions.reminderTime * 60 * 1000)),
+                confirmationMethod: confirmOptions.email && confirmOptions.sms ? 'both' : 
+                                  confirmOptions.email ? 'email' : 
+                                  confirmOptions.sms ? 'sms' : 'none',
+                confirmationStatus: 'pending'
+              };
+              
+              console.log("Creating schedule with data:", JSON.stringify(scheduleData, null, 2));
+              const schedule = await storage.createSchedule(scheduleData);
+              console.log("Schedule created:", JSON.stringify(schedule, null, 2));
+            } else {
+              console.log("Skipping schedule creation in backend - will be handled by contact form component");
+            }
           }
         } catch (appointmentError) {
           console.error("Failed to process appointment:", appointmentError);
