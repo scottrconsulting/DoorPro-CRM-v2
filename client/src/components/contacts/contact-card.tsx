@@ -421,17 +421,17 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     // This ensures the date is sent in the format expected by the API
     
     try {
-      // Parse date string into a proper Date object on the client side
-      const taskDate = new Date(taskDueDate + "T12:00:00Z");
-      console.log("Creating task with date:", taskDate);
+      // Important: Do NOT create a Date object client-side - send as string
+      // Let the server handle the date conversion through the schema transformer
+      console.log("Creating task with due date:", taskDueDate);
       
       createTaskMutation.mutate({
         contactId,
         userId: user.id,
         title: taskTitle,
-        description: taskDescription,
-        dueDate: taskDate, // Send as proper Date object
-        priority: taskPriority,
+        description: taskDescription || "",
+        dueDate: taskDueDate, // Send as string - server will convert
+        priority: taskPriority || "medium",
         completed: false,
       });
     } catch (error) {
