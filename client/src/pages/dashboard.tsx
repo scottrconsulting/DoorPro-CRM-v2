@@ -342,7 +342,7 @@ export default function Dashboard() {
           );
         case "map":
           return (
-            <div key="map" id="map-view" className="mb-6" data-tour="map-view">
+            <div key="map" id="map-view" className="mb-6 scroll-anchor" data-tour="map-view">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
                 <Button 
@@ -382,10 +382,7 @@ export default function Dashboard() {
                 
                 {/* Scroll button to jump above the map - simple implementation */}
                 <button 
-                  onClick={() => {
-                    // Use a simple approach for more reliable scrolling
-                    window.scrollTo({top: 0, behavior: 'smooth'});
-                  }}
+                  onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
                   className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
                   aria-label="Scroll above map"
                 >
@@ -428,6 +425,9 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-6">
+      {/* Hidden anchor point for top scrolling */}
+      <div id="dashboard-top" className="scroll-anchor"></div>
+      
       {/* Welcome Banner for New Users */}
       {showWelcomeMessage && (
         <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">

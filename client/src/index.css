@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom scroll behaviors */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll anchors */
+.scroll-anchor {
+  scroll-margin-top: 20px;
+}
+
 :root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;
