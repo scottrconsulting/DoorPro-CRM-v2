@@ -623,16 +623,16 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
             <div className="md:col-span-2">
               <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-4 mb-4 w-full">
-                  <TabsTrigger value="notes" className="px-1 text-xs md:text-sm whitespace-nowrap">Notes & Hist</TabsTrigger>
-                  <TabsTrigger value="schedule" className="px-1 text-xs md:text-sm">Schedule</TabsTrigger>
-                  <TabsTrigger value="sales" className="px-1 text-xs md:text-sm">Sales</TabsTrigger>
-                  <TabsTrigger value="tasks" className="px-1 text-xs md:text-sm">Tasks</TabsTrigger>
+                  <TabsTrigger value="notes" className="px-2 text-xs md:text-sm">History</TabsTrigger>
+                  <TabsTrigger value="schedule" className="px-2 text-xs md:text-sm">Schedule</TabsTrigger>
+                  <TabsTrigger value="sales" className="px-2 text-xs md:text-sm">Sales</TabsTrigger>
+                  <TabsTrigger value="tasks" className="px-2 text-xs md:text-sm">Tasks</TabsTrigger>
                 </TabsList>
                 
-                {/* Notes & History Tab */}
+                {/* History Tab */}
                 <TabsContent value="notes">
                   <div className="space-y-4">
-                    <h3 className="text-sm font-medium">Notes & History</h3>
+                    <h3 className="text-sm font-medium">Contact History</h3>
                     <div className="space-y-2 max-h-[350px] overflow-y-auto">
                       {visits.length > 0 ? (
                         visits.map((visit) => (
