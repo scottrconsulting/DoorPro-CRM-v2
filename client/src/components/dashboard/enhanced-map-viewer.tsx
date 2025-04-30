@@ -708,19 +708,49 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         // Store the new marker reference
         setUserMarker(newUserMarker);
       }
+      
+      // Return the position for use by other functions
+      return position;
     } catch (error) {
       // Silently handle location errors without showing toasts
       console.log("Location tracking error (silent):", error);
       // Don't show error notifications for automatic background tracking
+      return null;
     }
   }, [map, userMarker]);
+  
+  // Function to center the map on user's location (used on initial load)
+  const centerMapOnUserLocation = useCallback(async () => {
+    if (!map) return;
+    
+    try {
+      // Get the user's location
+      const position = await locateUserSilently();
+      
+      if (position && !hasLocatedUser.current) {
+        // Center the map on the user's location and set zoom
+        panTo(position);
+        map.setZoom(15);
+        
+        // Mark that we've located the user so we don't do it again 
+        // until a new map session
+        hasLocatedUser.current = true;
+        
+        console.log("Map automatically centered on user location");
+      }
+    } catch (error) {
+      console.error("Auto-centering map failed:", error);
+      // No notification for automatic centering
+    }
+  }, [map, locateUserSilently, panTo]);
   
   // Set up real-time location tracking that continuously updates every minute
   useEffect(() => {
     if (!isLoaded || !map) return;
     
-    // Immediately get initial location when map loads
-    locateUserSilently();
+    // First, center the map on user's location (automatic)
+    // This simulates clicking the "My Location" button automatically
+    centerMapOnUserLocation();
     
     // Set up interval for continuous real-time tracking
     const locationTrackingInterval = setInterval(() => {
@@ -733,7 +763,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     return () => {
       clearInterval(locationTrackingInterval);
     };
-  }, [isLoaded, map, locateUserSilently]);
+  }, [isLoaded, map, locateUserSilently, centerMapOnUserLocation]);
 
   // Update markers when contacts or customization changes
   useEffect(() => {
