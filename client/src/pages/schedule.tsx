@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useTour } from "@/contexts/tour-context";
-import HelpTooltip from "@/components/tour/help-tooltip";
 import CustomTour from "@/components/tour/custom-tour";
 import { customScheduleTourSteps } from "@/tours/custom-schedule-tour-steps";
 
@@ -687,18 +686,15 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm"
             onClick={handleStartScheduleTour}
-            className="ml-2 flex items-center h-8 p-1 rounded-full"
+            className="ml-2 flex items-center h-8 w-8 p-1 justify-center rounded-full hover:bg-gray-100"
             aria-label="Help"
+            title="Get help with managing your appointments and tasks"
           >
-            <HelpCircle className="h-5 w-5" />
+            <HelpCircle className="h-5 w-5 text-gray-500" />
           </Button>
-          <HelpTooltip 
-            content="Get help with managing your appointments and tasks. Click for a guided tour."
-            side="right"
-          />
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
