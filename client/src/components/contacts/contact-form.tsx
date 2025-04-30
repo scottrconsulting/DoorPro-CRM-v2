@@ -245,6 +245,22 @@ export default function ContactForm({
     },
   });
 
+  // Schedule creation mutation for appointments
+  const createScheduleMutation = useMutation({
+    mutationFn: async (scheduleData: any) => {
+      const response = await apiRequest("POST", "/api/schedules", scheduleData);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate schedules query to refresh calendar
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      console.log("Schedule entry created successfully");
+    },
+    onError: (error) => {
+      console.error("Error creating schedule entry:", error);
+    },
+  });
+
   // Create a sale record
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: any) => {
@@ -395,6 +411,27 @@ export default function ContactForm({
           data: contactData,
         });
         
+        // Create schedule entry if appointment is set
+        if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime) {
+          // Calculate start and end times
+          const startTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}`);
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + 30); // Default 30 min appointment
+          
+          // Create the schedule entry
+          createScheduleMutation.mutate({
+            userId: user.id,
+            title: `Appointment with ${initialContact.fullName}`,
+            description: formData.notes || "",
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            type: "appointment",
+            location: initialContact.address,
+            reminderSent: false,
+            contactIds: [initialContact.id]
+          });
+        }
+        
         // Create sale record if status is "sold" and we have sale amount
         if (formData.status === "sold" && formData.saleAmount && initialContact.id) {
           // Create a sale record in the database
@@ -413,6 +450,27 @@ export default function ContactForm({
         // For new contacts, we need to wait for the contact to be created before we can add a sale
         createContactMutation.mutate(contactData as InsertContact, {
           onSuccess: (newContact) => {
+            // Create schedule entry if appointment is set
+            if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime && newContact.id) {
+              // Calculate start and end times
+              const startTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}`);
+              const endTime = new Date(startTime);
+              endTime.setMinutes(endTime.getMinutes() + 30); // Default 30 min appointment
+              
+              // Create the schedule entry
+              createScheduleMutation.mutate({
+                userId: user.id,
+                title: `Appointment with ${newContact.fullName}`,
+                description: formData.notes || "",
+                startTime: startTime.toISOString(),
+                endTime: endTime.toISOString(),
+                type: "appointment",
+                location: newContact.address,
+                reminderSent: false,
+                contactIds: [newContact.id]
+              });
+            }
+            
             // Create sale record if status is "sold" and we have sale amount
             if (formData.status === "sold" && formData.saleAmount && newContact.id) {
               // Create a sale record in the database
