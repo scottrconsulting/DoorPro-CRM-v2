@@ -190,7 +190,13 @@ export default function ContactForm({
   // Create contact mutation
   const createContactMutation = useMutation({
     mutationFn: async (data: InsertContact) => {
-      const response = await apiRequest("POST", "/api/contacts", data);
+      // Include custom header to identify this as coming from the contact form
+      const options = {
+        headers: {
+          'x-contact-form-submission': 'true'
+        }
+      };
+      const response = await apiRequest("POST", "/api/contacts", data, options);
       return response.json();
     },
     onSuccess: (newContact) => {
@@ -448,7 +454,20 @@ export default function ContactForm({
         }
       } else {
         // For new contacts, we need to wait for the contact to be created before we can add a sale
-        createContactMutation.mutate(contactData as InsertContact, {
+        // Add a custom header to identify this as a contact form submission
+        const options = {
+          headers: {
+            'x-contact-form-submission': 'true'
+          }
+        };
+        
+        // Include a flag in the data to identify it's from the contact form
+        const contactFormData = {
+          ...contactData,
+          usingContactForm: true
+        };
+        
+        createContactMutation.mutate(contactFormData as InsertContact, {
           onSuccess: (newContact) => {
             // Create schedule entry if appointment is set
             if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime && newContact.id) {
