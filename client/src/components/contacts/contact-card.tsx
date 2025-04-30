@@ -91,7 +91,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     enabled: contactId > 0 && isOpen && activeTab === "tasks",
   });
 
-  // Add note mutation
+  // Add note mutation - creates a visit record for tracking history
   const addNoteMutation = useMutation({
     mutationFn: async (data: InsertVisit) => {
       const response = await apiRequest("POST", "/api/visits", data);
@@ -112,6 +112,20 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
         description: "Failed to add note. Please try again.",
         variant: "destructive",
       });
+    },
+  });
+  
+  // Update contact notes mutation
+  const updateContactNotesMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: number; notes: string }) => {
+      const response = await apiRequest("PATCH", `/api/contacts/${id}`, { notes });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+    },
+    onError: (error) => {
+      console.error("Error updating contact notes:", error);
     },
   });
 
@@ -302,6 +316,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
 
     if (!user?.id || !contactId) return;
 
+    // Create a visit record for history tracking
     addNoteMutation.mutate({
       contactId,
       userId: user.id,
@@ -310,6 +325,21 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       outcome: "neutral",
       followUpNeeded: false,
       visitDate: new Date(),
+    });
+    
+    // Also update the contact's notes field
+    // Append the new note to existing notes (if any)
+    const timestamp = format(new Date(), "MMM d, yyyy h:mm a");
+    const newNoteWithTimestamp = `[${timestamp}] ${note}`;
+    
+    const updatedNotes = contact?.notes 
+      ? `${contact.notes}\n\n${newNoteWithTimestamp}`
+      : newNoteWithTimestamp;
+    
+    // Update the contact record with the combined notes
+    updateContactNotesMutation.mutate({
+      id: contactId,
+      notes: updatedNotes
     });
   };
 
@@ -387,15 +417,15 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     }
     
     // Create the task
-    // Parse the date properly to avoid validation errors
-    const dueDate = new Date(taskDueDate + "T00:00:00");
+    // Format the date as an ISO string for proper database storage
+    // This ensures the date is sent in the format expected by the API
     
     createTaskMutation.mutate({
       contactId,
       userId: user.id,
       title: taskTitle,
       description: taskDescription,
-      dueDate, // Use properly parsed date
+      dueDate: new Date(taskDueDate + "T00:00:00").toISOString(), // Send as ISO string
       priority: taskPriority,
       completed: false,
     });

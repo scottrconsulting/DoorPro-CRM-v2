@@ -190,13 +190,19 @@ export default function ContactForm({
   // Create contact mutation
   const createContactMutation = useMutation({
     mutationFn: async (data: InsertContact) => {
-      // Include custom header to identify this as coming from the contact form
-      const options = {
-        headers: {
-          'x-contact-form-submission': 'true'
-        }
-      };
-      const response = await apiRequest("POST", "/api/contacts", data, options);
+      // Use a custom header to identify this as a contact form submission
+      const headers = new Headers();
+      headers.append('x-contact-form-submission', 'true');
+      headers.append('Content-Type', 'application/json');
+      
+      // Use fetch directly instead of apiRequest for this special case
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data),
+        credentials: 'include'
+      });
+      
       return response.json();
     },
     onSuccess: (newContact) => {
@@ -454,13 +460,6 @@ export default function ContactForm({
         }
       } else {
         // For new contacts, we need to wait for the contact to be created before we can add a sale
-        // Add a custom header to identify this as a contact form submission
-        const options = {
-          headers: {
-            'x-contact-form-submission': 'true'
-          }
-        };
-        
         // Include a flag in the data to identify it's from the contact form
         const contactFormData = {
           ...contactData,
