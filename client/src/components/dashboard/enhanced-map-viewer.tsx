@@ -879,13 +879,37 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }));
   }, [activeStatus]);
 
+  // Tour functionality
+  const { startTour } = useTour();
+  
+  // Function to start the map tour
+  const handleStartMapTour = () => {
+    startTour('map');
+  };
+
   return (
     <div className="relative w-full h-full">
+      {/* Map Tour Guide */}
+      <TourGuide steps={mapTourSteps} tourName="map" />
+      
       {/* Map container */}
       <div 
         ref={mapRef} 
-        className="w-full h-full"
+        className="w-full h-full map-container"
       />
+      
+      {/* Map help button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="absolute top-24 right-4 z-10 bg-white shadow-md"
+        onClick={handleStartMapTour}
+      >
+        <span className="flex items-center gap-1">
+          <span className="material-icons text-sm">help_outline</span>
+          Map Tour
+        </span>
+      </Button>
       
       {/* Loading overlay */}
       {loading && (
@@ -901,7 +925,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         {/* Main search bar and controls - Responsive layout */}
         <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
           {/* Search input and button - Always visible */}
-          <div className="flex-grow flex items-stretch gap-2">
+          <div className="flex-grow flex items-stretch gap-2 map-search">
             <Input
               type="text"
               placeholder="Search for an address..."
@@ -928,13 +952,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               variant="outline"
               size="sm"
               onClick={handleMyLocationClick}
-              className="text-xs whitespace-nowrap flex-shrink-0"
+              className="text-xs whitespace-nowrap flex-shrink-0 location-button"
             >
               My Location
             </Button>
           
             {/* Map Type Controls - Responsive handling */}
-            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2">
+            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2 map-controls">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1037,7 +1061,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       )}
       
       {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter">
         {/* Toggle button for showing/hiding the legend */}
         <Button
           variant="ghost"
