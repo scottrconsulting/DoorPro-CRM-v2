@@ -1,226 +1,183 @@
 import { Step } from 'react-joyride';
 
-// Dashboard Tour Steps
+// Dashboard tour steps
 export const dashboardTourSteps: Step[] = [
   {
     target: 'body',
-    content: 'Welcome to DoorPro CRM! This quick tour will help you get familiar with the system.',
+    content: 'Welcome to DoorPro CRM! This tour will help you get familiar with the dashboard. Let\'s get started!',
     placement: 'center',
     disableBeacon: true,
-  },
-  {
-    target: '.sidebar-navigation',
-    content: 'This is your main navigation menu. You can access all parts of the application from here.',
-    placement: 'right',
-  },
-  {
-    target: '.dashboard-summary',
-    content: 'The dashboard gives you a quick overview of your sales performance, contact statistics, and upcoming appointments.',
-    placement: 'bottom',
-  },
-  {
-    target: '.dashboard-map',
-    content: 'This map shows all your contacts. You can click on pins to view contact details and navigate to their location.',
-    placement: 'top',
-  },
-  {
-    target: '.my-location-button',
-    content: "Click here to center the map on your current location. This helps when you're out in the field.",
-    placement: 'left',
-  },
-  {
-    target: '.map-controls',
-    content: 'You can change map views, zoom in and out, and adjust other map settings here.',
-    placement: 'left',
-  },
-  {
-    target: '.theme-toggle',
-    content: 'You can switch between light and dark themes based on your preference.',
-    placement: 'bottom',
-  },
-];
-
-// Contacts Tour Steps
-export const contactsTourSteps: Step[] = [
-  {
-    target: 'body',
-    content: 'This is the Contacts page where you can manage all your customer information.',
-    placement: 'center',
-    disableBeacon: true,
+    title: 'Welcome to DoorPro CRM',
   },
   {
     target: '.add-contact-button',
-    content: "Click here to add a new contact. You'll need to fill in details like name, address, and contact information.",
+    content: 'Click here to add new contacts to your CRM. You can add details like name, address, and contact information.',
     placement: 'bottom',
+    title: 'Add New Contacts',
   },
   {
-    target: '.contacts-search',
-    content: 'You can search for specific contacts by name, address, or any other information.',
+    target: '[data-tour="stat-cards"]',
+    content: 'These cards show your daily statistics, including visits, conversions, and sales. They give you a quick overview of your performance.',
     placement: 'bottom',
+    title: 'Performance Statistics',
   },
   {
-    target: '.contact-list',
-    content: 'This list shows all your contacts. Click on any contact to view more details and interaction history.',
+    target: '[data-tour="map-view"]',
+    content: 'The map shows all your contacts geographically. You can click on pins to view contact details and get directions.',
     placement: 'top',
+    title: 'Interactive Map',
   },
   {
-    target: '.contacts-sort',
-    content: 'You can sort contacts by different criteria like name, date added, or last contacted.',
-    placement: 'left',
+    target: '[data-tour="recent-contacts"]',
+    content: 'Here you can see your most recent contacts and their status. Click on any contact to view more details.',
+    placement: 'top',
+    title: 'Recent Contacts',
   },
   {
-    target: '.contacts-filter',
-    content: 'Filter contacts by status, tags, or follow-up requirements.',
-    placement: 'left',
+    target: '[data-tour="schedule-widget"]',
+    content: 'View your upcoming appointments and tasks. This helps you stay organized and prioritize your day.',
+    placement: 'top',
+    title: 'Your Schedule',
   },
-];
-
-// Contact Detail Tour Steps
-export const contactDetailTourSteps: Step[] = [
+  {
+    target: '[data-tour="navigation"]',
+    content: 'Use this navigation menu to switch between different sections of DoorPro CRM.',
+    placement: 'right',
+    title: 'Navigation Menu',
+  },
   {
     target: 'body',
-    content: 'This is the Contact Detail page where you can view and manage all information about a specific contact.',
+    content: 'That\'s it! You\'ve completed the dashboard tour. Feel free to explore more, and don\'t forget that you can start this tour again by clicking the Help button in the top-right corner.',
     placement: 'center',
-    disableBeacon: true,
-  },
-  {
-    target: '.contact-card-tabs',
-    content: 'These tabs organize different types of information about your contact.',
-    placement: 'bottom',
-  },
-  {
-    target: '.add-note-button',
-    content: 'Add notes about your interactions with this contact to keep track of important details.',
-    placement: 'top',
-  },
-  {
-    target: '.add-task-button',
-    content: 'Create tasks with due dates to follow up with this contact. You can set priorities and reminders.',
-    placement: 'top',
-  },
-  {
-    target: '.schedule-appointment-button',
-    content: 'Schedule appointments with this contact. These will appear in your calendar.',
-    placement: 'top',
-  },
-  {
-    target: '.record-sale-button',
-    content: 'Record sales transactions with this contact. This helps track your performance and contact value.',
-    placement: 'top',
-  },
-  {
-    target: '.edit-contact-button',
-    content: "Edit the contact's information if anything changes.",
-    placement: 'left',
-  },
-  {
-    target: '.contact-map',
-    content: "This map shows the contact's location. You can get directions from here.",
-    placement: 'top',
+    title: 'Tour Complete!',
   },
 ];
 
-// Schedule Tour Steps
+// Contacts page tour steps
+export const contactsTourSteps: Step[] = [
+  {
+    target: 'body',
+    content: 'Welcome to the Contacts page! This is where you can manage all your customer contacts in one place.',
+    placement: 'center',
+    disableBeacon: true,
+    title: 'Contacts Management',
+  },
+  {
+    target: '.add-contact-button',
+    content: 'Click here to add new contacts to your database. All contacts will automatically appear on your map with location pins.',
+    placement: 'bottom',
+    title: 'Add New Contacts',
+  },
+  {
+    target: '.search-contacts-wrapper',
+    content: 'Use this search box to quickly find contacts by name, address, email, or phone number.',
+    placement: 'bottom',
+    title: 'Search Contacts',
+  },
+  {
+    target: '.status-filter-wrapper',
+    content: 'Filter your contacts by status like Interested, Converted, or Not Interested to focus on specific groups.',
+    placement: 'bottom',
+    title: 'Filter by Status',
+  },
+  {
+    target: 'table',
+    content: 'This table shows all your contacts. Click on a contact\'s name to view detailed information and history.',
+    placement: 'top',
+    title: 'Contact List',
+  },
+  {
+    target: 'body',
+    content: 'You can click on a contact\'s address to get directions or click on a contact\'s name to see all details, including notes, tasks, and sales history.',
+    placement: 'center',
+    title: 'Contact Interactions',
+  },
+  {
+    target: 'body',
+    content: 'That\'s it! You\'ve completed the contacts tour. Remember that the same contact card appears whether you click a contact from this list or from a map pin.',
+    placement: 'center',
+    title: 'Tour Complete!',
+  },
+];
+
+// Schedule page tour steps
 export const scheduleTourSteps: Step[] = [
   {
     target: 'body',
-    content: 'The Schedule page helps you manage your appointments, tasks, and follow-ups.',
+    content: 'Welcome to the Schedule page! This is where you can manage your appointments and tasks in one unified view.',
     placement: 'center',
     disableBeacon: true,
+    title: 'Schedule Management',
   },
   {
-    target: '.schedule-view-controls',
-    content: 'You can switch between daily, weekly, or monthly views to see your schedule.',
+    target: '[data-tour="calendar-view"]',
+    content: 'This calendar shows all your scheduled appointments and tasks. You can switch between different calendar views.',
     placement: 'bottom',
+    title: 'Calendar View',
   },
   {
-    target: '.calendar-navigation',
-    content: 'Navigate between time periods using these controls.',
+    target: '[data-tour="add-schedule-item"]',
+    content: 'Click here to add new appointments or tasks to your calendar.',
     placement: 'bottom',
+    title: 'Add New Items',
   },
   {
-    target: '.schedule-appointments',
-    content: 'Your scheduled appointments appear here. Click on any appointment to view details or make changes.',
+    target: '[data-tour="task-list"]',
+    content: 'Here you can see all your upcoming tasks. Tasks are color-coded by priority.',
     placement: 'top',
+    title: 'Task List',
   },
   {
-    target: '.schedule-tasks',
-    content: 'Tasks appear in purple. You can see their due dates and priority levels at a glance.',
+    target: '[data-tour="appointment-list"]',
+    content: 'This section shows your upcoming appointments with customers.',
     placement: 'top',
+    title: 'Appointment List',
   },
   {
-    target: '.add-appointment-button',
-    content: 'Quickly add new appointments directly from this page.',
-    placement: 'left',
-  },
-  {
-    target: '.add-task-button',
-    content: 'Create new tasks with priorities and due dates.',
-    placement: 'left',
+    target: 'body',
+    content: 'That\'s it! You\'ve completed the schedule tour. Remember to keep your schedule updated to stay organized.',
+    placement: 'center',
+    title: 'Tour Complete!',
   },
 ];
 
-// Routes Tour Steps
-export const routesTourSteps: Step[] = [
+// Settings page tour steps 
+export const settingsTourSteps: Step[] = [
   {
     target: 'body',
-    content: 'The Routes page helps you plan and optimize your sales routes for efficient visits.',
+    content: 'Welcome to the Settings page! Here you can customize DoorPro CRM to fit your workflow.',
     placement: 'center',
     disableBeacon: true,
+    title: 'Settings & Customization',
   },
   {
-    target: '.routes-map',
-    content: 'This map shows your planned route and all stops you need to make.',
-    placement: 'top',
-  },
-  {
-    target: '.optimize-route-button',
-    content: 'Automatically optimize your route to minimize travel time between contacts.',
+    target: '[data-tour="profile-settings"]',
+    content: 'Update your personal information, profile picture, and contact details here.',
     placement: 'bottom',
+    title: 'Profile Settings',
   },
   {
-    target: '.route-stops-list',
-    content: 'This list shows all stops on your route. You can reorder them manually if needed.',
+    target: '[data-tour="dashboard-settings"]',
+    content: 'Customize your dashboard layout, widgets, and statistics metrics to show what matters most to you.',
+    placement: 'bottom',
+    title: 'Dashboard Settings',
+  },
+  {
+    target: '[data-tour="notification-settings"]',
+    content: 'Configure when and how you receive notifications about new leads, appointments, and tasks.',
     placement: 'top',
+    title: 'Notification Settings',
   },
   {
-    target: '.add-stop-button',
-    content: 'Add more stops to your route from your contacts list.',
-    placement: 'left',
+    target: '[data-tour="team-settings"]',
+    content: 'Manage your team members and their permissions (available on Pro plan).',
+    placement: 'top',
+    title: 'Team Settings',
   },
-];
-
-// Reports Tour Steps
-export const reportsTourSteps: Step[] = [
   {
     target: 'body',
-    content: 'The Reports page gives you insights into your sales performance and activity.',
+    content: 'That\'s it! You\'ve completed the settings tour. Remember to save your changes after making adjustments.',
     placement: 'center',
-    disableBeacon: true,
-  },
-  {
-    target: '.reports-date-range',
-    content: 'Select a date range to analyze your performance over specific periods.',
-    placement: 'bottom',
-  },
-  {
-    target: '.sales-overview-chart',
-    content: 'This chart shows your sales performance over time. You can spot trends and patterns.',
-    placement: 'top',
-  },
-  {
-    target: '.activity-metrics',
-    content: 'These metrics show your level of activity like contacts added, appointments scheduled, and follow-ups completed.',
-    placement: 'left',
-  },
-  {
-    target: '.conversion-metrics',
-    content: 'See your conversion rates from leads to customers and understand your sales funnel.',
-    placement: 'left',
-  },
-  {
-    target: '.export-report-button',
-    content: 'Export your reports to share with your team or for further analysis.',
-    placement: 'left',
+    title: 'Tour Complete!',
   },
 ];

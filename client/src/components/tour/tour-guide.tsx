@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+import { useEffect } from 'react';
+import Joyride, { Step, CallBackProps, STATUS } from 'react-joyride';
 import { useTour } from '@/contexts/tour-context';
 
 interface TourGuideProps {
@@ -8,69 +8,61 @@ interface TourGuideProps {
 }
 
 const TourGuide = ({ steps, tourName }: TourGuideProps) => {
-  const { isTourActive, activeTour, endTour, markTourComplete } = useTour();
-  const runTour = isTourActive && activeTour === tourName;
-  const hasRunRef = useRef(false);
-
-  useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      if (runTour && !hasRunRef.current) {
-        endTour();
-      }
-    };
-  }, [endTour, runTour]);
-
+  const { currentTour, endTour } = useTour();
+  
+  // Handle tour callbacks to respond to tour events
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status } = data;
+    const { status, type } = data;
+    
+    // Check if the tour has been completed or skipped
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
     
     if (finishedStatuses.includes(status)) {
-      hasRunRef.current = true;
-      markTourComplete(tourName);
-      endTour();
+      // Mark the tour as completed when user finishes or skips
+      endTour(tourName);
+    }
+    
+    // For debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Joyride callback:', type, status, data);
     }
   };
-
+  
   return (
     <Joyride
-      callback={handleJoyrideCallback}
-      continuous
-      hideCloseButton
-      run={runTour}
-      scrollToFirstStep
-      showProgress
-      showSkipButton
       steps={steps}
+      run={currentTour === tourName}
+      continuous={true}
+      showProgress={true}
+      showSkipButton={true}
+      callback={handleJoyrideCallback}
       styles={{
         options: {
-          zIndex: 10000,
-          primaryColor: '#6366f1',
-          textColor: '#374151',
+          primaryColor: '#0554f8', // Primary blue color to match theme
+          textColor: '#4b5563',
           backgroundColor: '#ffffff',
           arrowColor: '#ffffff',
+          zIndex: 10000,
         },
-        tooltip: {
-          padding: '20px',
-          borderRadius: '8px',
+        spotlight: {
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
         },
-        buttonNext: {
-          backgroundColor: '#6366f1',
-          color: '#ffffff',
-          fontSize: '14px',
-          padding: '8px 16px',
-          borderRadius: '4px',
+        tooltipContainer: {
+          textAlign: 'left',
         },
         buttonBack: {
-          marginRight: '8px',
-          fontSize: '14px',
-          padding: '8px 16px',
-          borderRadius: '4px',
+          marginRight: 10,
         },
         buttonSkip: {
           color: '#6b7280',
-          fontSize: '14px',
         },
+      }}
+      locale={{
+        back: 'Back',
+        close: 'Close',
+        last: 'Finish',
+        next: 'Next',
+        skip: 'Skip tour',
       }}
     />
   );

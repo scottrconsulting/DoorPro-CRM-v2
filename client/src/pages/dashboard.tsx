@@ -287,7 +287,7 @@ export default function Dashboard() {
       switch (widgetId) {
         case "stats":
           return (
-            <div key="stats" className="mb-6">
+            <div key="stats" className="mb-6" data-tour="stat-cards">
               <p className="text-muted-foreground mb-3">Here's your activity summary for today</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {selectedStatistics.map(metricId => {
@@ -326,7 +326,7 @@ export default function Dashboard() {
           );
         case "map":
           return (
-            <div key="map" className="mb-6">
+            <div key="map" className="mb-6" data-tour="map-view">
               <h2 className="font-semibold text-xl mb-3">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
               <div className="rounded-lg h-[500px]">
                 <EnhancedMapViewer 
@@ -337,7 +337,7 @@ export default function Dashboard() {
           );
         case "contacts":
           return (
-            <div key="contacts" className="mb-6">
+            <div key="contacts" className="mb-6" data-tour="recent-contacts">
               <ContactList 
                 title={widgetLabels["contacts"] || DASHBOARD_WIDGET_LABELS["contacts"]} 
               />
@@ -345,7 +345,7 @@ export default function Dashboard() {
           );
         case "schedule":
           return (
-            <div key="schedule" className="mb-6">
+            <div key="schedule" className="mb-6" data-tour="schedule-widget">
               <ScheduleWidget 
                 title={widgetLabels["schedule"] || DASHBOARD_WIDGET_LABELS["schedule"]} 
               />

@@ -1,95 +1,103 @@
-import { ReactNode, createContext, useContext, useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-interface TourContextType {
-  isTourActive: boolean;
-  activeTour: string | null;
-  startTour: (tourName: string) => void;
-  endTour: () => void;
+// Define the tour state type
+interface TourState {
   completedTours: Record<string, boolean>;
-  markTourComplete: (tourName: string) => void;
-  resetTours: () => void;
+  currentTour: string | null;
+  startTour: (tourName: string) => void;
+  endTour: (tourName: string) => void;
+  resetTour: (tourName: string) => void;
+  resetAllTours: () => void;
 }
 
-const TourContext = createContext<TourContextType | undefined>(undefined);
+// Create the context with default values
+const TourContext = createContext<TourState>({
+  completedTours: {},
+  currentTour: null,
+  startTour: () => {},
+  endTour: () => {},
+  resetTour: () => {},
+  resetAllTours: () => {},
+});
 
+// Define props for the TourProvider component
 interface TourProviderProps {
   children: ReactNode;
 }
 
-export function TourProvider({ children }: TourProviderProps) {
-  const [isTourActive, setIsTourActive] = useState<boolean>(false);
-  const [activeTour, setActiveTour] = useState<string | null>(null);
-  const [completedTours, setCompletedTours] = useState<Record<string, boolean>>({});
-  const [location] = useLocation();
+// Storage key for storing completed tours in localStorage
+const STORAGE_KEY = 'doorpro-completed-tours';
 
-  // Load tour completion status from localStorage
-  useEffect(() => {
-    const savedTours = localStorage.getItem('doorpro-completed-tours');
-    if (savedTours) {
-      try {
-        setCompletedTours(JSON.parse(savedTours));
-      } catch (error) {
-        console.error('Error parsing completed tours:', error);
-      }
+// Create the Tour Provider component
+export const TourProvider = ({ children }: TourProviderProps) => {
+  // Load completed tours from localStorage or use empty object if none exists
+  const loadCompletedTours = (): Record<string, boolean> => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Error loading completed tours from localStorage:', error);
+      return {};
     }
-  }, []);
+  };
 
-  // Save tour completion status to localStorage when it changes
+  // Initialize state with loaded tours and no current tour
+  const [completedTours, setCompletedTours] = useState<Record<string, boolean>>(loadCompletedTours);
+  const [currentTour, setCurrentTour] = useState<string | null>(null);
+
+  // Save completed tours to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('doorpro-completed-tours', JSON.stringify(completedTours));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(completedTours));
+    } catch (error) {
+      console.error('Error saving completed tours to localStorage:', error);
+    }
   }, [completedTours]);
 
-  // End active tour when navigation happens
-  useEffect(() => {
-    if (isTourActive) {
-      endTour();
-    }
-  }, [location]);
-
+  // Start a tour - set it as the current tour
   const startTour = (tourName: string) => {
-    setActiveTour(tourName);
-    setIsTourActive(true);
+    setCurrentTour(tourName);
   };
 
-  const endTour = () => {
-    setIsTourActive(false);
-    setActiveTour(null);
-  };
-
-  const markTourComplete = (tourName: string) => {
-    setCompletedTours(prev => ({
+  // End a tour - mark it as completed and clear current tour
+  const endTour = (tourName: string) => {
+    setCompletedTours((prev) => ({
       ...prev,
-      [tourName]: true
+      [tourName]: true,
     }));
+    if (currentTour === tourName) {
+      setCurrentTour(null);
+    }
   };
 
-  const resetTours = () => {
+  // Reset a specific tour - mark it as not completed
+  const resetTour = (tourName: string) => {
+    setCompletedTours((prev) => {
+      const newCompletedTours = { ...prev };
+      delete newCompletedTours[tourName];
+      return newCompletedTours;
+    });
+  };
+
+  // Reset all tours - clear all completed tours
+  const resetAllTours = () => {
     setCompletedTours({});
-    localStorage.removeItem('doorpro-completed-tours');
+    setCurrentTour(null);
   };
 
-  return (
-    <TourContext.Provider 
-      value={{ 
-        isTourActive, 
-        activeTour, 
-        startTour, 
-        endTour, 
-        completedTours, 
-        markTourComplete, 
-        resetTours 
-      }}
-    >
-      {children}
-    </TourContext.Provider>
-  );
-}
+  // Create the context value with all state and functions
+  const value = {
+    completedTours,
+    currentTour,
+    startTour,
+    endTour,
+    resetTour,
+    resetAllTours,
+  };
 
-export function useTour() {
-  const context = useContext(TourContext);
-  if (context === undefined) {
-    throw new Error('useTour must be used within a TourProvider');
-  }
-  return context;
-}
+  // Return the provider with the context value
+  return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
+};
+
+// Custom hook for accessing the tour context
+export const useTour = () => useContext(TourContext);

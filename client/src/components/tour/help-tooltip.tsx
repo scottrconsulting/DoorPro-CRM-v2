@@ -1,11 +1,6 @@
 import { ReactNode } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 interface HelpTooltipProps {
   content: ReactNode;
@@ -15,27 +10,28 @@ interface HelpTooltipProps {
   iconSize?: number;
 }
 
+/**
+ * Help tooltip component that displays help information in a tooltip
+ * when hovering over a help icon. Used throughout the application for
+ * providing contextual help without cluttering the UI.
+ */
 const HelpTooltip = ({
   content,
   side = 'top',
   align = 'center',
   className = '',
-  iconSize = 16,
+  iconSize = 16
 }: HelpTooltipProps) => {
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className={`text-muted-foreground hover:text-primary focus:outline-none ${className}`}
-            aria-label="Help"
-          >
-            <HelpCircle size={iconSize} />
-          </button>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild className={className}>
+          <span className="cursor-help inline-flex">
+            <HelpCircle size={iconSize} className="text-muted-foreground" />
+          </span>
         </TooltipTrigger>
-        <TooltipContent side={side} align={align} className="max-w-xs p-4">
-          <div className="text-sm">{content}</div>
+        <TooltipContent side={side} align={align} className="max-w-xs">
+          {content}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
