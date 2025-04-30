@@ -907,18 +907,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         data-tour="map-container"
       />
       
-      {/* Map help button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-24 right-4 z-10 bg-white shadow-md"
-        onClick={handleStartMapTour}
-      >
-        <span className="flex items-center gap-1">
-          <span className="material-icons text-sm">help_outline</span>
-          Map Tour
-        </span>
-      </Button>
+      {/* Map help button removed from here and moved to top bar */}
       
       {/* Loading overlay */}
       {loading && (
@@ -966,6 +955,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               data-tour="my-location"
             >
               My Location
+            </Button>
+            
+            {/* Map Tour help button moved here - just the question mark icon */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleStartMapTour}
+              className="h-8 w-8 p-1 flex items-center justify-center rounded-full"
+              aria-label="Map Help"
+              title="Get help with using the map"
+            >
+              <span className="material-icons text-sm text-gray-500">help_outline</span>
             </Button>
           
             {/* Map Type Controls - Responsive handling */}
