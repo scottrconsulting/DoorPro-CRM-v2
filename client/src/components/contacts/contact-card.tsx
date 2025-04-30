@@ -43,6 +43,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [followUpDate, setFollowUpDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [followUpTime, setFollowUpTime] = useState("10:00");
+  const [followUpTitle, setFollowUpTitle] = useState("");
   const [followUpReason, setFollowUpReason] = useState("");
   
   // Sale form state
@@ -138,6 +139,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     onSuccess: () => {
       setFollowUpDate(format(new Date(), "yyyy-MM-dd"));
       setFollowUpTime("10:00");
+      setFollowUpTitle("");
       setFollowUpReason("");
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
       toast({
@@ -347,13 +349,23 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const handleScheduleFollowUp = () => {
     if (!user?.id || !contactId) return;
 
+    // Validate title field
+    if (!followUpTitle.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a title for the follow-up",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const startDateTime = new Date(`${followUpDate}T${followUpTime}`);
     const endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + 30);
 
     createScheduleMutation.mutate({
       userId: user.id,
-      title: `Follow-up with ${contact?.fullName}`,
+      title: followUpTitle,
       description: followUpReason || `Check back with contact`,
       startTime: startDateTime,
       endTime: endDateTime,
@@ -664,7 +676,17 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                 <TabsContent value="schedule">
                   <div className="space-y-4">
                     <h3 className="text-sm font-medium">Schedule a Follow-up</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="followup-title">Title</Label>
+                      <Input 
+                        id="followup-title" 
+                        type="text" 
+                        placeholder="Follow-up title..." 
+                        value={followUpTitle} 
+                        onChange={(e) => setFollowUpTitle(e.target.value)} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
                       <div>
                         <Label htmlFor="followup-date">Date</Label>
                         <Input 
@@ -684,7 +706,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                         />
                       </div>
                     </div>
-                    <div>
+                    <div className="mt-3">
                       <Label htmlFor="followup-reason">Reason</Label>
                       <Textarea 
                         id="followup-reason" 
