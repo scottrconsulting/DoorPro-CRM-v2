@@ -110,7 +110,7 @@ export const scheduleTourSteps: Step[] = [
     title: 'Schedule Management',
   },
   {
-    target: '[data-tour="schedule-title"]',
+    target: 'h1',
     content: 'This page shows all of your tasks and appointments in chronological order. It combines both scheduled appointments and your to-do tasks in one place.',
     placement: 'bottom',
     title: 'Tasks & Bookings',
@@ -122,19 +122,19 @@ export const scheduleTourSteps: Step[] = [
     title: 'View Filters',
   },
   {
-    target: '[data-tour="add-schedule-btn"]',
+    target: 'button.flex.items-center',
     content: 'Click here to add new appointments or tasks to your schedule. You can create follow-ups, presentations, and booked appointments.',
     placement: 'bottom',
     title: 'Add New Items',
   },
   {
-    target: '[data-tour="schedule-form"]',
+    target: 'form',
     content: 'Fill out this form to create new appointments or tasks. You can specify details like title, location, date, and time.',
     placement: 'top',
     title: 'Create New Appointments',
   },
   {
-    target: '[data-tour="schedule-list"]',
+    target: '.grid.grid-cols-1.md\\:grid-cols-2',
     content: 'Your schedule items appear here grouped by date. Tasks appear in purple, while appointments are shown in blue. You can click on any item to view details or get directions to the location.',
     placement: 'top',
     title: 'Schedule Items',
