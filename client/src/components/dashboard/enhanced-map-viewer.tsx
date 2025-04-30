@@ -967,11 +967,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             </Button>
           
             {/* Map Type Controls - Responsive handling */}
-            <div className="hidden sm:flex items-stretch gap-1 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
+            <div className="hidden sm:flex items-stretch gap-0.5 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
               <Button
                 variant="ghost"
                 size="sm"
-                className={`px-2 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
                 onClick={() => {
                   if (inStreetView) {
                     exitStreetView();
@@ -985,7 +985,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`px-2 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
                 onClick={() => {
                   if (inStreetView) {
                     exitStreetView();
@@ -999,7 +999,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`px-2 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
                 onClick={() => {
                   if (inStreetView) {
                     exitStreetView();
@@ -1013,7 +1013,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`px-2 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
                 onClick={() => {
                   if (inStreetView) {
                     exitStreetView();
