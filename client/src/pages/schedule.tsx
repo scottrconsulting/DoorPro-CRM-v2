@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTour } from "@/contexts/tour-context";
 import HelpTooltip from "@/components/tour/help-tooltip";
+import CustomTour from "@/components/tour/custom-tour";
+import { customScheduleTourSteps } from "@/tours/custom-schedule-tour-steps";
 
 export default function SchedulePage() {
   const { toast } = useToast();
@@ -582,11 +584,30 @@ export default function SchedulePage() {
   };
 
   // Get tour functionality
-  const { startTour } = useTour();
+  const { startTour, endTour } = useTour();
+  const [showScheduleTour, setShowScheduleTour] = useState(false);
+  
+  // Function to handle starting the schedule tour
+  const handleStartScheduleTour = () => {
+    console.log("Starting schedule tour");
+    setShowScheduleTour(true);
+  };
+  
+  // Function to handle closing the schedule tour
+  const handleCloseScheduleTour = () => {
+    setShowScheduleTour(false);
+  };
   
   return (
     <div className="container mx-auto py-6">
-      {/* Custom tour will be handled by contexts */}
+      {/* Custom Tour Component */}
+      <CustomTour 
+        steps={customScheduleTourSteps}
+        open={showScheduleTour}
+        onClose={handleCloseScheduleTour}
+        showCloseButton={true}
+        showDoneButton={true}
+      />
       {/* Debug panel for auth troubleshooting */}
       {debugVisible && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md">
@@ -651,11 +672,11 @@ export default function SchedulePage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => startTour('schedule')}
-            className="ml-2 hidden md:flex items-center text-xs h-8"
+            onClick={handleStartScheduleTour}
+            className="ml-2 flex items-center text-xs h-8"
           >
             <HelpCircle className="h-3.5 w-3.5 mr-1" />
-            Tour
+            <span className="hidden sm:inline">Tour</span>
           </Button>
           <HelpTooltip 
             content="Get help with managing your appointments and tasks. Click for a guided tour."
