@@ -12,7 +12,7 @@ const TourGuide = ({ steps, tourName }: TourGuideProps) => {
   
   // Handle tour callbacks to respond to tour events
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status, type } = data;
+    const { status, type, index } = data;
     
     // Check if the tour has been completed or skipped
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
@@ -24,7 +24,7 @@ const TourGuide = ({ steps, tourName }: TourGuideProps) => {
     
     // For debugging
     if (process.env.NODE_ENV === 'development') {
-      console.log('Joyride callback:', type, status, data);
+      console.log('Joyride callback:', type, status, index, data);
     }
   };
   
@@ -36,6 +36,11 @@ const TourGuide = ({ steps, tourName }: TourGuideProps) => {
       showProgress={true}
       showSkipButton={true}
       callback={handleJoyrideCallback}
+      disableCloseOnEsc={false}
+      disableOverlayClose={false}
+      disableScrolling={false}
+      scrollToFirstStep={true}
+      spotlightClicks={false}
       styles={{
         options: {
           primaryColor: '#0554f8', // Primary blue color to match theme
