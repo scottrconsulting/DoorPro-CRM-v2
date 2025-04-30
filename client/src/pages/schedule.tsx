@@ -583,8 +583,13 @@ export default function SchedulePage() {
     }
   };
 
+  // Get tour functionality
+  const { startTour } = useTour();
+  
   return (
     <div className="container mx-auto py-6">
+      {/* Tour Guide Component */}
+      <TourGuide steps={scheduleTourSteps} tourName="schedule" />
       {/* Debug panel for auth troubleshooting */}
       {debugVisible && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md">
@@ -644,11 +649,26 @@ export default function SchedulePage() {
       )}
     
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Tasks & Bookings Schedule</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900" data-tour="schedule-title">Tasks & Bookings Schedule</h1>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => startTour('schedule')}
+            className="ml-2 hidden md:flex items-center text-xs h-8"
+          >
+            <HelpCircle className="h-3.5 w-3.5 mr-1" />
+            Tour
+          </Button>
+          <HelpTooltip 
+            content="Get help with managing your appointments and tasks. Click for a guided tour."
+            side="right"
+          />
+        </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0">
           {/* View mode selector */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" data-tour="schedule-filters">
             <div className="flex bg-gray-100 rounded-md p-1">
               <button 
                 type="button"
@@ -699,6 +719,7 @@ export default function SchedulePage() {
           <Button 
             onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center"
+            data-tour="add-schedule-btn"
           >
             <span className="material-icons text-sm mr-1">{showAddForm ? "close" : "add"}</span>
             {showAddForm ? "Cancel" : "Add Task/Appointment"}
@@ -707,9 +728,9 @@ export default function SchedulePage() {
       </div>
       
       {showAddForm && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6" data-tour="schedule-form">
           <h2 className="text-lg font-medium mb-4">Add New Task or Appointment</h2>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} data-tour="appointment-form">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="title">Title</Label>
@@ -994,7 +1015,7 @@ export default function SchedulePage() {
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="schedule-list">
         {isLoading ? (
           <div className="col-span-full flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
