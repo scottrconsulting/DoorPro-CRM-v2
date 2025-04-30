@@ -22,6 +22,7 @@ export const DASHBOARD_WIDGETS = [
   "map", 
   "contacts",
   "schedule",
+  "activity_tracker", // New activity tracker widget
   // "territory_coverage", - temporarily hidden until core features are stable
   "contacts_added_today",
   "appointments_today",
@@ -80,6 +81,7 @@ export const DASHBOARD_WIDGET_LABELS: Record<string, string> = {
   "map": "DoorPro Map",
   "contacts": "Recent Contacts",
   "schedule": "Schedule",
+  "activity_tracker": "Activity Tracker",
   "today_visits": "Today's Visits",
   "conversions": "Conversions",
   "follow_ups": "Follow-ups",

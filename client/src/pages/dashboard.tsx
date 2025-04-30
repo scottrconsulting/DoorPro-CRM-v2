@@ -8,6 +8,7 @@ import StatCard from "@/components/dashboard/stat-card";
 import EnhancedMapViewer from "@/components/dashboard/enhanced-map-viewer";
 import ContactList from "@/components/dashboard/contact-list";
 import ScheduleWidget from "@/components/dashboard/schedule-widget";
+import { ActivityTrackerWidget } from "@/components/dashboard/activity-tracker-widget";
 import { PRO_FEATURES } from "@/lib/auth";
 import ContactCard from "@/components/contacts/contact-card";
 import { format, differenceInHours, differenceInMinutes } from "date-fns";
@@ -148,25 +149,13 @@ export default function Dashboard() {
       return isNaN(amount) ? sum : sum + amount;
     }, 0);
     
-    // Calculate time worked based on active time near pins
+    // Calculate time worked - this will be replaced by activity tracker
+    // For now we'll use a simple calculation based on visits
     const totalMinutesWorked = visits.reduce((total, visit) => {
-      if (!visit.visitDate || !visit.latitude || !visit.longitude) return total;
+      if (!visit.visitDate) return total;
       
-      const visitLocation = {
-        lat: parseFloat(visit.latitude),
-        lng: parseFloat(visit.longitude)
-      };
-      
-      // Only count time if the visit was made while within work radius
-      const wasWithinRadius = isWithinWorkRadius(
-        visitLocation,
-        visits.map(v => ({
-          lat: parseFloat(v.latitude || '0'),
-          lng: parseFloat(v.longitude || '0')
-        }))
-      );
-      
-      return total + (wasWithinRadius ? 15 : 0);
+      // Simple calculation - assume 15 minutes per visit
+      return total + 15;
     }, 0);
     
     const hoursWorked = Math.floor(totalMinutesWorked / 60);
@@ -363,6 +352,15 @@ export default function Dashboard() {
               <ScheduleWidget 
                 title={widgetLabels["schedule"] || DASHBOARD_WIDGET_LABELS["schedule"]} 
               />
+            </div>
+          );
+        case "activity_tracker":
+          return (
+            <div key="activity_tracker" className="mb-6">
+              <h2 className="font-semibold text-xl mb-3">
+                {widgetLabels["activity_tracker"] || DASHBOARD_WIDGET_LABELS["activity_tracker"]}
+              </h2>
+              <ActivityTrackerWidget />
             </div>
           );
         default:
