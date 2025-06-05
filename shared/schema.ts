@@ -514,3 +514,23 @@ export type ChatParticipant = typeof chatParticipants.$inferSelect;
 
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// Audit logs table for security and compliance
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  action: text("action").notNull(), // CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, FAILED_LOGIN
+  resource: text("resource").notNull(), // contacts, visits, schedules, etc.
+  resourceId: integer("resource_id"), // ID of the affected resource (nullable for general actions)
+  details: json("details"), // Additional context as JSON
+  ipAddress: text("ip_address"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
