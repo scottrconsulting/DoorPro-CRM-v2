@@ -832,6 +832,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setShowMapTour(false);
   };
 
+    // Function to scroll to top
+    const scrollToTop = () => {
+      window.scrollTo({
+          top: 0,
+          behavior: 'smooth' // for smooth scrolling
+      });
+    };
+
+    // Function to scroll to bottom
+    const scrollToBottom = () => {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth' // for smooth scrolling
+        });
+    };
+
   return (
     <div className="relative w-full h-full">
 {/* Map Tour Guide is moved to end of component */}
@@ -867,6 +883,28 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <span className="hidden sm:inline">Scroll Above</span>
         </button>
       </div>
+
+      {/* Scroll Up Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+        onClick={scrollToTop}
+      >
+        <ChevronUp className="h-4 w-4 mr-1" />
+        Scroll Above
+      </Button>
+
+      {/* Scroll Down Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white```text
+        onClick={scrollToBottom}
+      >
+        <ChevronDown className="h-4 w-4 mr-1" />
+        Scroll Below
+      </Button>
 
       {/* Loading overlay */}
       {loading && (
