@@ -24,6 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
 import ContactForm from "./contact-form";
@@ -518,19 +519,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       .join(" ");
   };
 
-  // Get status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'booked': return 'bg-blue-100 text-blue-800';
-      case 'not_home': return 'bg-yellow-100 text-yellow-800';
-      case 'no_answer': return 'bg-pink-100 text-pink-800';
-      case 'not_interested': return 'bg-red-100 text-red-800';
-      case 'check_back': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'presented': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  
 
   if (isLoading) {
     return (
@@ -568,8 +557,8 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
           
           {/* Status badge */}
           <div className="mb-4">
-            <Badge className={getStatusBadge(contact.status)}>
-              {formatStatus(contact.status)}
+            <Badge className={`${getStatusBadgeConfig(contact.status).bg} ${getStatusBadgeConfig(contact.status).text}`}>
+              {getStatusBadgeConfig(contact.status).label}
             </Badge>
           </div>
           

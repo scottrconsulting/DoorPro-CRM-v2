@@ -64,7 +64,7 @@ useEffect(() => {
     }));
   }
 }, [user]);
-  
+
   // State for customization settings
   const [activeTab, setActiveTab] = useState("appearance");
   const [newStatus, setNewStatus] = useState("");
@@ -75,18 +75,18 @@ useEffect(() => {
   const [reminderTime, setReminderTime] = useState(30); // minutes
   const [theme, setTheme] = useState<string>("light");
 
-  
+
   // Dashboard widgets state
   const [enabledWidgets, setEnabledWidgets] = useState<string[]>(DASHBOARD_WIDGETS);
   const [widgetOrder, setWidgetOrder] = useState<string[]>(DASHBOARD_WIDGETS);
   const [customWidgetLabels, setCustomWidgetLabels] = useState<Record<string, string>>({});
   const [editingWidgetLabel, setEditingWidgetLabel] = useState<string | null>(null);
-  
+
   // Statistics metrics state
   const [enabledStatisticsMetrics, setEnabledStatisticsMetrics] = useState<string[]>(STATISTICS_METRICS.slice(0, 4));
   const [statisticsMetricLabels, setStatisticsMetricLabels] = useState<Record<string, string>>({});
   const [editingStatisticsMetricLabel, setEditingStatisticsMetricLabel] = useState<string | null>(null);
-  
+
   // Fetch user's customization settings
   const { data: customization, isLoading } = useQuery<Customization>({
     queryKey: ["/api/customizations/current"],
@@ -115,18 +115,18 @@ useEffect(() => {
           updatedAt: new Date()
         } as unknown as Customization;
       }
-      
+
       // Force pin colors to use the defaults
       const data = await response.json();
       if (!data.pinColors) {
         data.pinColors = DEFAULT_PIN_COLORS;
       }
-      
+
       return data;
     },
     enabled: !!user
   });
-  
+
   // State to track UI editing
   const [editedPinColors, setEditedPinColors] = useState<Record<string, string>>({});
   const [customStatuses, setCustomStatuses] = useState<string[]>([]);
@@ -135,14 +135,14 @@ useEffect(() => {
   const [statusLabels, setStatusLabels] = useState<Record<string, string>>({});
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const [editingAppointmentType, setEditingAppointmentType] = useState<{index: number, value: string} | null>(null);
-  
+
   // Force colors back to the default colors the first time
   useEffect(() => {
     // Force reset to defaults
     const resetColorPrefs = async () => {
       const defaultColors = { ...DEFAULT_PIN_COLORS };
       setEditedPinColors(defaultColors);
-      
+
       // Update the server with our forced defaults
       try {
         await apiRequest("PUT", "/api/customizations/current", {
@@ -154,12 +154,12 @@ useEffect(() => {
         console.error("Failed to reset colors:", err);
       }
     };
-    
+
     if (user) {
       resetColorPrefs();
     }
   }, [user]);
-  
+
   // Set initial values when data is loaded
   useEffect(() => {
     if (customization) {
@@ -168,10 +168,10 @@ useEffect(() => {
       setCustomStatuses(customization.customStatuses || []);
       setQuickActions(customization.quickActions || QUICK_ACTIONS);
       setAppointmentTypes(customization.appointmentTypes || []);
-      
+
       // Set theme
       setTheme(customization.theme || "light");
-      
+
       // Initialize status labels for default statuses
       const initialStatusLabels: Record<string, string> = {
         no_answer: "No Answer",
@@ -182,7 +182,7 @@ useEffect(() => {
         no_soliciting: "No Soliciting",
         check_back: "Check Back"
       };
-      
+
       // If there are custom status labels in customization, use those
       if (customization.statusLabels) {
         Object.keys(customization.statusLabels).forEach(status => {
@@ -190,51 +190,51 @@ useEffect(() => {
         });
       }
       setStatusLabels(initialStatusLabels);
-      
+
       if (customization.confirmationOptions) {
         setSmsEnabled(customization.confirmationOptions.sms);
         setEmailEnabled(customization.confirmationOptions.email);
         setReminderTime(customization.confirmationOptions.reminderTime);
       }
-      
+
       // Initialize dashboard widgets settings
       const widgets = customization.dashboardWidgets || DASHBOARD_WIDGETS;
       setEnabledWidgets(widgets);
-      
+
       // Initialize widget order, ensuring all enabled widgets are included
       if (customization.dashboardWidgetOrder && customization.dashboardWidgetOrder.length > 0) {
         // Start with the custom order
         let order = [...customization.dashboardWidgetOrder];
-        
+
         // Add any enabled widgets that aren't in the order yet
         widgets.forEach(widget => {
           if (!order.includes(widget)) {
             order.push(widget);
           }
         });
-        
+
         setWidgetOrder(order);
       } else {
         // If no custom order, use the enabled widgets
         setWidgetOrder([...widgets]);
       }
-      
+
       if (customization.dashboardWidgetLabels) {
         setCustomWidgetLabels(customization.dashboardWidgetLabels || {});
       }
-      
+
       // Initialize statistics metrics if present
       if (customization.statisticsMetrics) {
         setEnabledStatisticsMetrics(customization.statisticsMetrics);
       }
-      
+
       // Initialize custom statistics metric labels if present
       if (customization.statisticsMetricLabels) {
         setStatisticsMetricLabels(customization.statisticsMetricLabels as Record<string, string>);
       }
     }
   }, [customization]);
-  
+
   // Save customization settings
   const saveCustomizationMutation = useMutation({
     mutationFn: async (updatedCustomization: Partial<Customization>) => {
@@ -243,12 +243,12 @@ useEffect(() => {
         "/api/customizations/current",
         updatedCustomization
       );
-      
+
       // Check if the response status is 204 No Content
       if (response.status === 204) {
         return null;
       }
-      
+
       const clonedResponse = response.clone();
       try {
         return await clonedResponse.json();
@@ -272,7 +272,7 @@ useEffect(() => {
       });
     }
   });
-  
+
   // Handle saving all customization settings
   const handleSaveSettings = () => {
     saveCustomizationMutation.mutate({
@@ -295,7 +295,7 @@ useEffect(() => {
       statisticsMetricLabels: statisticsMetricLabels as Record<string, string>
     });
   };
-  
+
   // Handle adding a new custom status
   const handleAddCustomStatus = () => {
     if (!newStatus) return;
@@ -307,11 +307,11 @@ useEffect(() => {
       });
       return;
     }
-    
+
     setCustomStatuses([...customStatuses, newStatus]);
     setNewStatus("");
   };
-  
+
   // Handle adding a new quick action
   const handleAddQuickAction = () => {
     if (!newQuickAction) return;
@@ -323,11 +323,11 @@ useEffect(() => {
       });
       return;
     }
-    
+
     setQuickActions([...quickActions, newQuickAction]);
     setNewQuickAction("");
   };
-  
+
   // Handle adding a new appointment type
   const handleAddAppointmentType = () => {
     if (!newAppointmentType) return;
@@ -339,11 +339,11 @@ useEffect(() => {
       });
       return;
     }
-    
+
     setAppointmentTypes([...appointmentTypes, newAppointmentType]);
     setNewAppointmentType("");
   };
-  
+
   // Update pin color for a status
   const updatePinColor = (status: string, color: string) => {
     setEditedPinColors({
@@ -351,9 +351,9 @@ useEffect(() => {
       [status]: color
     });
   };
-  
+
   // No color picker needed since we only use standard Google Maps colors
-  
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -363,7 +363,7 @@ useEffect(() => {
             Personalize your door-to-door sales CRM experience
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <Link href="/customize-message-templates">
             <Button variant="outline">Message Templates</Button>
@@ -373,7 +373,7 @@ useEffect(() => {
           </Button>
         </div>
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full md:w-auto md:inline-flex grid-cols-2 md:grid-cols-none h-auto">
           <TabsTrigger value="appearance" className="data-[state=active]:bg-primary data-[state=active]:text-white">
@@ -394,7 +394,7 @@ useEffect(() => {
           </TabsTrigger>
 
         </TabsList>
-        
+
         {/* Appearance Tab */}
         <TabsContent value="appearance" className="space-y-4">
           <Card>
@@ -431,7 +431,7 @@ useEffect(() => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Contact Statuses</CardTitle>
@@ -462,7 +462,7 @@ useEffect(() => {
                           <span>{statusLabels[status] || status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
                         </div>
                       )}
-                      
+
                       <div className="flex space-x-1">
                         {editingStatus === status ? (
                           <>
@@ -506,10 +506,10 @@ useEffect(() => {
                   ))}
                 </div>
               </div>
-              
+
               <div className="border-t pt-5 space-y-4">
                 <h3 className="text-base font-semibold mb-3">Custom Statuses</h3>
-                
+
                 {customStatuses.length === 0 ? (
                   <div className="text-center p-4 border border-dashed rounded-md">
                     <p className="text-muted-foreground">No custom statuses added yet.</p>
@@ -531,7 +531,7 @@ useEffect(() => {
                     ))}
                   </div>
                 )}
-                
+
                 <div className="flex gap-2 mt-2">
                   <Input 
                     placeholder="New status name..." 
@@ -548,7 +548,7 @@ useEffect(() => {
                     Add
                   </Button>
                 </div>
-                
+
                 {!isPro && (
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Info className="h-3 w-3 mr-1" /> Free accounts limited to 3 custom statuses. Upgrade to Pro for unlimited.
@@ -557,7 +557,7 @@ useEffect(() => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Appointment Settings</CardTitle>
@@ -584,7 +584,7 @@ useEffect(() => {
                       ) : (
                         <span>{type}</span>
                       )}
-                      
+
                       <div className="flex space-x-1">
                         {editingAppointmentType && editingAppointmentType.index === index ? (
                           <>
@@ -634,7 +634,7 @@ useEffect(() => {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Input 
                     placeholder="New appointment type..." 
@@ -649,18 +649,18 @@ useEffect(() => {
                     Add
                   </Button>
                 </div>
-                
+
                 {!isPro && (
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Info className="h-3 w-3 mr-1" /> Free accounts limited to 4 appointment types. Upgrade for more.
                   </p>
                 )}
               </div>
-              
+
               {/* Confirmation settings temporarily hidden until needed
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Confirmation Settings</h3>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="sms-confirmation" className="flex items-center gap-2">
@@ -674,7 +674,7 @@ useEffect(() => {
                       disabled={!isPro}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <Label htmlFor="email-confirmation">Email Notifications</Label>
                     <Switch 
@@ -683,7 +683,7 @@ useEffect(() => {
                       onCheckedChange={setEmailEnabled}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="reminder-time">Reminder Time (minutes before appointment)</Label>
                     <Input 
@@ -701,7 +701,7 @@ useEffect(() => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Dashboard Widgets Tab */}
         <TabsContent value="dashboard" className="space-y-4">
           <Card>
@@ -716,7 +716,7 @@ useEffect(() => {
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Enable/Disable Widgets</Label>
                   <p className="text-sm text-muted-foreground">Select which widgets to display on your dashboard.</p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                     {DASHBOARD_WIDGETS.filter(widget => !HIDDEN_WIDGETS.includes(widget)).map(widget => (
                       <div key={widget} className="flex items-center space-x-2 p-2 border rounded">
@@ -728,7 +728,7 @@ useEffect(() => {
                               // Add widget to enabled widgets
                               const newEnabledWidgets = [...enabledWidgets, widget];
                               setEnabledWidgets(newEnabledWidgets);
-                              
+
                               // Add to widget order if not already there
                               if (!widgetOrder.includes(widget)) {
                                 setWidgetOrder([...widgetOrder, widget]);
@@ -736,7 +736,7 @@ useEffect(() => {
                             } else {
                               // Remove widget from enabled widgets
                               setEnabledWidgets(enabledWidgets.filter(w => w !== widget));
-                              
+
                               // Keep widget in the order to maintain configuration
                               // This allows re-enabling later with the same position
                             }
@@ -748,7 +748,7 @@ useEffect(() => {
                             className="font-medium cursor-pointer flex items-center justify-between"
                           >
                             <span>{DASHBOARD_WIDGET_LABELS[widget] || widget}</span>
-                            
+
                             {editingWidgetLabel === widget ? (
                               <Input 
                                 value={customWidgetLabels[widget] || DASHBOARD_WIDGET_LABELS[widget] || widget}
@@ -774,7 +774,7 @@ useEffect(() => {
                               </Button>
                             )}
                           </Label>
-                          
+
                           {editingWidgetLabel === widget && (
                             <div className="flex space-x-1 mt-1 justify-end">
                               <Button 
@@ -803,11 +803,11 @@ useEffect(() => {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="border-t pt-5 space-y-2">
                   <Label className="text-base font-semibold">Widget Order</Label>
                   <p className="text-sm text-muted-foreground">Drag and drop to rearrange the order of widgets on your dashboard.</p>
-                  
+
                   <div className="space-y-2 mt-3">
                     {enabledWidgets.length === 0 ? (
                       <div className="text-center p-4 border border-dashed rounded-md">
@@ -844,7 +844,7 @@ useEffect(() => {
                               variant="ghost"
                               onClick={() => {
                                 if (index === 0) return;
-                                
+
                                 // Get the current sorted enabled widgets
                                 const sortedWidgets = enabledWidgets
                                   .filter(w => !HIDDEN_WIDGETS.includes(w))
@@ -857,21 +857,21 @@ useEffect(() => {
                                   })
                                   .sort((a, b) => a.orderIndex - b.orderIndex)
                                   .map(item => item.widget);
-                                
+
                                 // Find the current widget and the one before it in this sorted list
                                 const currentWidget = widget;
                                 const prevWidgetIndex = index - 1;
                                 const previousWidget = sortedWidgets[prevWidgetIndex];
-                                
+
                                 // Get their actual positions in the full widget order array
                                 const currentWidgetIndex = widgetOrder.indexOf(currentWidget);
                                 const previousWidgetIndex = widgetOrder.indexOf(previousWidget);
-                                
+
                                 // Create new order and swap the positions
                                 const newOrder = [...widgetOrder];
                                 newOrder[currentWidgetIndex] = previousWidget;
                                 newOrder[previousWidgetIndex] = currentWidget;
-                                
+
                                 setWidgetOrder(newOrder);
                               }}
                               disabled={index === 0}
@@ -894,25 +894,25 @@ useEffect(() => {
                                   })
                                   .sort((a, b) => a.orderIndex - b.orderIndex)
                                   .map(item => item.widget);
-                                
+
                                 // If this is the last widget, we can't move it down
                                 const enabledCount = sortedWidgets.length;
                                 if (index === enabledCount - 1) return;
-                                
+
                                 // Find the current widget and the one after it in this sorted list
                                 const currentWidget = widget;
                                 const nextWidgetIndex = index + 1;
                                 const nextWidget = sortedWidgets[nextWidgetIndex];
-                                
+
                                 // Get their actual positions in the full widget order array
                                 const currentWidgetIndex = widgetOrder.indexOf(currentWidget);
                                 const nextWidgetFullIndex = widgetOrder.indexOf(nextWidget);
-                                
+
                                 // Create new order and swap the positions
                                 const newOrder = [...widgetOrder];
                                 newOrder[currentWidgetIndex] = nextWidget;
                                 newOrder[nextWidgetFullIndex] = currentWidget;
-                                
+
                                 setWidgetOrder(newOrder);
                               }}
                               disabled={index === enabledWidgets.filter(w => !HIDDEN_WIDGETS.includes(w)).length - 1}
@@ -929,7 +929,7 @@ useEffect(() => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Statistics Metrics Tab */}
         <TabsContent value="statistics" className="space-y-4">
           <Card>
@@ -944,7 +944,7 @@ useEffect(() => {
                 <div className="space-y-2">
                   <Label className="text-base font-semibold">Enable/Disable Metrics</Label>
                   <p className="text-sm text-muted-foreground">Select which statistics metrics to display on your dashboard.</p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                     {STATISTICS_METRICS.filter(metric => !HIDDEN_WIDGETS.includes(metric)).map(metric => (
                       <div key={metric} className="flex items-center space-x-2 p-2 border rounded">
@@ -965,7 +965,7 @@ useEffect(() => {
                             className="font-medium cursor-pointer flex items-center justify-between"
                           >
                             <span>{STATISTICS_METRIC_LABELS[metric] || metric.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
-                            
+
                             {editingStatisticsMetricLabel === metric ? (
                               <Input 
                                 value={statisticsMetricLabels[metric] || STATISTICS_METRIC_LABELS[metric] || metric.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -991,7 +991,7 @@ useEffect(() => {
                               </Button>
                             )}
                           </Label>
-                          
+
                           {editingStatisticsMetricLabel === metric && (
                             <div className="flex space-x-1 mt-1 justify-end">
                               <Button 
@@ -1020,7 +1020,7 @@ useEffect(() => {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="border-t pt-5">
                   <div className="flex flex-col items-center justify-center p-6 border border-dashed rounded-md bg-muted/30">
                     <div className="max-w-lg w-full">
@@ -1045,7 +1045,7 @@ useEffect(() => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Map Pins Tab */}
         <TabsContent value="map-pins" className="space-y-4">
           <Card>
@@ -1162,9 +1162,9 @@ useEffect(() => {
                   </TableBody>
                 </Table>
               </div>
-              
 
-              
+
+
               {/* Legend Preview */}
               <div className="mt-8 bg-white p-4 border rounded-md">
                 <h3 className="text-base font-semibold mb-3">Map Legend Preview</h3>
@@ -1182,7 +1182,7 @@ useEffect(() => {
                   ))}
                 </div>
               </div>
-              
+
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground">
                   <AlertCircle className="h-3 w-3 inline-block mr-1" />
@@ -1192,7 +1192,7 @@ useEffect(() => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
 
       </Tabs>
     </div>

@@ -107,7 +107,7 @@ export default function ContactForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [showAppointmentFields, setShowAppointmentFields] = useState(false);
-  const [showSaleFields, setShowSaleFields] = useState(false);
+  const [showSaleFields] = useState(false);
 
   // Form setup
   const form = useForm<ContactFormValues>({
@@ -136,20 +136,20 @@ export default function ContactForm({
       saleNotes: "",
     },
   });
-  
+
   // Add a ref to track initialization state
   const hasInitializedRef = useRef(false);
-  
+
   // Only update conditional fields visibility when dialog opens - just once
   useEffect(() => {
     if (isOpen && !hasInitializedRef.current) {
       // Mark as initialized to prevent further resets
       hasInitializedRef.current = true;
-      
+
       // Check if there's an appointment in the initial contact
       const hasAppointment = initialContact?.appointment ? true : false;
       const currentStatus = initialContact?.status || "not_visited";
-      
+
       // Initialize form with all values at once using setValue instead of reset
       form.setValue("fullName", initialContact?.fullName || "");
       form.setValue("address", initialContact?.address || "");
@@ -161,7 +161,7 @@ export default function ContactForm({
       form.setValue("status", currentStatus);
       form.setValue("notes", initialContact?.notes || "");
       form.setValue("scheduleFollowUp", hasAppointment);
-      
+
       // Only set appointment fields if there's an appointment
       if (hasAppointment && initialContact?.appointment) {
         const appointmentParts = initialContact.appointment.split(" ");
@@ -170,19 +170,19 @@ export default function ContactForm({
           form.setValue("appointmentTime", appointmentParts[1]);
         }
       }
-      
+
       // Set default sale date for all forms
       form.setValue("saleDate", new Date().toISOString().split('T')[0]);
-      
+
       // Set visibility flags
       setShowSaleFields(currentStatus === "sold");
       setShowAppointmentFields(hasAppointment);
-      
+
       console.log("Dialog opened with status:", currentStatus, 
         "- Has appointment:", hasAppointment,
         "- Shows sale fields:", currentStatus === "sold");
     }
-    
+
     // Reset the initialization flag when the dialog closes
     if (!isOpen) {
       hasInitializedRef.current = false;
@@ -201,21 +201,21 @@ export default function ContactForm({
         ...data,
         isContactFormSubmission: true
       });
-      
+
       return response.json();
     },
     onSuccess: (newContact) => {
       form.reset();
-      
+
       toast({
         title: "Success",
         description: "Contact has been created successfully",
       });
-      
+
       if (onSuccess) {
         onSuccess(newContact);
       }
-      
+
       onClose();
     },
     onError: (error) => {
@@ -239,11 +239,11 @@ export default function ContactForm({
         title: "Success",
         description: "Contact has been updated successfully",
       });
-      
+
       if (onSuccess) {
         onSuccess(updatedContact);
       }
-      
+
       onClose();
     },
     onError: (error) => {
@@ -285,7 +285,7 @@ export default function ContactForm({
       if (initialContact?.id) {
         queryClient.invalidateQueries({ queryKey: [`/api/contacts/${initialContact.id}/sales`] });
       }
-      
+
       toast({
         title: "Success",
         description: "Sale has been recorded successfully",
@@ -325,7 +325,7 @@ export default function ContactForm({
         status: formData.status,
         notes: formData.notes || null,
       };
-      
+
       // Add appointment data if checkbox is checked and fields are filled
       if (
         formData.scheduleFollowUp && 
@@ -335,15 +335,15 @@ export default function ContactForm({
         // Format the appointment field as "YYYY-MM-DD HH:MM" string
         const appointmentStr = `${formData.appointmentDate} ${formData.appointmentTime}`;
         cleanData.appointment = appointmentStr;
-        
+
         // We'll later create a schedule entry for this appointment
       }
-      
+
       // Store sale details in notes field for reference
       if (formData.status === "sold") {
         // Include sale details in notes for historical reference
         let saleInfo = "";
-        
+
         if (formData.saleProduct) {
           saleInfo += `Product/Service: ${formData.saleProduct}\n`;
         }
@@ -351,20 +351,20 @@ export default function ContactForm({
         if (formData.saleAmount) {
           saleInfo += `Sale Amount: $${formData.saleAmount}\n`;
         }
-        
+
         if (formData.saleDate) {
           saleInfo += `Sale Date: ${formData.saleDate}\n`;
         }
-        
+
         if (formData.saleNotes) {
           saleInfo += `Sale Notes: ${formData.saleNotes}\n`;
         }
-        
+
         // Add existing notes if available
         if (formData.notes) {
           saleInfo += `\nAdditional Notes: ${formData.notes}`;
         }
-        
+
         // Update notes field with sale information
         cleanData.notes = saleInfo.trim();
       }
@@ -379,17 +379,17 @@ export default function ContactForm({
       // This ensures the contact will appear on the map
       const fullAddress = `${formData.address}, ${formData.city || ''}, ${formData.state || ''} ${formData.zipCode || ''}`.trim();
       console.log("Geocoding address:", fullAddress);
-      
+
       try {
         // Use the full address for better geocoding results
         const geocodeResult = await geocodeAddress(fullAddress);
         console.log("Geocode result:", geocodeResult);
-        
+
         if (geocodeResult) {
           // The geocodeAddress function returns a different format than expected in the condition below
           contactData.latitude = geocodeResult.latitude;
           contactData.longitude = geocodeResult.longitude;
-          
+
           // Update city/state/zip if they were missing and we got them from geocoding
           if (!formData.city && geocodeResult.city) {
             contactData.city = geocodeResult.city;
@@ -400,7 +400,7 @@ export default function ContactForm({
           if (!formData.zipCode && geocodeResult.zipCode) {
             contactData.zipCode = geocodeResult.zipCode;
           }
-          
+
           console.log("Contact with geocoded data:", contactData);
         } else {
           console.warn("Geocoding failed but continuing with submission");
@@ -425,14 +425,14 @@ export default function ContactForm({
           id: initialContact.id,
           data: contactData,
         });
-        
+
         // Create schedule entry if appointment is set
         if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime) {
           // Calculate start and end times
           const startTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}`);
           const endTime = new Date(startTime);
           endTime.setMinutes(endTime.getMinutes() + 30); // Default 30 min appointment
-          
+
           // Create the schedule entry
           createScheduleMutation.mutate({
             userId: user.id,
@@ -446,7 +446,7 @@ export default function ContactForm({
             contactIds: [initialContact.id]
           });
         }
-        
+
         // Create sale record if status is "sold" and we have sale amount
         if (formData.status === "sold" && formData.saleAmount && initialContact.id) {
           // Create a sale record in the database
@@ -468,7 +468,7 @@ export default function ContactForm({
           ...contactData,
           usingContactForm: true
         };
-        
+
         createContactMutation.mutate(contactFormData as InsertContact, {
           onSuccess: (newContact) => {
             // Create schedule entry if appointment is set
@@ -477,7 +477,7 @@ export default function ContactForm({
               const startTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}`);
               const endTime = new Date(startTime);
               endTime.setMinutes(endTime.getMinutes() + 30); // Default 30 min appointment
-              
+
               // Create the schedule entry
               createScheduleMutation.mutate({
                 userId: user.id,
@@ -491,7 +491,7 @@ export default function ContactForm({
                 contactIds: [newContact.id]
               });
             }
-            
+
             // Create sale record if status is "sold" and we have sale amount
             if (formData.status === "sold" && formData.saleAmount && newContact.id) {
               // Create a sale record in the database
@@ -667,14 +667,14 @@ export default function ContactForm({
                     onValueChange={(value) => {
                       // First update the form field without triggering reset
                       form.setValue("status", value);
-                      
+
                       // Show sale fields if status is "sold"
                       const needsSale = value === "sold";
                       setShowSaleFields(needsSale);
-                      
+
                       console.log("Status changed to:", value, 
                         "- Now showing sale fields:", needsSale);
-                      
+
                       // If switching to sold status, pre-set the sale date to today
                       if (value === "sold") {
                         form.setValue("saleDate", new Date().toISOString().split('T')[0]);
@@ -683,7 +683,7 @@ export default function ContactForm({
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger className="relative">
+                      <SelectTrigger className={form.watch("status") ? `border-2 ${getStatusColor(form.watch("status")) || 'border-input'}` : ''}>
                         <div className="flex items-center gap-2">
                           <span 
                             className={`inline-block w-3 h-3 rounded-full ${getStatusColor(field.value)}`}
@@ -787,7 +787,7 @@ export default function ContactForm({
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="appointmentTime"
@@ -808,7 +808,7 @@ export default function ContactForm({
                 </div>
               </div>
             )}
-            
+
             {/* Show sale fields if status is sold */}
             {showSaleFields && (
               <div className="space-y-4 border border-green-200 bg-green-50 p-4 rounded-md">
@@ -852,7 +852,7 @@ export default function ContactForm({
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="saleDate"
@@ -871,7 +871,7 @@ export default function ContactForm({
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="saleNotes"
