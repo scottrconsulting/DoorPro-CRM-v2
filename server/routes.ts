@@ -428,18 +428,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
       
       try {
-        if (verifyToken(token)) {
-          // Return admin user info for token auth
-          console.log("Token authenticated user info request");
+        // Use the secure token verification from auth-service
+        const { verifyToken } = require('./direct-auth');
+        const user = await verifyToken(token);
+        
+        if (user) {
+          console.log("Token authenticated user info request for user:", user.username);
           return res.json({ 
             authenticated: true, 
-            user: { 
-              id: 1, 
-              username: 'admin', 
-              email: 'scottrconsulting@gmail.com', 
-              fullName: 'Admin User', 
-              role: 'admin' 
-            } 
+            user: {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              fullName: user.fullName,
+              role: user.role
+            }
           });
         }
       } catch (error) {

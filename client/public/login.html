@@ -183,7 +183,33 @@
         const password = document.getElementById('password').value;
         
         try {
-          // Try standard cookie-based authentication
+          // For deployed sites, use direct token-based authentication first
+          const isDeployedSite = window.location.hostname.includes('.replit.app') || 
+                                window.location.hostname.includes('.repl.co');
+          
+          if (isDeployedSite) {
+            // Use token-based authentication for deployed sites
+            const tokenResponse = await fetch('/api/direct-auth/direct-login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ username, password }),
+              credentials: 'include'
+            });
+            
+            const tokenData = await tokenResponse.json();
+            
+            if (tokenResponse.ok && tokenData.success) {
+              // Store token for deployed site authentication
+              localStorage.setItem('doorpro_auth_token', tokenData.token);
+              // Success - redirect to dashboard
+              window.location.href = '/';
+              return;
+            }
+          }
+          
+          // Try standard cookie-based authentication for preview mode
           const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {
@@ -199,7 +225,7 @@
             // Success - redirect to dashboard
             window.location.href = '/';
           } else {
-            // Try token-based authentication next
+            // Fallback to token-based authentication
             try {
               const tokenResponse = await fetch('/api/direct-auth/direct-login', {
                 method: 'POST',

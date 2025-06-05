@@ -33,19 +33,19 @@ export async function apiRequest(
   try {
     // Get auth token if it exists
     const token = localStorage.getItem('doorpro_auth_token');
-    
+
     // Create headers with authorization if we have a token
     const headers: Record<string, string> = {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
     };
-    
+
     // Add content-type for requests with data, but not for FormData
     if (data && !options?.isFormData) {
       headers['Content-Type'] = 'application/json';
     }
-    
+
     // Add auth token if it exists - always send it for all API requests
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -105,17 +105,17 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
 
     try {
       console.log(`Fetching from: ${url}`);
-      
+
       // Get auth token if it exists
       const token = localStorage.getItem('doorpro_auth_token');
-      
+
       // Create headers
       const headers: Record<string, string> = {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       };
-      
+
       // Add auth token if it exists
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -123,7 +123,7 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
       } else {
         console.warn(`No auth token found for query: ${url}`);
       }
-      
+
       const res = await fetch(url, {
         credentials: "include", // Essential for sending cookies
         mode: 'cors',  // Use CORS for cross-domain requests
