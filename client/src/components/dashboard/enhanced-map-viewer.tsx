@@ -88,13 +88,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showLegend, setShowLegend] = useState(true); // For legend toggle
   const [inStreetView, setInStreetView] = useState(false); // Track street view state
-  
+
   // Function to handle contact deletion
   const handleContactDelete = useCallback((contact: Contact) => {
     setSelectedContact(contact);
     setShowDeleteDialog(true);
   }, []);
-  
+
   const [newContactForm, setNewContactForm] = useState<ContactFormState>({
     fullName: "",
     address: "",
@@ -109,7 +109,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     // We'll use the appointment string format in the contact schema
     // instead of separate appointmentDate and appointmentTime fields
   });
-  
+
   // Work timer states and refs
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timerDisplay, setTimerDisplay] = useState(0);
@@ -118,10 +118,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const lastActivityRef = useRef<number>(Date.now());
   const firstHouseRecordedRef = useRef<boolean>(false);
   const sessionsRef = useRef<{startTime: string; duration: number}[]>([]);
-  
+
   // Track if we've already attempted to locate the user
   const hasLocatedUser = useRef<boolean>(false);
-  
+
   // Set up timer interval
   useEffect(() => {
     // Timer update interval - every second
@@ -131,10 +131,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         setTimerDisplay(workTimerRef.current);
       }
     }, 1000);
-    
+
     return () => clearInterval(timerInterval);
   }, []);
-  
+
   // For the time display in HH:MM:SS format
   const formattedTime = useMemo(() => {
     const hours = Math.floor(workTimerRef.current / 3600);
@@ -142,13 +142,13 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const seconds = workTimerRef.current % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }, [timerDisplay]);
-  
+
   // Fetch contacts
   const { data: contacts = [], isLoading: isLoadingContacts } = useQuery<Contact[]>({
     queryKey: ["/api/contacts"],
     enabled: !!user,
   });
-  
+
   // Fetch user's customizations
   const { data: customization } = useQuery<Customization>({
     queryKey: ["/api/customizations/current"],
@@ -187,7 +187,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         setNewHouseMarker(null);
       }
       setIsAddingHouse(false);
-      
+
       // Create a visit record for this contact interaction
       if (createdContact?.id && user?.id) {
         createVisitMutation.mutate({
@@ -200,7 +200,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           followUpNeeded: createdContact.status === "check_back" || createdContact.status === "booked",
           visitDate: new Date()
         });
-        
+
         // NOTE: We're now letting the contact form handle appointment creation
         // to avoid creating duplicate appointment entries in the schedule.
         // The visit record is still created here, but appointment scheduling
@@ -216,7 +216,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     },
   });
-  
+
   // Create visit mutation
   const createVisitMutation = useMutation({
     mutationFn: async (visitData: InsertVisit) => {
@@ -230,7 +230,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       console.error("Failed to create visit record", error);
     }
   });
-  
+
   // Delete contact mutation
   const deleteContactMutation = useMutation({
     mutationFn: async (contactId: number) => {
@@ -255,7 +255,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
   });
-  
+
   // Create schedule entry mutation
   const createScheduleMutation = useMutation({
     mutationFn: async (scheduleData: InsertSchedule) => {
@@ -280,12 +280,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
   });
-  
+
   // Helper function to create a schedule entry
   const createScheduleEntry = (scheduleData: InsertSchedule) => {
     createScheduleMutation.mutate(scheduleData);
   };
-  
+
   // Handle address search
   const handleAddressSearch = async () => {
     if (!searchQuery.trim()) {
@@ -296,36 +296,36 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
       return;
     }
-    
+
     try {
       const result = await geocodeAddress(searchQuery);
-      
+
       if (result && map) {
         const position = {
           lat: parseFloat(result.latitude),
           lng: parseFloat(result.longitude)
         };
-        
+
         // Pan the map to the found location
         panTo(position);
         map.setZoom(17);
-        
+
         // Create a temporary marker at the searched location
         if (newHouseMarker) {
           newHouseMarker.setMap(null);
         }
-        
+
         const marker = new window.google.maps.Marker({
           position: position,
           map: map,
           animation: window.google.maps.Animation.DROP,
           title: result.address
         });
-        
+
         setNewHouseMarker(marker);
         setNewContactAddress(result.address);
         setNewContactCoords(position);
-        
+
         // Prefill the contact form with address details but reset the name field
         setNewContactForm(prev => ({
           ...prev,
@@ -335,7 +335,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           state: result.state || '',
           zipCode: result.zipCode || ''
         }));
-        
+
         toast({
           title: "Location Found",
           description: result.address,
@@ -356,7 +356,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
   };
-  
+
   // Handle my location button click
   const handleMyLocationClick = async () => {
     try {
@@ -364,12 +364,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       console.log("Getting current location...");
       const position = await getCurrentLocation();
       console.log("Current location:", position);
-      
+
       if (position && map) {
         // Animate to the user's location smoothly
         panTo(position);
         map.setZoom(15);
-        
+
         if (userMarker) {
           // If marker exists, just update its position instead of recreating it
           // This prevents the flickering effect
@@ -392,11 +392,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             animation: window.google.maps.Animation.DROP, // Add a drop animation for visibility
             zIndex: 1000 // Ensure it's above other markers
           });
-          
+
           // Store the new marker reference
           setUserMarker(newUserMarker);
         }
-        
+
         // Show a success notification
         toast({
           title: "Location Found",
@@ -413,26 +413,26 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       });
     }
   };
-  
+
   // Add click functionality to map for adding new contacts
   useEffect(() => {
     if (!isLoaded || !map || !window.google) return;
-    
+
     // Track when the mouse is pressed down
     const mouseDownListener = map.addListener("mousedown", (e: any) => {
       if (!e.latLng) return;
       setMouseDownTime(Date.now());
     });
-    
+
     // Handle click with hold detection
     const clickListener = map.addListener("click", async (e: any) => {
       if (!e.latLng) return;
       setMouseUpTime(Date.now());
-      
+
       // Calculate click duration
       const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
       const isLongClick = clickDuration > 500; // 500ms threshold for long press
-      
+
       // Create a marker at the clicked location with the current active status
       const marker = addMarker(e.latLng.toJSON(), {
         title: "New Contact",
@@ -440,10 +440,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         animation: window.google.maps.Animation.DROP,
         icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
       });
-      
+
       setNewHouseMarker(marker);
       setIsAddingHouse(true); // Auto-enable adding mode
-      
+
       // Get the address from the coordinates
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ location: e.latLng.toJSON() }, (
@@ -454,7 +454,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           const address = results[0].formatted_address;
           setNewContactAddress(address);
           setNewContactCoords(e.latLng.toJSON());
-          
+
           // Extract address components for all contact creation paths
           const streetNumber = results[0].address_components.find((c: any) => 
             c.types.includes('street_number'))?.short_name || '';
@@ -466,29 +466,29 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             c.types.includes('administrative_area_level_1'))?.short_name || '';
           const zipCode = results[0].address_components.find((c: any) => 
             c.types.includes('postal_code'))?.short_name || '';
-          
+
           const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
-          
+
           // Start work timer when first contact is added (if not already started)
           if (!firstHouseRecordedRef.current) {
             firstHouseRecordedRef.current = true;
             timerActiveRef.current = true;
-            
+
             // Add first session to the sessions list
             sessionsRef.current.push({
               startTime: new Date().toISOString(),
               duration: 0
             });
-            
+
             // Toast notification removed per user request
             // No notification will be shown
           }
-          
+
           // Different behavior based on click duration
           if (isLongClick) {
             // Long press - show detailed contact form
             const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
-            
+
             setNewContactForm(prev => ({
               ...prev,
               // Don't pre-fill the name at all - let user enter it themselves
@@ -501,16 +501,16 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               latitude: e.latLng.lat().toString(),
               longitude: e.latLng.lng().toString(),
             }));
-            
+
             // Set the scheduling fields visibility state first
             setShowSchedulingFields(isAppointmentStatus);
-            
+
             // Show the form dialog for long press
             setShowNewContactDialog(true);
-            
+
             // Log for debugging
             console.log("Map pin contact form opened with status:", activeStatus, "- Should show appointment fields:", isAppointmentStatus);
-            
+
             // Toast notification removed per user request
             // No notification will be shown
           } else {
@@ -543,7 +543,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 });
               }
             });
-            
+
             // Toast notification removed per user request
             // No notification will be shown
           }
@@ -554,7 +554,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         }
       });
     });
-    
+
     return () => {
       // Clean up the listeners when the component unmounts
       window.google.maps.event.removeListener(mouseDownListener);
@@ -562,20 +562,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
 
-  
+
 
   // Function to silently locate the user without showing toast notifications
   const locateUserSilently = useCallback(async () => {
     if (!map) return;
-    
+
     try {
       console.log("Silently getting current location...");
       const position = await getCurrentLocation();
       console.log("Auto-locate position:", position);
-      
+
       // Only update marker position without changing map zoom or center
       // This provides real-time tracking without disrupting the user's map view
-      
+
       if (userMarker) {
         // If marker exists, just update its position instead of recreating it
         // This prevents the flickering effect
@@ -597,11 +597,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           title: "Your Location",
           zIndex: 1000 // Ensure it's above other markers
         });
-        
+
         // Store the new marker reference
         setUserMarker(newUserMarker);
       }
-      
+
       // Return the position for use by other functions
       return position;
     } catch (error) {
@@ -611,24 +611,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       return null;
     }
   }, [map, userMarker]);
-  
+
   // Function to center the map on user's location (used on initial load)
   const centerMapOnUserLocation = useCallback(async () => {
     if (!map) return;
-    
+
     try {
       // Get the user's location
       const position = await locateUserSilently();
-      
+
       if (position && !hasLocatedUser.current) {
         // Center the map on the user's location and set zoom
         panTo(position);
         map.setZoom(15);
-        
+
         // Mark that we've located the user so we don't do it again 
         // until a new map session
         hasLocatedUser.current = true;
-        
+
         console.log("Map automatically centered on user location");
       }
     } catch (error) {
@@ -636,22 +636,22 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       // No notification for automatic centering
     }
   }, [map, locateUserSilently, panTo]);
-  
+
   // Set up real-time location tracking that continuously updates every minute
   useEffect(() => {
     if (!isLoaded || !map) return;
-    
+
     // First, center the map on user's location (automatic)
     // This simulates clicking the "My Location" button automatically
     centerMapOnUserLocation();
-    
+
     // Set up interval for continuous real-time tracking
     const locationTrackingInterval = setInterval(() => {
       // Re-request location every minute to keep location current
       // A longer interval reduces flickering and battery usage
       locateUserSilently();
     }, 60000); // 60 seconds in milliseconds
-    
+
     // Clean up interval when component unmounts
     return () => {
       clearInterval(locationTrackingInterval);
@@ -661,31 +661,31 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Update markers when contacts or customization changes
   useEffect(() => {
     if (!isLoaded || !map || isLoadingContacts) return;
-    
+
     // Clear all existing markers before adding new ones
     clearMarkers();
-    
+
     // Debug any contact status issues
     const statusCounts: Record<string, number> = {};
-    
+
     // Process all contacts and create markers for each one with coordinates
     contacts.forEach((contact) => {
       // Skip contacts without coordinates
       if (!contact.latitude || !contact.longitude) return;
-      
+
       // Count statuses for debugging
       statusCounts[contact.status] = (statusCounts[contact.status] || 0) + 1;
-      
+
       // Parse coordinates
       const position = {
         lat: parseFloat(contact.latitude),
         lng: parseFloat(contact.longitude),
       };
-      
+
       // Get the proper marker icon based on status and customization settings
       // This ensures consistent pin colors for all status types
       const markerIcon = getMarkerIcon(contact.status, customization?.pinColors, customization?.statusLabels);
-      
+
       // Create the map marker with the correct icon
       const marker = addMarker(position, {
         title: contact.fullName,
@@ -693,7 +693,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         // Adding animation for better visibility
         animation: window.google.maps.Animation.DROP
       });
-      
+
       if (marker) {
         // Click handler for all contact types - opens contact details
         // This has been standardized for all contact status types including call_back
@@ -705,20 +705,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             // Call the onSelectContact for all pin types - makes behavior consistent
             if (onSelectContact) {
               onSelectContact(contact.id);
-              
+
               // Toast notification removed per user request
               // No notification will be shown
             }
           }
         });
-        
+
         // Long-press handler to show delete option
         marker.addListener("mousedown", () => {
           const startTime = Date.now();
           const longPressTimeout = setTimeout(() => {
             handleContactDelete(contact);
           }, 800); // 800ms long-press
-          
+
           // Clear timeout if mouse is released before threshold
           marker.addListener("mouseup", () => {
             const duration = Date.now() - startTime;
@@ -727,18 +727,18 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             }
           });
         });
-        
+
         // Right-click handler to show delete option (for desktop)
         marker.addListener("rightclick", () => {
           handleContactDelete(contact);
         });
       }
     });
-    
+
     console.log("Status counts for debugging:", statusCounts);
-    
+
   }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization, handleContactDelete]);
-  
+
   // Change map type when mapType state changes
   useEffect(() => {
     if (isLoaded && map) {
@@ -746,11 +746,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       setGoogleMapType(mapType);
     }
   }, [mapType, isLoaded, map, setGoogleMapType]);
-  
+
   // Monitor street view status changes
   useEffect(() => {
     if (!isLoaded || !map) return;
-    
+
     // Check every 750ms if we're in street view
     const streetViewInterval = setInterval(() => {
       const newInStreetViewState = isInStreetView();
@@ -758,7 +758,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         setInStreetView(newInStreetViewState);
       }
     }, 750);
-    
+
     return () => clearInterval(streetViewInterval);
   }, [isLoaded, map, isInStreetView, inStreetView]);
 
@@ -778,11 +778,11 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const needsScheduling = 
       newContactForm.status === "booked" || 
       newContactForm.status === "check_back";
-    
+
     const needsSaleFields = newContactForm.status === "sold";
-    
+
     setShowSchedulingFields(needsScheduling);
-    
+
     // Clear scheduling fields if not needed
     if (!needsScheduling) {
       // Reset appointment fields (will be handled via appointment string in universal form)
@@ -791,7 +791,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         // appointment fields will be handled by the form component
       }));
     }
-    
+
     // If status needs scheduling and we're showing the dialog, ensure we flag the form
     if ((needsScheduling || needsSaleFields) && showNewContactDialog) {
       console.log(`Status ${newContactForm.status} requires extra fields, updating form...`);
@@ -809,24 +809,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Custom Tour functionality
   const { endTour } = useTour();
   const [showMapTour, setShowMapTour] = useState(false);
-  
+
   // Function to start the map tour
   const handleStartMapTour = () => {
     console.log("Map tour button clicked - setting showMapTour to true");
     setShowMapTour(true);
     console.log("Current showMapTour state:", showMapTour); // This will show the previous state due to React's async state updates
   };
-  
+
   // Expose the handleStartMapTour function to the window object
   useEffect(() => {
     window.handleStartMapTour = handleStartMapTour;
-    
+
     return () => {
       // Clean up when component unmounts
       delete window.handleStartMapTour;
     };
   }, []);
-  
+
   // Function to close the map tour
   const handleCloseMapTour = () => {
     setShowMapTour(false);
@@ -835,7 +835,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   return (
     <div className="relative w-full h-full">
 {/* Map Tour Guide is moved to end of component */}
-      
+
       {/* Map container with improved touch behavior */}
       <div 
         ref={mapRef} 
@@ -846,8 +846,28 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         {/* Invisible overlays for touch scroll help */}
         <div className="absolute left-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
         <div className="absolute right-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
+
+        {/* Scroll button to jump below the map - positioned to avoid map controls */}
+        <button 
+          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
+          className="absolute top-20 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
+          aria-label="Scroll below map"
+        >
+          <span className="material-icons text-sm">arrow_downward</span> 
+          <span className="hidden sm:inline">Scroll Below</span>
+        </button>
+
+        {/* Scroll button to jump above the map - positioned to avoid legend overlap */}
+        <button 
+          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
+          className="absolute bottom-20 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
+          aria-label="Scroll above map"
+        >
+          <span className="material-icons text-sm">arrow_upward</span>
+          <span className="hidden sm:inline">Scroll Above</span>
+        </button>
       </div>
-      
+
       {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -856,7 +876,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </div>
         </div>
       )}
-      
+
       {/* Search Controls and Map Options in a single bar at the top */}
       <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2">
         {/* Main search bar and controls - Responsive layout */}
@@ -882,7 +902,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               Search
             </Button>
           </div>
-          
+
           {/* My Location button - Always visible */}
           <div className="flex items-center gap-2">
             <Button
@@ -895,7 +915,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             >
               My Location
             </Button>
-          
+
             {/* Map Type Controls - Responsive handling */}
             <div className="hidden sm:flex items-stretch gap-0.5 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
               <Button
@@ -955,7 +975,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 Terrain
               </Button>
             </div>
-            
+
             {/* Mobile dropdown for map type */}
             <div className="flex sm:hidden items-center border-l pl-2">
               <Select 
@@ -982,7 +1002,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Street View Exit Button - Only shown when in street view */}
       {inStreetView && (
         <div className="absolute top-20 right-4 z-10 bg-white p-1.5 rounded-lg shadow-lg">
@@ -998,7 +1018,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </Button>
         </div>
       )}
-      
+
       {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter" id="status-filter" data-tour="status-filter">
         {/* Toggle button for showing/hiding the legend */}
@@ -1013,7 +1033,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             {showLegend ? "remove" : "add"}
           </span>
         </Button>
-        
+
         {/* Only show the status buttons if legend is expanded */}
         {showLegend && (
           <>
@@ -1044,9 +1064,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           </>
         )}
       </div>
-      
+
       {/* Map Type Controls have been moved to the main search bar at the top */}
-      
+
       {/* New Contact Dialog - Using our new consolidated Form Component */}
       <ContactForm
         isOpen={showNewContactDialog}
@@ -1086,10 +1106,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         onSuccess={(newContact: Contact) => {
           // Log status for debugging
           console.log("Contact created successfully:", newContact);
-          
+
           // Handle successful creation
           queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-          
+
           // Reset form completely to prevent data persisting to next contact
           setNewContactForm({
             fullName: "", // Make sure name is cleared for the next new contact
@@ -1103,14 +1123,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             notes: "",
             appointment: "",
           });
-          
+
           // Cleanup map marker
           if (newHouseMarker) {
             newHouseMarker.setMap(null);
             setNewHouseMarker(null);
           }
           setIsAddingHouse(false);
-          
+
           // Create a visit record for this contact interaction
           if (newContact?.id && user?.id) {
             createVisitMutation.mutate({
@@ -1123,7 +1143,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               followUpNeeded: newContact.status === "check_back" || newContact.status === "booked",
               visitDate: new Date()
             });
-            
+
             // Handle scheduling based on status
             if (newContact.appointment) {
               const [appointmentDate, appointmentTime] = newContact.appointment.split(' ');
