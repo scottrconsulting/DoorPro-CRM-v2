@@ -299,7 +299,7 @@ export default function EnhancedRegister() {
           <p className="text-sm text-red-500">{errors.email.message}</p>
         )}
         {emailAvailable === false && (
-          <p className="text-sm text-red-500">Email is already registered</p>
+          <p className="text-sm text-red-500">Email is already registered. Please use a different email or <a href="/login" className="text-blue-600 hover:underline">sign in</a> instead.</p>
         )}
       </div>
     </div>
@@ -478,6 +478,17 @@ export default function EnhancedRegister() {
               {step === 2 && renderStep2()}
               {step === 3 && renderStep3()}
               {step === 4 && renderStep4()}
+
+              {/* Show validation errors for step 1 */}
+              {step === 1 && (usernameAvailable === false || emailAvailable === false) && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>
+                    {usernameAvailable === false && "Username is already taken. "}
+                    {emailAvailable === false && "Email is already registered. "}
+                    Please correct these issues to continue.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="flex justify-between pt-4">
                 {step > 1 && (
