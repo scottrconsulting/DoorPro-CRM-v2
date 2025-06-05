@@ -24,7 +24,7 @@ export default function DirectLogin() {
     try {
       // First, clear any existing token
       localStorage.removeItem('doorpro_auth_token');
-      
+
       // Make login request using the new secure authentication endpoint
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -36,15 +36,15 @@ export default function DirectLogin() {
           password
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok && data.authenticated && data.user) {
         // For session-based authentication, we don't need to store a token
         // The session is handled by the server via cookies
-        
+
         setSuccess(`Welcome back, ${data.user.fullName}! Redirecting to dashboard...`);
-        
+
         // Redirect after a short delay to show the success message
         setTimeout(() => {
           window.location.href = '/';
@@ -82,14 +82,14 @@ export default function DirectLogin() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             {success && (
               <Alert className="mb-4 bg-green-50 border-green-500 text-green-700">
                 <AlertTitle>Success</AlertTitle>
                 <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}
-            
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
@@ -103,7 +103,7 @@ export default function DirectLogin() {
                   required
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Password
@@ -117,7 +117,7 @@ export default function DirectLogin() {
                   required
                 />
               </div>
-              
+
               <Button 
                 type="submit" 
                 className="w-full"
@@ -143,7 +143,7 @@ export default function DirectLogin() {
                   Forgot your password?
                 </Link>
               </div>
-              
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -152,7 +152,7 @@ export default function DirectLogin() {
                   <span className="bg-white px-2 text-gray-500">Or</span>
                 </div>
               </div>
-              
+
               <Link href="/register" className="w-full">
                 <Button variant="outline" className="w-full">
                   <UserPlus className="mr-2 h-4 w-4" />

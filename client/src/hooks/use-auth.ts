@@ -36,9 +36,14 @@ export function useAuth() {
   // Fetch the current authenticated user
   const { data, isLoading, error } = useQuery<{authenticated: boolean; user?: User}>({
     queryKey: ["/api/auth/user"],
-    retry: false,
-    refetchOnWindowFocus: true,
-    refetchInterval: 5 * 60 * 1000, // refresh session every 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry 401 errors, but retry network errors
+      if (error?.message?.includes('401')) return false;
+      return failureCount < 2;
+    },
+    refetchOnWindowFocus: false, // Disable to prevent auth loops
+    refetchInterval: false, // Disable auto-refresh to prevent conflicts
+    staleTime: 10 * 60 * 1000, // Consider data fresh for 10 minutes
   });
 
   const isAuthenticated = data?.authenticated || false;
@@ -48,13 +53,25 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       const res = await apiRequest("POST", "/api/auth/login", credentials);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
       return res.json();
     },
     onSuccess: (data) => {
+      // Clear any existing tokens that might conflict
+      localStorage.removeItem('doorpro_auth_token');
+      // Invalidate and refetch auth state
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Force reload after redirect to ensure clean state
-      window.location.href = '/';
+      // Small delay to ensure session is established before redirect
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     },
+    onError: (error) => {
+      console.error('Login error:', error);
+    }
   });
 
   // Register mutation

@@ -110,14 +110,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       proxy: true,
       cookie: { 
-        secure: process.env.NODE_ENV === 'production',
+        secure: false, // Set to false to work on both HTTP and HTTPS
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax', // Use lax for better compatibility
         path: '/',
-        domain: process.env.NODE_ENV === 'production' ? '.replit.dev' : undefined
+        // Remove domain restriction for Replit deployment compatibility
       },
-      rolling: true
+      rolling: true,
+      name: 'doorpro.sid' // Custom session name
     })
   );
 
@@ -193,31 +194,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Use the verifyToken function imported at the top
 
-  // Middleware to ensure the user is authenticated - supports both session and token authentication
+  // Middleware to ensure the user is authenticated - prioritize session authentication
   const ensureAuthenticated = async (req: Request, res: Response, next: any) => {
     console.log(`Auth check for ${req.method} ${req.url}`);
     
-    // First check standard cookie-based authentication
-    if (req.isAuthenticated()) {
+    // First check standard cookie-based authentication (primary method)
+    if (req.isAuthenticated() && req.user) {
       console.log("User authenticated via session");
       return next();
     }
     
-    // If not authenticated by cookie, check for bearer token
+    // Fallback to token authentication for API access
     const authHeader = req.headers.authorization;
-    console.log(`Authorization header: ${authHeader ? 'present' : 'missing'}`);
-    
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      console.log(`Token received in Authorization header: ${token.substring(0, 5)}...`);
+      const token = authHeader.substring(7);
       
-      // Use the direct-auth token verification
       try {
         if (verifyToken(token)) {
-          // We're authenticated via token - set req.user with admin credentials
           console.log("User authenticated via token, setting admin user");
           
-          // Set the user property on the request to enable admin access
           (req as any).user = {
             id: 1,
             username: 'admin',
@@ -227,17 +222,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           return next();
-        } else {
-          console.log("Token verification failed - invalid token");
         }
       } catch (error) {
         console.error("Token verification error:", error);
       }
-    } else {
-      console.log("No Bearer token found in authorization header");
     }
     
-    // Not authenticated by any method
     console.log("Authentication failed for request");
     return res.status(401).json({ message: "Unauthorized" });
   };
@@ -312,12 +302,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Login session error:", err);
           return next(err);
         }
+        
+        // Ensure session is properly saved
         req.session.save((err) => {
           if (err) {
             console.error("Session save error:", err);
-            return next(err);
+            return res.status(500).json({ message: "Session creation failed" });
           }
-          console.log("Session created and saved successfully");
+          
+          console.log("Session created and saved successfully for user:", user.username);
           
           // Log successful login
           logAuditEvent(
@@ -332,16 +325,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req.ip
           );
           
-          return res.status(200).json({ 
-            authenticated: true,
-            user: { 
-              id: user.id, 
-              username: user.username, 
-              email: user.email, 
-              fullName: user.fullName, 
-              role: user.role 
-            } 
-          });
+          // Add session verification
+          if (req.isAuthenticated()) {
+            console.log("Session verification successful");
+            return res.status(200).json({ 
+              authenticated: true,
+              user: { 
+                id: user.id, 
+                username: user.username, 
+                email: user.email, 
+                fullName: user.fullName, 
+                role: user.role 
+              } 
+            });
+          } else {
+            console.error("Session verification failed");
+            return res.status(500).json({ message: "Authentication verification failed" });
+          }
         });
       });
     })(req, res, next);
@@ -387,9 +387,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Session authentication status endpoint
   app.get("/api/auth/me", (req, res) => {
+    console.log("Session check - isAuthenticated():", req.isAuthenticated());
+    console.log("Session ID:", req.sessionID);
+    console.log("Session data:", req.session);
+    
     // Check for session authentication
     if (req.isAuthenticated()) {
       const user = req.user as any;
+      console.log("Authenticated user:", user?.username);
       return res.json({ 
         authenticated: true, 
         user: { 
@@ -403,6 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } 
     
     // Not authenticated
+    console.log("User not authenticated");
     return res.status(401).json({ authenticated: false });
   });
 

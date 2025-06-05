@@ -16,18 +16,8 @@ export async function apiRequest(
   // Always use the current browser domain for API requests
   let fullUrl = url;
   if (url.startsWith('/') && typeof window !== 'undefined') {
-    // On mobile browsers, we may need to use a specific domain
-    // This helps avoid gateway errors on some mobile devices
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const hasGatewayError = window.localStorage.getItem('hadGatewayError') === 'true';
-
-    if (isMobile && hasGatewayError) {
-      // Use the Replit preview URL directly
-      fullUrl = `https://door-pro-crm.scottrconsult.repl.co${url}`;
-    } else {
-      // IMPORTANT: This ensures we always use the same domain as the browser window
-      fullUrl = `${window.location.origin}${url}`;
-    }
+    // Use the current page domain consistently
+    fullUrl = `${window.location.origin}${url}`;
   }
 
   try {
@@ -65,8 +55,8 @@ export async function apiRequest(
       method,
       headers,
       body,
-      credentials: "include", // This ensures cookies are sent with the request
-      mode: 'cors', // Enable CORS for cross-domain requests
+      credentials: "include", // Essential for session cookies
+      mode: 'same-origin', // Use same-origin for better session handling
     });
 
     await throwIfResNotOk(res);
@@ -126,7 +116,7 @@ export const getQueryFn = <T>({ on401: unauthorizedBehavior }: { on401: Unauthor
 
       const res = await fetch(url, {
         credentials: "include", // Essential for sending cookies
-        mode: 'cors',  // Use CORS for cross-domain requests
+        mode: 'same-origin',  // Use same-origin for session handling
         headers
       });
 
