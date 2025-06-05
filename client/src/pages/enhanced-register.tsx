@@ -26,8 +26,10 @@ const registerSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
   confirmPassword: z.string(),
-  subscriptionTier: z.enum(["free", "pro"]),
-  agreeToTerms: z.boolean().refine(val => val === true, "You must agree to the terms and conditions"),
+  subscriptionTier: z.enum(["free", "pro"]).default("free"),
+  agreeToTerms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the Terms of Service and Privacy Policy"
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -73,8 +75,9 @@ export default function EnhancedRegister() {
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // To manage error messages
 
-  const { register, handleSubmit, formState: { errors }, watch, trigger } = useForm<RegisterFormValues>({
+  const { register, handleSubmit, formState: { errors }, watch, trigger, setValue } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
@@ -92,7 +95,7 @@ export default function EnhancedRegister() {
   // Username availability check
   const checkUsername = async (username: string) => {
     if (username.length < 3) return;
-    
+
     setIsCheckingUsername(true);
     try {
       const response = await fetch(`/api/auth/check-username/${encodeURIComponent(username)}`);
@@ -109,7 +112,7 @@ export default function EnhancedRegister() {
   // Email availability check
   const checkEmail = async (email: string) => {
     if (!email.includes('@')) return;
-    
+
     setIsCheckingEmail(true);
     try {
       const response = await fetch(`/api/auth/check-email/${encodeURIComponent(email)}`);
@@ -134,43 +137,66 @@ export default function EnhancedRegister() {
         },
         body: JSON.stringify(registrationData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Registration failed');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
-        setStep(4); // Success step
+        setLocation('/login'); // Redirect to login on successful registration
       }
     },
   });
 
-  const onSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
+  const validateStep = async (stepNumber: number): Promise<boolean> => {
+    switch (stepNumber) {
+      case 1:
+        return await trigger(["username", "fullName", "email"]);
+      case 2:
+        return await trigger(["password", "confirmPassword"]);
+      case 3:
+        return await trigger(["subscriptionTier"]);
+      case 4:
+        return await trigger(["agreeToTerms"]);
+      default:
+        return true;
+    }
   };
 
-  const nextStep = async () => {
-    if (step === 1) {
-      const isValid = await trigger(['username', 'fullName', 'email']);
-      if (isValid && usernameAvailable && emailAvailable) {
-        setStep(2);
-      }
-    } else if (step === 2) {
-      const isValid = await trigger(['password', 'confirmPassword']);
+  const handleNext = async () => {
+    const isValid = await validateStep(step);
+    if (isValid && step < 4) {
+      setStep(step + 1);
+    }
+  };
+
+  const onSubmit = async (data: RegisterFormValues) => {
+    setErrorMessage(null);
+
+    // If not on final step, just advance to next step
+    if (step < 4) {
+      const isValid = await validateStep(step);
       if (isValid) {
-        setStep(3);
+        setStep(step + 1);
       }
+      return;
     }
-  };
 
-  const previousStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
+    // Final step - submit the form
+    const { confirmPassword, agreeToTerms, ...userData } = data;
+
+    // Ensure terms are agreed to
+    if (!agreeToTerms) {
+      setErrorMessage("You must agree to the Terms of Service and Privacy Policy to continue.");
+      return;
     }
+
+    // Only allow admin privileges for the master account email (removed for normal registration)
+    registerMutation.mutate(userData);
   };
 
   const getStepProgress = () => {
@@ -211,7 +237,7 @@ export default function EnhancedRegister() {
           <p className="text-sm text-red-500">Username is already taken</p>
         )}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="fullName">Full Name</Label>
         <Input 
@@ -223,7 +249,7 @@ export default function EnhancedRegister() {
           <p className="text-sm text-red-500">{errors.fullName.message}</p>
         )}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="email">Email Address</Label>
         <div className="relative">
@@ -277,7 +303,7 @@ export default function EnhancedRegister() {
           Password must contain at least 8 characters with uppercase, lowercase, and numbers
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm Password</Label>
         <Input 
@@ -331,47 +357,65 @@ export default function EnhancedRegister() {
           })}
         </RadioGroup>
       </div>
-
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="agreeToTerms"
-          checked={watchedValues.agreeToTerms}
-          onCheckedChange={(checked) => register("agreeToTerms").onChange({ target: { checked } })}
-        />
-        <Label htmlFor="agreeToTerms" className="text-sm">
-          I agree to the{" "}
-          <Link href="/terms" className="text-blue-600 hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="text-blue-600 hover:underline">
-            Privacy Policy
-          </Link>
-        </Label>
-      </div>
-      {errors.agreeToTerms && (
-        <p className="text-sm text-red-500">{errors.agreeToTerms.message}</p>
-      )}
     </div>
   );
 
-  // Step 4: Success/Email Verification
+  // Step 4: Terms and Final Confirmation
   const renderStep4 = () => (
-    <div className="text-center space-y-4">
-      <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-      <h3 className="text-xl font-semibold">Account Created Successfully!</h3>
-      <p className="text-gray-600">
-        We've sent a verification email to <strong>{watchedValues.email}</strong>
-      </p>
-      <p className="text-sm text-gray-500">
-        Please check your email and click the verification link to activate your account.
-      </p>
-      <Button 
-        onClick={() => setLocation('/login')}
-        className="w-full"
-      >
-        Continue to Login
-      </Button>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Review and Confirm</h3>
+        <div className="bg-gray-50 rounded-lg p-4 space-y-3 mb-6">
+          <div className="flex justify-between">
+            <span>Username:</span>
+            <span className="font-medium">{watchedValues.username}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Email:</span>
+            <span className="font-medium">{watchedValues.email}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Plan:</span>
+            <span className="font-medium capitalize">
+              {watchedValues.subscriptionTier === "free" ? "Free Tier" : "Pro Tier"} 
+              {watchedValues.subscriptionTier === "pro" ? " - $29/month" : " - $0/month"}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-4 mb-6">
+          <h4 className="font-medium mb-2">Terms of Service Summary</h4>
+          <p className="text-sm text-gray-600 mb-2">
+            By creating an account, you agree to our terms and conditions, including:
+          </p>
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li>• Responsible use of our platform and services</li>
+            <li>• Data privacy and protection policies</li>
+            <li>• Subscription and billing terms (if applicable)</li>
+            <li>• Content and conduct guidelines</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="flex items-start space-x-3">
+        <Checkbox 
+          id="agreeToTerms"
+          checked={watchedValues.agreeToTerms}
+          onCheckedChange={(checked) => {
+            setValue("agreeToTerms", checked as boolean, { shouldValidate: true });
+          }}
+        />
+        <Label htmlFor="agreeToTerms" className="text-sm leading-relaxed cursor-pointer">
+          I agree to the{" "}
+          <a href="#" className="text-blue-600 hover:underline font-medium">Terms of Service</a>
+          {" "}and{" "}
+          <a href="#" className="text-blue-600 hover:underline font-medium">Privacy Policy</a>
+        </Label>
+      </div>
+
+      {errors.agreeToTerms && (
+        <p className="text-sm text-red-500 mt-2">{errors.agreeToTerms.message}</p>
+      )}
     </div>
   );
 
@@ -382,7 +426,7 @@ export default function EnhancedRegister() {
           <h1 className="text-3xl font-bold text-blue-900 mb-2">DoorPro CRM</h1>
           <p className="text-gray-600">Join thousands of sales professionals</p>
         </div>
-        
+
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle>Create Your Account</CardTitle>
@@ -391,8 +435,15 @@ export default function EnhancedRegister() {
             </CardDescription>
             <Progress value={getStepProgress()} className="w-full" />
           </CardHeader>
-          
+
           <CardContent>
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
             {registerMutation.error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
@@ -407,50 +458,41 @@ export default function EnhancedRegister() {
               {step === 3 && renderStep3()}
               {step === 4 && renderStep4()}
 
-              {step < 4 && (
-                <div className="flex space-x-3 mt-6">
-                  {step > 1 && (
-                    <Button type="button" variant="outline" onClick={previousStep} className="flex-1">
-                      Previous
-                    </Button>
-                  )}
-                  {step < 3 ? (
-                    <Button 
-                      type="button" 
-                      onClick={nextStep} 
-                      className="flex-1"
-                      disabled={
-                        (step === 1 && (!usernameAvailable || !emailAvailable)) ||
-                        isCheckingUsername || 
-                        isCheckingEmail
-                      }
-                    >
-                      Next
-                    </Button>
+              <div className="flex justify-between pt-4">
+                {step > 1 && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setStep(step - 1)}
+                  >
+                    Previous
+                  </Button>
+                )}
+                <Button 
+                  type="submit" 
+                  disabled={registerMutation.isPending || (step === 4 && !watchedValues.agreeToTerms)}
+                  className={step === 1 ? "ml-auto" : ""}
+                >
+                  {registerMutation.isPending ? (
+                    "Creating Account..."
+                  ) : step === 4 ? (
+                    "Create Account"
                   ) : (
-                    <Button 
-                      type="submit" 
-                      className="flex-1"
-                      disabled={registerMutation.isPending || !watchedValues.agreeToTerms}
-                    >
-                      {registerMutation.isPending ? "Creating Account..." : "Create Account"}
-                    </Button>
+                    "Next"
                   )}
-                </div>
-              )}
+                </Button>
+              </div>
             </form>
           </CardContent>
-          
-          {step < 4 && (
-            <CardFooter>
-              <p className="text-center w-full text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link href="/login" className="text-blue-600 hover:underline font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </CardFooter>
-          )}
+
+          <CardFooter>
+            <p className="text-center w-full text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link href="/login" className="text-blue-600 hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
         </Card>
       </div>
     </div>
