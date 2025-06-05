@@ -16,6 +16,8 @@ import DirectLogin from "@/pages/direct-login";
 import SimpleLogin from "@/pages/simple-login";
 import LoginFix from "@/pages/login-fix";
 import Register from "@/pages/register";
+import EnhancedRegister from "@/pages/enhanced-register";
+import EmailVerification from "@/pages/email-verification";
 import Upgrade from "@/pages/upgrade";
 import Settings from "@/pages/settings";
 import Customize from "@/pages/customize";
@@ -64,7 +66,13 @@ function App() {
                     <DirectLogin />
                   </Route>
                   <Route path="/register">
+                    <EnhancedRegister />
+                  </Route>
+                  <Route path="/register-classic">
                     <Register />
+                  </Route>
+                  <Route path="/verify-email">
+                    <EmailVerification />
                   </Route>
                   <Route path="/forgot-password">
                     <ForgotPassword />
