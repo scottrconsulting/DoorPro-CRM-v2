@@ -406,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(401).json({ authenticated: false });
   });
 
-  app.get("/api/auth/user", (req, res) => {
+  app.get("/api/auth/user", async (req, res) => {
     // Check for cookie/session authentication first
     if (req.isAuthenticated()) {
       const user = req.user as any;
@@ -429,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Use the secure token verification from auth-service
-        const { verifyToken } = require('./direct-auth');
+        const { verifyToken } = await import('./direct-auth');
         const user = await verifyToken(token);
         
         if (user) {
