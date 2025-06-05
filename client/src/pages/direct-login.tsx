@@ -3,13 +3,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DoorProLogo } from "@/components/ui/door-pro-logo";
+import { Link } from "wouter";
 
 export default function DirectLogin() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("password");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -24,15 +25,21 @@ export default function DirectLogin() {
       // First, clear any existing token
       localStorage.removeItem('doorpro_auth_token');
       
-      // Make login request
-      const response = await apiRequest("POST", "/api/direct-auth/direct-login", {
-        username,
-        password
+      // Make login request using the new secure authentication endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password
+        }),
       });
       
       const data = await response.json();
       
-      if (data.success && data.token) {
+      if (response.ok && data.success && data.token) {
         // Store token
         localStorage.setItem('doorpro_auth_token', data.token);
         
@@ -92,7 +99,7 @@ export default function DirectLogin() {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
+                  placeholder="Enter your username"
                   required
                 />
               </div>
@@ -130,22 +137,37 @@ export default function DirectLogin() {
               </Button>
             </form>
 
+            <div className="mt-4 space-y-3">
+              <div className="text-center">
+                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                  Forgot your password?
+                </Link>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or</span>
+                </div>
+              </div>
+              
+              <Link href="/register" className="w-full">
+                <Button variant="outline" className="w-full">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create New Account
+                </Button>
+              </Link>
+            </div>
+
             <div className="mt-4 bg-blue-50 p-3 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-700">Cross-Platform Access</h4>
+              <h4 className="text-sm font-semibold text-blue-700">Secure Authentication</h4>
               <p className="text-xs text-blue-600 mt-1">
-                This secure login works across all devices including mobile apps, web browsers, 
-                and desktop applications - ensuring consistent access no matter how you connect.
+                Your account is protected with database-backed authentication and secure token management.
               </p>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between flex-col space-y-2">
-            <div className="text-sm text-primary hover:underline">
-              Need an account? Contact your administrator
-            </div>
-            <div className="text-xs text-gray-400 text-center mt-4">
-              Demo credentials: admin / password
-            </div>
-          </CardFooter>
         </Card>
       </div>
     </div>
