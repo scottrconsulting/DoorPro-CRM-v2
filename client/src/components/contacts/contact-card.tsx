@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import ContactForm from "./contact-form";
+import EditContactView from "./edit-contact-view";
 
 interface ContactCardProps {
   contactId: number;
@@ -46,7 +46,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const [followUpTime, setFollowUpTime] = useState("10:00");
   const [followUpTitle, setFollowUpTitle] = useState("");
   const [followUpReason, setFollowUpReason] = useState("");
-  
+
   // Sale form state
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [saleAmount, setSaleAmount] = useState("");
@@ -55,14 +55,14 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   const [saleNotes, setSaleNotes] = useState("");
   const [saleStatus, setSaleStatus] = useState("completed");
   const [salePaymentMethod, setSalePaymentMethod] = useState("Unknown");
-  
+
   // Task form state
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [taskPriority, setTaskPriority] = useState("medium");
-  
+
   // Get contact details
   const { data: contact, isLoading, isError } = useQuery<Contact>({
     queryKey: [`/api/contacts/${contactId}`],
@@ -116,7 +116,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
     },
   });
-  
+
   // Update contact notes mutation
   const updateContactNotesMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: number; notes: string }) => {
@@ -157,7 +157,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
     },
   });
-  
+
   // Record sale mutation
   const recordSaleMutation = useMutation({
     mutationFn: async (data: InsertSale) => {
@@ -173,16 +173,16 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       setSaleStatus("completed");
       setSalePaymentMethod("Unknown");
       setShowSaleForm(false);
-      
+
       // Invalidate sales queries to update UI
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/sales`] });
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
-      
+
       toast({
         title: "Sale recorded",
         description: "The sale has been recorded successfully",
       });
-      
+
       // Switch to the sales tab to show the new sale
       setActiveTab("sales");
     },
@@ -209,16 +209,16 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       setTaskDueDate(format(new Date(), "yyyy-MM-dd"));
       setTaskPriority("medium");
       setShowTaskForm(false);
-      
+
       // Invalidate tasks queries to update UI
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      
+
       toast({
         title: "Task created",
         description: "Your task has been created successfully",
       });
-      
+
       // Switch to the tasks tab to show the new task
       setActiveTab("tasks");
     },
@@ -231,7 +231,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
     },
   });
-  
+
   // Complete task mutation
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -241,7 +241,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      
+
       toast({
         title: "Task completed",
         description: "Task marked as completed successfully",
@@ -256,7 +256,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
     },
   });
-  
+
   // Delete task mutation
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -266,7 +266,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      
+
       toast({
         title: "Task deleted",
         description: "Task has been deleted successfully",
@@ -329,16 +329,16 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       followUpNeeded: false,
       visitDate: new Date(),
     });
-    
+
     // Also update the contact's notes field
     // Append the new note to existing notes (if any)
     const timestamp = format(new Date(), "MMM d, yyyy h:mm a");
     const newNoteWithTimestamp = `[${timestamp}] ${note}`;
-    
+
     const updatedNotes = contact?.notes 
       ? `${contact.notes}\n\n${newNoteWithTimestamp}`
       : newNoteWithTimestamp;
-    
+
     // Update the contact record with the combined notes
     updateContactNotesMutation.mutate({
       id: contactId,
@@ -380,7 +380,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
   // Handle sale submission
   const handleRecordSale = () => {
     if (!user?.id || !contactId) return;
-    
+
     // Validate form fields
     if (!saleAmount || !saleProduct) {
       toast({
@@ -390,7 +390,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
       return;
     }
-    
+
     // Convert amount to number
     const amount = parseFloat(saleAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -401,7 +401,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
       return;
     }
-    
+
     // Create the sale record
     recordSaleMutation.mutate({
       contactId,
@@ -414,11 +414,11 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       notes: saleNotes,
     });
   };
-  
+
   // Handle task creation - simplified approach
   const handleCreateTask = () => {
     if (!user?.id || !contactId) return;
-    
+
     // Validate form fields
     if (!taskTitle) {
       toast({
@@ -428,7 +428,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       });
       return;
     }
-    
+
     // Simple task object with just the essentials
     const newTask = {
       contactId: contactId,
@@ -439,7 +439,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       priority: taskPriority || "medium",
       completed: false
     };
-    
+
     // Convert the string date to a proper Date object
     if (taskDueDate) {
       try {
@@ -448,7 +448,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
         // Note: JS months are 0-based
         const dateObj = new Date(year, month - 1, day, 12, 0, 0);
         console.log(`Creating Date from ${taskDueDate}:`, dateObj);
-        
+
         // @ts-ignore - this will be a proper Date object now
         newTask.dueDate = dateObj;
       } catch (e) {
@@ -461,22 +461,22 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
         newTask.dueDate = tomorrow;
       }
     }
-    
+
     console.log("Creating task:", newTask);
-    
+
     createTaskMutation.mutate(newTask, {
       onSuccess: () => {
         toast({
           title: "Task created",
           description: "Task has been added successfully",
         });
-        
+
         // Reset form fields
         setTaskTitle("");
         setTaskDescription("");
         setTaskDueDate("");
         setTaskPriority("medium");
-        
+
         // Refresh the tasks list
         queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}/tasks`] });
         queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -491,13 +491,13 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       }
     });
   };
-  
+
   // Handle completing a task
   const handleCompleteTask = (taskId: number) => {
     if (!taskId) return;
     completeTaskMutation.mutate(taskId);
   };
-  
+
   // Handle deleting a task
   const handleDeleteTask = (taskId: number) => {
     if (!taskId) return;
@@ -519,7 +519,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       .join(" ");
   };
 
-  
+
 
   if (isLoading) {
     return (
@@ -554,14 +554,14 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       <Dialog open={isOpen} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogTitle className="text-xl font-bold">{contact.fullName}</DialogTitle>
-          
+
           {/* Status badge */}
           <div className="mb-4">
             <Badge className={`${getStatusBadgeConfig(contact.status).bg} ${getStatusBadgeConfig(contact.status).text}`}>
               {getStatusBadgeConfig(contact.status).label}
             </Badge>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1 space-y-4">
               {/* Contact information */}
@@ -578,14 +578,14 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                     )}
                   </div>
                 </div>
-                
+
                 {contact.phone && (
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 mr-2 text-gray-500" />
                     <p className="text-sm">{contact.phone}</p>
                   </div>
                 )}
-                
+
                 {contact.email && (
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-gray-500" />
@@ -593,7 +593,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                   </div>
                 )}
               </div>
-              
+
               {/* Notes section */}
               <div>
                 <h3 className="font-medium">Notes</h3>
@@ -601,7 +601,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                   {contact.notes || "No notes available."}
                 </p>
               </div>
-              
+
               {/* Quick add note */}
               <div className="mt-4">
                 <h4 className="text-sm font-medium mb-2">Add a Note</h4>
@@ -620,7 +620,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                 </Button>
               </div>
             </div>
-            
+
             <div className="md:col-span-2">
               <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-4 mb-4 w-full">
@@ -629,7 +629,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                   <TabsTrigger value="sales" className="px-2 text-xs md:text-sm">Sales</TabsTrigger>
                   <TabsTrigger value="tasks" className="px-2 text-xs md:text-sm">Tasks</TabsTrigger>
                 </TabsList>
-                
+
                 {/* History Tab */}
                 <TabsContent value="notes">
                   <div className="space-y-4">
@@ -660,7 +660,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                     </div>
                   </div>
                 </TabsContent>
-                
+
                 {/* Schedule Tab */}
                 <TabsContent value="schedule">
                   <div className="space-y-4">
@@ -710,7 +710,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                     </Button>
                   </div>
                 </TabsContent>
-                
+
                 {/* Sales Tab */}
                 <TabsContent value="sales">
                   <div className="space-y-4">
@@ -728,7 +728,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                         Record Sale
                       </Button>
                     </div>
-                    
+
                     {/* Sale Form */}
                     {showSaleForm && (
                       <div className="p-4 border border-green-200 bg-green-50 rounded-md space-y-3">
@@ -789,7 +789,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="space-y-2 max-h-[350px] overflow-y-auto">
                       {sales.length > 0 ? (
                         sales.map((sale) => (
@@ -818,7 +818,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                     </div>
                   </div>
                 </TabsContent>
-                
+
                 {/* Tasks Tab */}
                 <TabsContent value="tasks">
                   <div className="space-y-4">
@@ -836,12 +836,12 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                         Add Task
                       </Button>
                     </div>
-                    
+
                     {/* Task Creation Form */}
                     {showTaskForm && (
                       <div className="p-4 border border-blue-200 bg-blue-50 rounded-md space-y-3">
                         <h4 className="font-medium text-blue-700">Create New Task</h4>
-                        
+
                         <div>
                           <Label htmlFor="task-title">Title</Label>
                           <Input
@@ -851,7 +851,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                             onChange={(e) => setTaskTitle(e.target.value)}
                           />
                         </div>
-                        
+
                         <div>
                           <Label htmlFor="task-description">Description</Label>
                           <Textarea
@@ -861,7 +861,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                             onChange={(e) => setTaskDescription(e.target.value)}
                           />
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="task-due-date">Due Date</Label>
@@ -872,7 +872,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                               onChange={(e) => setTaskDueDate(e.target.value)}
                             />
                           </div>
-                          
+
                           <div>
                             <Label htmlFor="task-priority">Priority</Label>
                             <select
@@ -887,7 +887,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                             </select>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end gap-2 mt-3">
                           <Button 
                             variant="outline" 
@@ -904,7 +904,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="space-y-2 max-h-[350px] overflow-y-auto">
                       {tasks.length > 0 ? (
                         tasks.map((task) => (
@@ -923,7 +923,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                                 </Badge>
                               </div>
                             </div>
-                            
+
                             <div className="flex justify-between items-center mt-1">
                               <div className="text-xs text-gray-500">
                                 Due: {task.dueDate && format(new Date(task.dueDate), "MMM d, yyyy")}
@@ -932,9 +932,9 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                                 {task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) : "Medium"} Priority
                               </Badge>
                             </div>
-                            
+
                             {task.description && <p className="text-sm mt-1">{task.description}</p>}
-                            
+
                             <div className="flex justify-end mt-2 gap-2">
                               {!task.completed && (
                                 <Button 
@@ -966,7 +966,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
               </Tabs>
             </div>
           </div>
-          
+
           {/* Footer with buttons */}
           <div className="flex justify-between items-center pt-4 border-t mt-4">
             <div className="flex gap-2">
@@ -990,10 +990,10 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Edit Contact Form */}
       {contact && (
-        <ContactForm
+        <EditContactView
           isOpen={showEditForm}
           onClose={() => setShowEditForm(false)}
           initialContact={contact}
@@ -1001,7 +1001,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
           isEditMode={true}
         />
       )}
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

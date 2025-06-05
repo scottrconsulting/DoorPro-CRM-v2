@@ -188,10 +188,19 @@ export default function EditContactView({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!fullName || !address) {
+    if (!fullName.trim() || !address.trim()) {
       toast({
         title: "Missing required fields",
         description: "Please provide at least a name and address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!contact) {
+      toast({
+        title: "Error",
+        description: "Contact data is not available",
         variant: "destructive",
       });
       return;
@@ -238,6 +247,18 @@ export default function EditContactView({
     return (
       <div className="flex justify-center items-center h-40">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+        <span className="ml-2">Loading contact details...</span>
+      </div>
+    );
+  }
+
+  if (!contact) {
+    return (
+      <div className="flex justify-center items-center h-40 flex-col">
+        <p className="text-red-500 mb-4">Failed to load contact details</p>
+        <Button variant="outline" onClick={onCancel}>
+          Go Back
+        </Button>
       </div>
     );
   }

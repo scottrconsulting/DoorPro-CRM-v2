@@ -143,12 +143,13 @@ export default function ContactForm({
   // Only update conditional fields visibility when dialog opens - just once
   useEffect(() => {
     if (isOpen && !hasInitializedRef.current) {
-      // Mark as initialized to prevent further resets
-      hasInitializedRef.current = true;
+      try {
+        // Mark as initialized to prevent further resets
+        hasInitializedRef.current = true;
 
-      // Check if there's an appointment in the initial contact
-      const hasAppointment = initialContact?.appointment ? true : false;
-      const currentStatus = initialContact?.status || "not_visited";
+        // Check if there's an appointment in the initial contact
+        const hasAppointment = initialContact?.appointment ? true : false;
+        const currentStatus = initialContact?.status || "not_visited";
 
       // Initialize form with all values at once using setValue instead of reset
       form.setValue("fullName", initialContact?.fullName || "");
@@ -175,19 +176,28 @@ export default function ContactForm({
       form.setValue("saleDate", new Date().toISOString().split('T')[0]);
 
       // Set visibility flags
-      setShowSaleFields(currentStatus === "sold");
-      setShowAppointmentFields(hasAppointment);
+        setShowSaleFields(currentStatus === "sold");
+        setShowAppointmentFields(hasAppointment);
 
-      console.log("Dialog opened with status:", currentStatus, 
-        "- Has appointment:", hasAppointment,
-        "- Shows sale fields:", currentStatus === "sold");
+        console.log("Dialog opened with status:", currentStatus, 
+          "- Has appointment:", hasAppointment,
+          "- Shows sale fields:", currentStatus === "sold");
+      } catch (error) {
+        console.error("Error initializing contact form:", error);
+        toast({
+          title: "Form initialization error",
+          description: "There was an issue loading the contact form. Please try again.",
+          variant: "destructive",
+        });
+        onClose();
+      }
     }
 
     // Reset the initialization flag when the dialog closes
     if (!isOpen) {
       hasInitializedRef.current = false;
     }
-  }, [isOpen, initialContact, form]);
+  }, [isOpen, initialContact, form, toast, onClose]);
 
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
