@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Contact, InsertContact, InsertVisit, InsertSchedule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import CustomTour from "@/components/tour/custom-tour";
 import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
@@ -899,7 +900,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       <Button
         variant="outline"
         size="sm"
-        className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white```text
+        className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
         onClick={scrollToBottom}
       >
         <ChevronDown className="h-4 w-4 mr-1" />
