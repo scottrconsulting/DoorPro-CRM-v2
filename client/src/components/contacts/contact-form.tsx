@@ -8,6 +8,7 @@ import { insertContactSchema, Contact, InsertContact, CONTACT_STATUSES, Sale, In
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/maps";
+import { getStatusColor, getColorStyle } from "@/lib/status-helpers";
 
 // Extended interface to include appointment field
 interface ContactData {
@@ -682,17 +683,31 @@ export default function ContactForm({
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a status" />
+                      <SelectTrigger className="relative">
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className={`inline-block w-3 h-3 rounded-full ${getStatusColor(field.value)}`}
+                            style={getColorStyle(field.value)}
+                          ></span>
+                          <SelectValue placeholder="Select a status" />
+                        </div>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {CONTACT_STATUSES.map((status) => (
                         <SelectItem key={status} value={status}>
-                          {status
-                            .split("_")
-                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                            .join(" ")}
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className={`inline-block w-3 h-3 rounded-full ${getStatusColor(status)}`}
+                              style={getColorStyle(status)}
+                            ></span>
+                            <span>
+                              {status
+                                .split("_")
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(" ")}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

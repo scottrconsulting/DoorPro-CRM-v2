@@ -1,4 +1,5 @@
 // Helper functions for consistent status formatting across the application
+import { DEFAULT_PIN_COLORS } from "@shared/schema";
 
 /**
  * Properly formats a status string for display.
@@ -38,29 +39,57 @@ export function getStatusLabel(status: string, statusLabels?: Record<string, str
 
 /**
  * Gets a CSS color class based on the status.
+ * Uses DEFAULT_PIN_COLORS from schema as the single source of truth.
  * 
  * @param status The status from the database
+ * @param pinColors Optional custom pin colors from user settings
  * @returns A Tailwind CSS class for text or background color
  */
-export function getStatusColor(status: string): string {
-  // Map of status to Tailwind color classes - matches DEFAULT_PIN_COLORS
-  const colorMap: Record<string, string> = {
-    no_answer: 'bg-pink-500',              // Changed from not_visited to no_answer with pink
-    not_visited: 'bg-pink-500',            // For backward compatibility
-    interested: 'bg-yellow-500',           // Yellow
-    not_interested: 'bg-red-500',          // Red
-    call_back: 'bg-yellow-500',            // Changed to yellow for consistency
-    check_back: 'bg-yellow-500',           // Yellow for follow-ups
-    appointment_scheduled: 'bg-blue-500',  // Changed to blue (same as booked)
-    booked: 'bg-blue-500',                 // Blue for appointments
-    converted: 'bg-green-500',             // Green
-    sold: 'bg-green-500',                  // Green
-    no_soliciting: 'bg-purple-500',        // Purple
-    considering: 'bg-purple-500',          // Purple
-    presented: 'bg-orange-500',            // Orange
+export function getStatusColor(status: string, pinColors?: Record<string, string>): string {
+  // Map not_visited to no_answer for consistent handling
+  const mappedStatus = status === 'not_visited' ? 'no_answer' : status;
+  
+  // Use custom pin colors if available
+  if (pinColors && pinColors[mappedStatus]) {
+    const customColor = pinColors[mappedStatus];
+    // Convert named colors to Tailwind classes
+    const colorClassMap: Record<string, string> = {
+      'red': 'bg-red-500',
+      'blue': 'bg-blue-500',
+      'green': 'bg-green-500',
+      'yellow': 'bg-yellow-500',
+      'purple': 'bg-purple-500',
+      'orange': 'bg-orange-500',
+      'pink': 'bg-pink-500',
+    };
+    return colorClassMap[customColor.toLowerCase()] || 'bg-blue-500';
+  }
+  
+  // Use DEFAULT_PIN_COLORS as the base mapping
+  const defaultColor = DEFAULT_PIN_COLORS[mappedStatus as keyof typeof DEFAULT_PIN_COLORS];
+  if (defaultColor) {
+    const colorClassMap: Record<string, string> = {
+      'red': 'bg-red-500',
+      'blue': 'bg-blue-500',
+      'green': 'bg-green-500',
+      'yellow': 'bg-yellow-500',
+      'purple': 'bg-purple-500',
+      'orange': 'bg-orange-500',
+      'pink': 'bg-pink-500',
+    };
+    return colorClassMap[defaultColor.toLowerCase()] || 'bg-blue-500';
+  }
+  
+  // Fallback for backward compatibility
+  const legacyColorMap: Record<string, string> = {
+    interested: 'bg-yellow-500',
+    call_back: 'bg-yellow-500',
+    appointment_scheduled: 'bg-blue-500',
+    converted: 'bg-green-500',
+    considering: 'bg-purple-500',
   };
   
-  return colorMap[status] || 'bg-blue-500';
+  return legacyColorMap[status] || 'bg-blue-500';
 }
 
 /**

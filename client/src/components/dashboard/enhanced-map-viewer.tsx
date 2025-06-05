@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { getStatusColor, getColorStyle, getStatusLabel } from "@/lib/status-helpers";
 
 // Define the Customization type
 interface Customization {
@@ -561,82 +562,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     };
   }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
 
-  // Function to get the CSS color for a status based on customization
-  const getStatusColor = (status: string): string => {
-    // Default color mapping - updated to match pin colors
-    const defaultColorMap: Record<string, string> = {
-      no_answer: 'bg-pink-500',    // Changed from not_visited to no_answer with pink color
-      interested: 'bg-yellow-500',
-      not_interested: 'bg-red-500',
-      check_back: 'bg-yellow-500',  // Follow-up uses yellow
-      booked: 'bg-blue-500',       // Booked appointments use blue
-      converted: 'bg-green-500',
-      no_soliciting: 'bg-purple-500',
-      considering: 'bg-purple-500',
-    };
-    
-    // If customization is available, use the customized color
-    if (customization?.pinColors && customization.pinColors[status]) {
-      const customColor = customization.pinColors[status];
-      
-      // If it's a hex color, use it directly as an inline style
-      if (customColor.startsWith('#')) {
-        // Return null so we can use inline style instead
-        return '';
-      }
-      
-      // Convert color name to tailwind classes
-      const colorClassMap: Record<string, string> = {
-        'red': 'bg-red-500',
-        'blue': 'bg-blue-500',
-        'green': 'bg-green-500',
-        'yellow': 'bg-yellow-500',
-        'purple': 'bg-purple-500',
-        'orange': 'bg-orange-500',
-        'pink': 'bg-pink-500',
-      };
-      
-      return colorClassMap[customColor.toLowerCase()] || defaultColorMap[status] || 'bg-blue-500';
-    }
-    
-    return defaultColorMap[status] || 'bg-blue-500';
-  };
   
-  // Function to get inline style if it's a hex color
-  const getColorStyle = (status: string): React.CSSProperties | undefined => {
-    if (customization?.pinColors && customization.pinColors[status]) {
-      const customColor = customization.pinColors[status];
-      if (customColor.startsWith('#')) {
-        return { backgroundColor: customColor };
-      }
-    }
-    return undefined;
-  };
-  
-  // Function to properly capitalize a status for display
-  const getStatusLabel = (status: string): string => {
-    // Map not_visited to no_answer for display purposes
-    const mappedStatus = status === 'not_visited' ? 'no_answer' : status;
-    
-    if (customization?.statusLabels) {
-      // First check for direct match
-      if (customization.statusLabels[status]) {
-        return customization.statusLabels[status];
-      }
-      // Then check for mapped status match
-      if (mappedStatus !== status && customization.statusLabels[mappedStatus]) {
-        return customization.statusLabels[mappedStatus];
-      }
-    }
-    
-    // Handle special cases directly
-    if (status === 'not_visited') {
-      return 'No Answer';
-    }
-    
-    // Capitalize each word
-    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
 
   // Function to silently locate the user without showing toast notifications
   const locateUserSilently = useCallback(async () => {
@@ -1109,10 +1035,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
                 onClick={() => setActiveStatus(status.status)}
               >
                 <span 
-                  className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status)}`} 
-                  style={getColorStyle(status.status)}
+                  className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status, customization?.pinColors)}`} 
+                  style={getColorStyle(status.status, customization?.pinColors)}
                 ></span>
-                {getStatusLabel(status.status)}
+                {getStatusLabel(status.status, customization?.statusLabels)}
               </Button>
             ))}
           </>
