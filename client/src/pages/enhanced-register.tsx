@@ -155,7 +155,8 @@ export default function EnhancedRegister() {
   const validateStep = async (stepNumber: number): Promise<boolean> => {
     switch (stepNumber) {
       case 1:
-        return await trigger(["username", "fullName", "email"]);
+        const step1Valid = await trigger(["username", "fullName", "email"]);
+        return step1Valid && usernameAvailable !== false && emailAvailable !== false;
       case 2:
         return await trigger(["password", "confirmPassword"]);
       case 3:
@@ -182,7 +183,26 @@ export default function EnhancedRegister() {
       const isValid = await validateStep(step);
       if (isValid) {
         setStep(step + 1);
+      } else {
+        // Show specific error messages for step 1
+        if (step === 1) {
+          if (usernameAvailable === false) {
+            setErrorMessage("Username is already taken. Please choose a different one.");
+            return;
+          }
+          if (emailAvailable === false) {
+            setErrorMessage("Email is already registered. Please use a different email or try logging in.");
+            return;
+          }
+        }
       }
+      return;
+    }
+
+    // Final step - validate all fields before submission
+    const isFormValid = await trigger();
+    if (!isFormValid) {
+      setErrorMessage("Please correct the errors above before proceeding.");
       return;
     }
 
@@ -326,7 +346,7 @@ export default function EnhancedRegister() {
         <h3 className="text-lg font-semibold mb-4">Choose Your Plan</h3>
         <RadioGroup 
           value={watchedValues.subscriptionTier} 
-          onValueChange={(value) => register("subscriptionTier").onChange({ target: { value } })}
+          onValueChange={(value) => setValue("subscriptionTier", value as "free" | "pro", { shouldValidate: true })}
           className="space-y-4"
         >
           {Object.entries(subscriptionPlans).map(([key, plan]) => {
@@ -400,6 +420,7 @@ export default function EnhancedRegister() {
       <div className="flex items-start space-x-3">
         <Checkbox 
           id="agreeToTerms"
+          {...register("agreeToTerms")}
           checked={watchedValues.agreeToTerms}
           onCheckedChange={(checked) => {
             setValue("agreeToTerms", checked as boolean, { shouldValidate: true });
@@ -470,7 +491,11 @@ export default function EnhancedRegister() {
                 )}
                 <Button 
                   type="submit" 
-                  disabled={registerMutation.isPending || (step === 4 && !watchedValues.agreeToTerms)}
+                  disabled={
+                    registerMutation.isPending || 
+                    (step === 1 && (usernameAvailable === false || emailAvailable === false)) ||
+                    (step === 4 && !watchedValues.agreeToTerms)
+                  }
                   className={step === 1 ? "ml-auto" : ""}
                 >
                   {registerMutation.isPending ? (
