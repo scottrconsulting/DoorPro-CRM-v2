@@ -7,89 +7,159 @@ import {
   createAuthToken, 
   verifyAuthToken, 
   revokeToken,
+  createAdminUser,
   type AuthUser 
 } from './auth-service';
 
 const router = express.Router();
 
-// Direct login route that doesn't rely on cookies/sessions
-router.post('/direct-login', (req, res) => {
+// Direct login route using secure database authentication
+router.post('/direct-login', async (req, res) => {
   const { username, password } = req.body;
   
-  // For demo purposes - hardcoded admin credentials
-  // In production, verify against user database
-  if (username === 'admin' && password === 'password') {
-    const token = generateToken();
-    const expiry = Date.now() + TOKEN_EXPIRY;
-    
-    // Store token with expiry
-    tokenStorage[token] = expiry;
-    saveTokens();
-    
-    console.log(`User ${username} logged in successfully with token`);
-    
-    return res.json({ 
-      success: true, 
-      token,
-      user: {
-        id: 1,
-        username: 'admin',
-        email: 'scottrconsulting@gmail.com',
-        fullName: 'Admin User',
-        role: 'admin'
-      }
+  if (!username || !password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Username and password are required'
     });
   }
-  
-  console.log(`Failed login attempt for user: ${username}`);
-  return res.status(401).json({ 
-    success: false, 
-    message: 'Invalid credentials' 
-  });
+
+  try {
+    const user = await authenticateUser(username, password);
+    
+    if (!user) {
+      console.log(`Failed login attempt for user: ${username}`);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const token = await createAuthToken(
+      user.id,
+      'session',
+      req.ip,
+      req.get('User-Agent')
+    );
+
+    console.log(`User ${username} logged in successfully`);
+
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 });
 
 // Verify token validity
-router.post('/verify-token', (req, res) => {
+router.post('/verify-token', async (req, res) => {
   const { token } = req.body;
   
-  if (isValidToken(token)) {
-    console.log(`Token verified successfully`);
-    return res.json({ 
-      valid: true,
-      user: {
-        id: 1,
-        username: 'admin',
-        email: 'scottrconsulting@gmail.com',
-        fullName: 'Admin User',
-        role: 'admin'
-      }
-    });
+  if (!token) {
+    return res.json({ valid: false });
   }
-  
-  console.log(`Invalid token verification attempt`);
-  return res.json({ valid: false });
+
+  try {
+    const user = await verifyAuthToken(token, 'session');
+    
+    if (user) {
+      console.log(`Token verified successfully for user: ${user.username}`);
+      return res.json({
+        valid: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role
+        }
+      });
+    }
+
+    console.log(`Invalid token verification attempt`);
+    return res.json({ valid: false });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.json({ valid: false });
+  }
 });
 
 // Logout by invalidating token
-router.post('/logout-token', (req, res) => {
+router.post('/logout-token', async (req, res) => {
   const { token } = req.body;
   
-  if (tokenStorage[token]) {
-    delete tokenStorage[token];
-    saveTokens();
-    console.log(`Token invalidated for logout`);
+  if (!token) {
+    return res.json({ success: true });
   }
-  
-  return res.json({ success: true });
+
+  try {
+    await revokeToken(token);
+    console.log(`Token invalidated for logout`);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.json({ success: true }); // Return success even if revocation fails
+  }
 });
 
-// For debugging only - get current token count
-router.get('/token-count', (req, res) => {
-  const tokens = Object.keys(tokenStorage);
-  return res.json({ 
-    count: tokens.length,
-    tokens: tokens
-  });
+// Create initial admin user (for first-time setup)
+router.post('/create-admin', async (req, res) => {
+  const { username, email, password, fullName } = req.body;
+  
+  if (!username || !email || !password || !fullName) {
+    return res.status(400).json({
+      success: false,
+      message: 'All fields are required'
+    });
+  }
+
+  try {
+    const adminUser = await createAdminUser(username, email, password, fullName);
+    
+    if (!adminUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin user already exists or creation failed'
+      });
+    }
+
+    console.log(`Admin user created: ${username}`);
+    return res.json({
+      success: true,
+      message: 'Admin user created successfully',
+      user: {
+        id: adminUser.id,
+        username: adminUser.username,
+        email: adminUser.email,
+        fullName: adminUser.fullName,
+        role: adminUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Admin creation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create admin user'
+    });
+  }
 });
+
+// Export verification function for middleware
+export const verifyToken = async (token: string): Promise<AuthUser | null> => {
+  return verifyAuthToken(token, 'session');
+};
 
 export default router;
