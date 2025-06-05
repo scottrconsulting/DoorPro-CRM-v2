@@ -25,7 +25,11 @@ export async function registerUser(data: RegistrationData): Promise<{ success: b
       .limit(1);
 
     if (existingUsername.length > 0) {
-      return { success: false, message: 'Username already exists' };
+      return { 
+        success: false, 
+        message: `Username "${data.username}" is already taken. Please choose a different username.`,
+        field: 'username'
+      };
     }
 
     // Check if email already exists
@@ -36,7 +40,11 @@ export async function registerUser(data: RegistrationData): Promise<{ success: b
       .limit(1);
 
     if (existingEmail.length > 0) {
-      return { success: false, message: 'Email already registered' };
+      return { 
+        success: false, 
+        message: `Email address "${data.email}" is already registered. Please use a different email or sign in to your existing account.`,
+        field: 'email'
+      };
     }
 
     // Hash password

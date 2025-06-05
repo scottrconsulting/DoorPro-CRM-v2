@@ -14,6 +14,8 @@ import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { CheckCircle, AlertCircle, Crown, Users, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const registerSchema = z.object({
   username: z.string()
@@ -75,7 +77,8 @@ export default function EnhancedRegister() {
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // To manage error messages
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { register, handleSubmit, formState: { errors }, watch, trigger, setValue } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -101,6 +104,14 @@ export default function EnhancedRegister() {
       const response = await fetch(`/api/auth/check-username/${encodeURIComponent(username)}`);
       const data = await response.json();
       setUsernameAvailable(data.available);
+      
+      if (!data.available) {
+        toast({
+          title: "Username Unavailable",
+          description: `"${username}" is already taken. Please try a different username.`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Username check failed:', error);
       setUsernameAvailable(null);
@@ -118,6 +129,22 @@ export default function EnhancedRegister() {
       const response = await fetch(`/api/auth/check-email/${encodeURIComponent(email)}`);
       const data = await response.json();
       setEmailAvailable(data.available);
+      
+      if (!data.available) {
+        toast({
+          title: "Email Already Registered",
+          description: `An account with "${email}" already exists. Please sign in or use a different email.`,
+          variant: "destructive",
+          action: (
+            <button 
+              onClick={() => setLocation('/login')}
+              className="text-sm underline hover:no-underline"
+            >
+              Sign In
+            </button>
+          ),
+        });
+      }
     } catch (error) {
       console.error('Email check failed:', error);
       setEmailAvailable(null);
@@ -147,7 +174,24 @@ export default function EnhancedRegister() {
     },
     onSuccess: (data) => {
       if (data.success) {
+        setErrorMessage(null);
         setLocation('/login'); // Redirect to login on successful registration
+      }
+    },
+    onError: (error: any) => {
+      // Handle specific duplicate registration errors
+      const errorMessage = error?.message || 'Registration failed. Please try again.';
+      
+      if (errorMessage.includes('Username already exists') || errorMessage.includes('username already taken')) {
+        setErrorMessage("This username is already taken. Please choose a different username.");
+        setUsernameAvailable(false);
+        setStep(1); // Go back to step 1 to fix the username
+      } else if (errorMessage.includes('Email already registered') || errorMessage.includes('email already exists')) {
+        setErrorMessage("This email address is already registered. Please use a different email or sign in to your existing account.");
+        setEmailAvailable(false);
+        setStep(1); // Go back to step 1 to fix the email
+      } else {
+        setErrorMessage(errorMessage);
       }
     },
   });
@@ -254,7 +298,14 @@ export default function EnhancedRegister() {
           <p className="text-sm text-red-500">{errors.username.message}</p>
         )}
         {usernameAvailable === false && (
-          <p className="text-sm text-red-500">Username is already taken</p>
+          <div className="space-y-2">
+            <p className="text-sm text-red-500">This username is already taken.</p>
+            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+              <p className="text-xs text-orange-700">
+                <strong>Suggestions:</strong> Try adding numbers, underscores, or variations like "{watchedValues.username}123", "{watchedValues.username}_pro", or "{watchedValues.username}2024".
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -299,7 +350,18 @@ export default function EnhancedRegister() {
           <p className="text-sm text-red-500">{errors.email.message}</p>
         )}
         {emailAvailable === false && (
-          <p className="text-sm text-red-500">Email is already registered. Please use a different email or <a href="/login" className="text-blue-600 hover:underline">sign in</a> instead.</p>
+          <div className="space-y-2">
+            <p className="text-sm text-red-500">This email address is already registered.</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-sm text-blue-800 font-medium">Already have an account?</p>
+              <p className="text-xs text-blue-600 mt-1">
+                If this email belongs to you, <Link href="/login" className="font-medium underline hover:no-underline">sign in here</Link> instead.
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Forgot your password? <Link href="/forgot-password" className="font-medium underline hover:no-underline">Reset it here</Link>.
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -483,9 +545,16 @@ export default function EnhancedRegister() {
               {step === 1 && (usernameAvailable === false || emailAvailable === false) && (
                 <Alert variant="destructive" className="mt-4">
                   <AlertDescription>
-                    {usernameAvailable === false && "Username is already taken. "}
-                    {emailAvailable === false && "Email is already registered. "}
-                    Please correct these issues to continue.
+                    <div className="space-y-2">
+                      <p className="font-medium">Registration Issue Detected</p>
+                      {usernameAvailable === false && (
+                        <p>• Username "{watchedValues.username}" is already taken</p>
+                      )}
+                      {emailAvailable === false && (
+                        <p>• Email "{watchedValues.email}" is already registered</p>
+                      )}
+                      <p className="text-sm mt-2">Please resolve these issues above to continue with your registration.</p>
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -531,6 +600,7 @@ export default function EnhancedRegister() {
           </CardFooter>
         </Card>
       </div>
+      <Toaster />
     </div>
   );
 }
