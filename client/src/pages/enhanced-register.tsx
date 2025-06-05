@@ -104,7 +104,7 @@ export default function EnhancedRegister() {
       const response = await fetch(`/api/auth/check-username/${encodeURIComponent(username)}`);
       const data = await response.json();
       setUsernameAvailable(data.available);
-      
+
       if (!data.available) {
         toast({
           title: "Username Unavailable",
@@ -129,7 +129,7 @@ export default function EnhancedRegister() {
       const response = await fetch(`/api/auth/check-email/${encodeURIComponent(email)}`);
       const data = await response.json();
       setEmailAvailable(data.available);
-      
+
       if (!data.available) {
         toast({
           title: "Email Already Registered",
@@ -172,16 +172,52 @@ export default function EnhancedRegister() {
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data, variables) => {
       if (data.success) {
         setErrorMessage(null);
-        setLocation('/login'); // Redirect to login on successful registration
+        toast({
+          title: "Registration successful!",
+          description: "Welcome to DoorPro CRM!",
+        });
+
+        // Log the user in immediately after registration
+        try {
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: variables.username,
+              password: variables.password
+            }),
+          });
+
+          if (loginResponse.ok) {
+            // Force a full page reload to ensure proper authentication state
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 500);
+          } else {
+            // If auto-login fails, redirect to login page
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 1000);
+          }
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError);
+          // If auto-login fails, redirect to login page
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1000);
+        }
       }
     },
     onError: (error: any) => {
       // Handle specific duplicate registration errors
       const errorMessage = error?.message || 'Registration failed. Please try again.';
-      
+
       if (errorMessage.includes('Username already exists') || errorMessage.includes('username already taken')) {
         setErrorMessage("This username is already taken. Please choose a different username.");
         setUsernameAvailable(false);
@@ -204,7 +240,7 @@ export default function EnhancedRegister() {
         const hasValidUsername = watchedValues.username.length >= 3 && usernameAvailable === true;
         const hasValidEmail = watchedValues.email.includes('@') && emailAvailable === true;
         const hasValidFullName = watchedValues.fullName.length >= 2;
-        
+
         console.log('Step 1 validation:', {
           step1Fields,
           hasValidUsername,
@@ -213,7 +249,7 @@ export default function EnhancedRegister() {
           usernameAvailable,
           emailAvailable
         });
-        
+
         return step1Fields && hasValidUsername && hasValidEmail && hasValidFullName;
       case 2:
         return await trigger(["password", "confirmPassword"]);
@@ -228,13 +264,13 @@ export default function EnhancedRegister() {
 
   const handleNext = async () => {
     console.log('handleNext called for step:', step);
-    
+
     // Clear any previous error messages
     setErrorMessage(null);
-    
+
     const isValid = await validateStep(step);
     console.log('Step validation result:', isValid);
-    
+
     if (isValid && step < 4) {
       setStep(step + 1);
       console.log('Advanced to step:', step + 1);
