@@ -146,3 +146,142 @@ After implementing these fixes:
 5. `server/middleware/tenant-isolation.ts` - Auth middleware updates
 
 This comprehensive fix plan addresses the root causes of the admin login issue and provides a clear path to resolution.
+
+# Color Alignment Analysis and Fix Plan
+
+## Problem Analysis
+
+After deep research across the codebase, I've identified several inconsistencies in how status colors are handled that prevent proper alignment between pin colors, contact form highlighting, and status displays.
+
+## Key Files and Functions Involved
+
+### 1. Status Helper Functions
+- **File**: `client/src/lib/status-helpers.ts`
+- **Functions**: `getStatusColor()`, `getColorStyle()`, `getStatusLabel()`, `getStatusBadgeConfig()`
+- **Issues**: Multiple color mapping systems with inconsistent defaults
+
+### 2. Map Components
+- **Files**: 
+  - `client/src/components/dashboard/enhanced-map-viewer.tsx`
+  - `client/src/components/dashboard/search-map-viewer.tsx`
+- **Functions**: `getStatusColor()`, `getColorStyle()`, `getStatusLabel()`
+- **Issues**: Duplicate color logic that doesn't match status-helpers.ts
+
+### 3. Contact Form
+- **File**: `client/src/components/contacts/contact-form.tsx`
+- **Issues**: No color highlighting based on status selection
+
+### 4. Contact Card
+- **File**: `client/src/components/contacts/contact-card.tsx`
+- **Function**: `getStatusBadge()`
+- **Issues**: Different color mapping than other components
+
+### 5. Customization System
+- **File**: `client/src/pages/customize.tsx`
+- **Issues**: DEFAULT_PIN_COLORS reference but inconsistent application
+
+### 6. Schema Definition
+- **File**: `shared/schema.ts`
+- **Issues**: Missing DEFAULT_PIN_COLORS export that other files reference
+
+## Root Causes of the Problem
+
+1. **Multiple Color Systems**: At least 4 different color mapping systems exist across components
+2. **Missing Central Color Definition**: DEFAULT_PIN_COLORS is referenced but not properly defined/exported
+3. **Inconsistent Status Mapping**: Some components map "not_visited" to "no_answer", others don't
+4. **No Form Highlighting**: Contact form doesn't apply status colors to selected status
+5. **Duplicate Logic**: Map components reimplement color logic instead of using centralized helpers
+
+## Specific Issues Found
+
+### Issue 1: Missing DEFAULT_PIN_COLORS
+Multiple files reference `DEFAULT_PIN_COLORS` from schema.ts, but it's not exported:
+- `client/src/pages/customize.tsx` (lines 13, multiple references)
+- Comments reference it in status-helpers.ts
+
+### Issue 2: Inconsistent Color Mappings
+Different components use different colors for the same status:
+- enhanced-map-viewer.tsx: `no_answer: 'bg-pink-500'`
+- contact-card.tsx: `no_answer: 'bg-pink-100'` (different shade)
+- status-helpers.ts: `no_answer: 'bg-pink-500'`
+
+### Issue 3: Contact Form No Visual Feedback
+The contact form doesn't highlight the selected status with the corresponding color that appears on the map.
+
+### Issue 4: Duplicate Status Functions
+Map components reimplement getStatusColor() instead of importing from status-helpers.ts.
+
+## Fix Plan
+
+### Phase 1: Centralize Color Definitions
+1. **Add DEFAULT_PIN_COLORS to schema.ts**
+   - Define the canonical color mapping for all statuses
+   - Export it for use across components
+
+2. **Update status-helpers.ts**
+   - Import DEFAULT_PIN_COLORS from schema
+   - Make it the single source of truth for all color logic
+   - Ensure consistent mapping of not_visited → no_answer
+
+### Phase 2: Consolidate Color Logic
+1. **Remove Duplicate Functions**
+   - Remove getStatusColor() from map components
+   - Import and use functions from status-helpers.ts instead
+
+2. **Standardize Color Usage**
+   - Update all components to use status-helpers functions
+   - Ensure consistent color shades (bg-color-500 for pins, bg-color-100 for badges)
+
+### Phase 3: Add Contact Form Highlighting
+1. **Update contact-form.tsx**
+   - Import status color functions
+   - Add visual highlighting to status selector
+   - Show selected status with corresponding pin color
+
+### Phase 4: Fix Customization System
+1. **Update customize.tsx**
+   - Fix DEFAULT_PIN_COLORS import
+   - Ensure customization properly propagates to all components
+
+### Phase 5: Testing and Validation
+1. **Verify Color Consistency**
+   - Map pin colors match contact form highlighting
+   - Status badges use consistent color scheme
+   - Customization affects all components equally
+
+## Implementation Priority
+
+1. **HIGH**: Fix DEFAULT_PIN_COLORS in schema.ts (blocks other fixes)
+2. **HIGH**: Consolidate status-helpers.ts as single source of truth
+3. **MEDIUM**: Remove duplicate functions from map components
+4. **MEDIUM**: Add contact form visual highlighting
+5. **LOW**: Update customize.tsx to properly handle defaults
+
+## Expected Outcomes
+
+After implementing this plan:
+- Map pin colors will exactly match contact form status highlighting
+- All status displays will use consistent colors
+- Customization will properly affect all components
+- No duplicate color logic across codebase
+- Visual feedback in contact form matches map representation
+
+## Technical Feasibility
+
+This is completely feasible with the current codebase. All required tools and patterns already exist:
+- Status helper functions are already implemented
+- Color customization system is in place
+- Components already support dynamic styling
+- No breaking changes to database schema required
+
+The main work involves consolidating existing logic rather than building new functionality.
+```
+
+cookie: { 
+  secure: process.env.NODE_ENV === 'production',
+  httpOnly: true,
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/',
+  domain: process.env.NODE_ENV === 'production' ? '.replit.dev' : undefined
+}
