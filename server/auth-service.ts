@@ -108,7 +108,7 @@ export async function authenticateUser(username: string, password: string): Prom
     }
 
     const user = result[0];
-    const isValidPassword = verifyPassword(user.password, password);
+    const isValidPassword = await verifyPassword(user.password, password);
 
     if (!isValidPassword) {
       return null;
