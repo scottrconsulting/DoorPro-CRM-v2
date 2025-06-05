@@ -199,8 +199,22 @@ export default function EnhancedRegister() {
   const validateStep = async (stepNumber: number): Promise<boolean> => {
     switch (stepNumber) {
       case 1:
-        const step1Valid = await trigger(["username", "fullName", "email"]);
-        return step1Valid && usernameAvailable !== false && emailAvailable !== false;
+        // Check if required fields are filled and available
+        const step1Fields = await trigger(["username", "fullName", "email"]);
+        const hasValidUsername = watchedValues.username.length >= 3 && usernameAvailable === true;
+        const hasValidEmail = watchedValues.email.includes('@') && emailAvailable === true;
+        const hasValidFullName = watchedValues.fullName.length >= 2;
+        
+        console.log('Step 1 validation:', {
+          step1Fields,
+          hasValidUsername,
+          hasValidEmail,
+          hasValidFullName,
+          usernameAvailable,
+          emailAvailable
+        });
+        
+        return step1Fields && hasValidUsername && hasValidEmail && hasValidFullName;
       case 2:
         return await trigger(["password", "confirmPassword"]);
       case 3:
@@ -213,9 +227,28 @@ export default function EnhancedRegister() {
   };
 
   const handleNext = async () => {
+    console.log('handleNext called for step:', step);
+    
+    // Clear any previous error messages
+    setErrorMessage(null);
+    
     const isValid = await validateStep(step);
+    console.log('Step validation result:', isValid);
+    
     if (isValid && step < 4) {
       setStep(step + 1);
+      console.log('Advanced to step:', step + 1);
+    } else if (!isValid) {
+      console.log('Validation failed for step:', step);
+      if (step === 1) {
+        if (usernameAvailable === false) {
+          setErrorMessage("Please choose a different username - this one is already taken.");
+        } else if (emailAvailable === false) {
+          setErrorMessage("Please use a different email address - this one is already registered.");
+        } else {
+          setErrorMessage("Please fill out all required fields correctly.");
+        }
+      }
     }
   };
 
@@ -570,10 +603,11 @@ export default function EnhancedRegister() {
                   </Button>
                 )}
                 <Button 
-                  type="submit" 
+                  type={step === 4 ? "submit" : "button"}
+                  onClick={step < 4 ? handleNext : undefined}
                   disabled={
                     registerMutation.isPending || 
-                    (step === 1 && (usernameAvailable === false || emailAvailable === false)) ||
+                    (step === 1 && (usernameAvailable === false || emailAvailable === false || isCheckingUsername || isCheckingEmail)) ||
                     (step === 4 && !watchedValues.agreeToTerms)
                   }
                   className={step === 1 ? "ml-auto" : ""}
