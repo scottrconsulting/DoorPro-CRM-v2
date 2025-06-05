@@ -39,16 +39,16 @@ export default function DirectLogin() {
       
       const data = await response.json();
       
-      if (response.ok && data.success && data.token) {
-        // Store token
-        localStorage.setItem('doorpro_auth_token', data.token);
+      if (response.ok && data.authenticated && data.user) {
+        // For session-based authentication, we don't need to store a token
+        // The session is handled by the server via cookies
         
-        setSuccess(`Login successful! Redirecting to dashboard...`);
+        setSuccess(`Welcome back, ${data.user.fullName}! Redirecting to dashboard...`);
         
         // Redirect after a short delay to show the success message
         setTimeout(() => {
           window.location.href = '/';
-        }, 1000);
+        }, 1500);
       } else {
         setError(data.message || "Invalid credentials");
       }
