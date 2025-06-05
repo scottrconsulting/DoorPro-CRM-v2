@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(passport.session());
 
   // Add tenant isolation and audit logging middleware for API routes (except auth)
-  app.use('/api/(?!auth|direct-auth).*', tenantIsolation);
+  app.use(/^\/api\/(?!auth|direct-auth).*/, tenantIsolation);
   app.use('/api/*', auditLogger);
   app.use('/api/*', softDeleteSupport);
 
