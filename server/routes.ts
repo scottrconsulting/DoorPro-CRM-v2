@@ -48,6 +48,15 @@ import { eq } from 'drizzle-orm';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { 
+  tenantIsolation, 
+  auditLogger, 
+  validateTenantAccess, 
+  softDeleteSupport,
+  logAuditEvent,
+  AuditAction,
+  type TenantRequest 
+} from './middleware/tenant-isolation';
 
 // Get directory name in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -115,6 +124,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Passport setup
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Add tenant isolation and audit logging middleware for all API routes
+  app.use('/api/*', tenantIsolation);
+  app.use('/api/*', auditLogger);
+  app.use('/api/*', softDeleteSupport);
 
   // Use the password verification utility imported at the top level
 
@@ -273,6 +287,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!user) {
         console.log("Authentication failed:", info?.message || "Unknown reason");
+        
+        // Log failed login attempt
+        logAuditEvent(
+          0, // Use 0 for unknown user
+          AuditAction.FAILED_LOGIN,
+          'auth',
+          undefined,
+          { 
+            attemptedUsername: req.body.username,
+            reason: info?.message || "Unknown reason",
+            userAgent: req.get('User-Agent')
+          },
+          req.ip
+        );
+        
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
 
@@ -289,6 +318,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return next(err);
           }
           console.log("Session created and saved successfully");
+          
+          // Log successful login
+          logAuditEvent(
+            user.id,
+            AuditAction.LOGIN,
+            'auth',
+            user.id,
+            { 
+              username: user.username,
+              userAgent: req.get('User-Agent')
+            },
+            req.ip
+          );
+          
           return res.status(200).json({ 
             authenticated: true,
             user: { 
@@ -409,10 +452,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
+    const userId = req.user?.id;
+    
     req.logout((err) => {
       if (err) {
         return res.status(500).json({ message: "Error during logout" });
       }
+      
+      // Log logout event
+      if (userId) {
+        logAuditEvent(
+          userId,
+          AuditAction.LOGOUT,
+          'auth',
+          userId,
+          { 
+            userAgent: req.get('User-Agent')
+          },
+          req.ip
+        );
+      }
+      
       return res.json({ message: "Logged out successfully" });
     });
   });
