@@ -1,35 +1,33 @@
 import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
 
-// A very simple protected route component that directly checks for token
+// A protected route component that checks session-based authentication
 export default function SimpleProtectedRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const verifyToken = async () => {
+    const verifySession = async () => {
       try {
-        // Get the token from localStorage
-        const token = localStorage.getItem('doorpro_auth_token');
+        // Check session with the server using the new auth endpoint
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include', // Include cookies for session
+        });
         
-        if (!token) {
-          // No token found, redirect to login
-          window.location.href = "/login";
-          return;
-        }
-        
-        // Verify the token with the server
-        const response = await apiRequest("POST", "/api/direct-auth/verify-token", { token });
-        const data = await response.json();
-        
-        if (data.valid) {
-          setIsAuthenticated(true);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.authenticated && data.user) {
+            setIsAuthenticated(true);
+          } else {
+            // Not authenticated, redirect to login
+            window.location.href = "/login";
+          }
         } else {
-          // Token is invalid, redirect to login
+          // Session invalid, redirect to login
           window.location.href = "/login";
         }
       } catch (error) {
-        console.error("Token verification error:", error);
+        console.error("Session verification error:", error);
         // On error, redirect to login
         window.location.href = "/login";
       } finally {
@@ -37,7 +35,7 @@ export default function SimpleProtectedRoute({ children }: { children: React.Rea
       }
     };
     
-    verifyToken();
+    verifySession();
   }, []);
   
   // Show loading indicator while checking authentication

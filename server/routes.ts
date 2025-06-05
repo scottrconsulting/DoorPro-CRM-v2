@@ -101,10 +101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       store: storage.sessionStore,
       proxy: true,
       cookie: { 
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        sameSite: 'none',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         domain: process.env.NODE_ENV === 'production' ? '.replit.dev' : undefined
       },
@@ -340,6 +340,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.status(500).json({ message: "Registration failed" });
     }
+  });
+
+  // Session authentication status endpoint
+  app.get("/api/auth/me", (req, res) => {
+    // Check for session authentication
+    if (req.isAuthenticated()) {
+      const user = req.user as any;
+      return res.json({ 
+        authenticated: true, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email, 
+          fullName: user.fullName, 
+          role: user.role 
+        } 
+      });
+    } 
+    
+    // Not authenticated
+    return res.status(401).json({ authenticated: false });
   });
 
   app.get("/api/auth/user", (req, res) => {
