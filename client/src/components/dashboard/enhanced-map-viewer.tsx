@@ -858,7 +858,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       )}
       
       {/* Search Controls and Map Options in a single bar at the top */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2">
+      <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2">
         {/* Main search bar and controls - Responsive layout */}
         <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
           {/* Search input and button - Always visible */}

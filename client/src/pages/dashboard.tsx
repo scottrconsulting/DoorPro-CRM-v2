@@ -31,13 +31,13 @@ export default function Dashboard() {
   const { startTour, completedTours, endTour } = useTour();
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [showDashboardTour, setShowDashboardTour] = useState(false);
-  
+
   // Function to handle starting the dashboard tour
   const handleStartDashboardTour = () => {
     console.log("Starting dashboard tour");
     setShowDashboardTour(true);
   };
-  
+
   // Function to handle closing the dashboard tour
   const handleCloseDashboardTour = () => {
     setShowDashboardTour(false);
@@ -59,7 +59,7 @@ export default function Dashboard() {
   const { data: visits = [], refetch: refetchVisits } = useQuery<Visit[]>({
     queryKey: ["/api/visits"],
   });
-  
+
   // Get user's customization settings
   const { data: customization } = useQuery<Customization>({
     queryKey: ["/api/customizations/current"],
@@ -77,7 +77,7 @@ export default function Dashboard() {
   const widgetOrder = customization?.dashboardWidgetOrder || DASHBOARD_WIDGETS;
   const widgetLabels = customization?.dashboardWidgetLabels || {};
   const metricLabels = customization?.statisticsMetricLabels || {};
-  
+
   // Get selected statistics metrics or use defaults
   const selectedStatistics = customization?.statisticsMetrics || 
     ["today_visits", "conversions", "follow_ups", "sales_count"];
@@ -91,13 +91,13 @@ export default function Dashboard() {
       isPositive: boolean;
     }
   };
-  
+
   // Calculate all statistics metrics
   const statisticsData = useMemo<Record<string, StatisticMetric>>(() => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     // Filter for today's data
     const todayVisits = visits.filter(visit => {
       const visitDate = new Date(visit.visitDate);
@@ -107,7 +107,7 @@ export default function Dashboard() {
         visitDate.getFullYear() === today.getFullYear()
       );
     });
-    
+
     // Filter for yesterday's data for trend comparison
     const yesterdayVisits = visits.filter(visit => {
       const visitDate = new Date(visit.visitDate);
@@ -117,7 +117,7 @@ export default function Dashboard() {
         visitDate.getFullYear() === yesterday.getFullYear()
       );
     });
-    
+
     // Calculate status-based metrics
     const statusCounts = {
       converted: contacts.filter(contact => contact.status === "converted").length,
@@ -131,20 +131,20 @@ export default function Dashboard() {
       booked: contacts.filter(contact => contact.status === "booked").length,
       no_answer: contacts.filter(contact => contact.status === "no_answer").length,
     };
-    
+
     // Calculate sales metrics
     const todaySales = sales.filter(sale => {
       if (!sale.saleDate) return false;
-      
+
       // Parse the sale date string into a proper Date object
       const saleDate = new Date(sale.saleDate);
-      
+
       // Check if it's a valid date
       if (isNaN(saleDate.getTime())) {
         console.warn("Invalid sale date found:", sale.saleDate);
         return false;
       }
-      
+
       // Compare with today's date
       return (
         saleDate.getDate() === today.getDate() &&
@@ -152,29 +152,29 @@ export default function Dashboard() {
         saleDate.getFullYear() === today.getFullYear()
       );
     });
-    
+
     console.log("Today's sales:", todaySales);
-    
+
     // Calculate total sales amount with better error handling
     const salesTotal = todaySales.reduce((sum, sale) => {
       // Ensure we're dealing with a numeric amount
       const amount = Number(sale.amount);
       return isNaN(amount) ? sum : sum + amount;
     }, 0);
-    
+
     // Calculate time worked - this will be replaced by activity tracker
     // For now we'll use a simple calculation based on visits
     const totalMinutesWorked = visits.reduce((total, visit) => {
       if (!visit.visitDate) return total;
-      
+
       // Simple calculation - assume 15 minutes per visit
       return total + 15;
     }, 0);
-    
+
     const hoursWorked = Math.floor(totalMinutesWorked / 60);
     const minutesWorked = totalMinutesWorked % 60;
     const timeWorkedFormatted = `${hoursWorked}h ${minutesWorked}m`;
-    
+
     return {
       today_visits: {
         value: todayVisits.length,
@@ -298,7 +298,7 @@ export default function Dashboard() {
     const filteredWidgets = (enabledWidgets.length > 0) 
       ? widgetOrder.filter(widget => enabledWidgets.includes(widget))
       : widgetOrder;
-      
+
     return filteredWidgets.map(widgetId => {
       switch (widgetId) {
         case "stats":
@@ -310,10 +310,10 @@ export default function Dashboard() {
                   // Get metric data
                   const metricData = statisticsData[metricId];
                   if (!metricData) return null;
-                  
+
                   // Get background color based on metric type
                   let iconBgColor = "bg-blue-100";
-                  
+
                   if (metricId.includes("sale")) {
                     iconBgColor = "bg-green-100"; // Sales metrics
                   } else if (metricId.includes("time")) {
@@ -325,7 +325,7 @@ export default function Dashboard() {
                   } else if (metricId === "appointments" || metricId === "booked") {
                     iconBgColor = "bg-orange-100"; // Appointment metrics
                   }
-                  
+
                   return (
                     <StatCard
                       key={metricId}
@@ -370,17 +370,17 @@ export default function Dashboard() {
                   <span className="material-icons text-sm">arrow_downward</span> 
                   <span className="hidden sm:inline">Scroll Below</span>
                 </button>
-                
+
                 <div className="rounded-lg h-[500px]">
                   <EnhancedMapViewer 
                     onSelectContact={(contactId) => setSelectedContactId(contactId)} 
                   />
                 </div>
-                
+
                 {/* Anchor for scroll target */}
                 <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
-                
-                {/* Scroll button to jump above the map - simple implementation */}
+
+                {/* Scroll button to jump above the map - positioned to not interfere with other controls */}
                 <button 
                   onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
                   className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
@@ -427,7 +427,7 @@ export default function Dashboard() {
     <div className="p-4 md:p-6">
       {/* Hidden anchor point for top scrolling */}
       <div id="dashboard-top" className="scroll-anchor"></div>
-      
+
       {/* Welcome Banner for New Users */}
       {showWelcomeMessage && (
         <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
@@ -453,7 +453,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold font-sans text-foreground">
@@ -480,14 +480,14 @@ export default function Dashboard() {
 
       {/* Render widgets in user's custom order */}
       {renderWidgets()}
-      
+
       {/* Feature Highlights - For Free Account */}
       {user?.role === 'free' && (
         <div className="mt-6 bg-background rounded-lg shadow-sm border border-border overflow-hidden">
           <div className="border-b border-border px-4 py-3">
             <h2 className="font-medium text-foreground">Upgrade to DoorPro CRM Pro</h2>
           </div>
-          
+
           <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {PRO_FEATURES.slice(0, 3).map((feature, index) => (
@@ -499,7 +499,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            
+
             <div className="mt-4 flex justify-center">
               <Link href="/upgrade">
                 <Button className="px-6 py-2">
@@ -519,7 +519,7 @@ export default function Dashboard() {
           onClose={() => setSelectedContactId(null)}
         />
       )}
-      
+
       {/* Dashboard Tour */}
       <CustomTour 
         steps={customDashboardTourSteps}
