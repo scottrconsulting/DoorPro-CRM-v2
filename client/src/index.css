@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Safe zone utilities for scroll button positioning */
+  .pb-safe-area {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  
+  .pb-safe-\[120px\] {
+    padding-bottom: max(120px, env(safe-area-inset-bottom));
+  }
+  
+  .scroll-safe {
+    scroll-padding-bottom: 120px;
+  }
+  
+  /* Touch-friendly scroll button sizing */
+  @media (pointer: coarse) {
+    .scroll-button {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 12px;
+    }
+  }
+  
+  /* Desktop scroll button sizing */
+  @media (pointer: fine) {
+    .scroll-button {
+      height: 32px;
+      width: 32px;
+      padding: 4px;
+    }
+  }
+}
+
 /* Custom scroll behaviors */
 html {
   scroll-behavior: smooth;

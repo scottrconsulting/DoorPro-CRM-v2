@@ -1159,7 +1159,7 @@ export default function ChatPage() {
 
               <div className="flex-1 flex overflow-hidden">
                 {/* Messages List with Scroll Area */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea className="flex-1 p-4 pb-safe-[120px]">
                   {messagesLoading ? (
                     <div className="flex justify-center items-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
