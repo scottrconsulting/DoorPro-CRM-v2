@@ -683,6 +683,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/contacts", ensureAuthenticated, async (req, res) => {
+    // Check tier limits for contact creation
+    const user = req.user as any;
+    try {
+      const { checkTierLimit, recordUsage } = await import('./usage-tracking');
+      const limitCheck = await checkTierLimit(user.id, 'create_contact');
+      
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          message: limitCheck.reason,
+          upgrade_required: true,
+          current_usage: limitCheck.currentUsage,
+          limit: limitCheck.limit
+        });
+      }
+    } catch (error) {
+      console.error('Tier limit check failed:', error);
+      // Continue with creation if check fails
+    }
     try {
       const user = req.user as any;
 
@@ -3319,6 +3337,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Error fetching team members status', 
         error: error.message 
       });
+    }
+  });
+
+  // Enhanced registration endpoints
+  app.post("/api/auth/register-v2", async (req, res) => {
+    try {
+      const { username, email, password, fullName, subscriptionTier } = req.body;
+      
+      if (!username || !email || !password || !fullName) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "All fields are required" 
+        });
+      }
+
+      const { registerUser } = await import('./user-registration');
+      const result = await registerUser({
+        username,
+        email,
+        password,
+        fullName,
+        subscriptionTier: subscriptionTier || 'free'
+      });
+
+      if (result.success) {
+        return res.status(201).json(result);
+      } else {
+        return res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Registration failed. Please try again." 
+      });
+    }
+  });
+
+  // Email verification endpoint
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: "Verification token is required"
+        });
+      }
+
+      const { verifyEmail } = await import('./user-registration');
+      const result = await verifyEmail(token);
+
+      return res.json(result);
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Email verification failed"
+      });
+    }
+  });
+
+  // Check username availability
+  app.get("/api/auth/check-username/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const { checkUsernameAvailability } = await import('./user-registration');
+      const result = await checkUsernameAvailability(username);
+      return res.json(result);
+    } catch (error) {
+      console.error('Username check error:', error);
+      return res.status(500).json({ available: false });
+    }
+  });
+
+  // Check email availability  
+  app.get("/api/auth/check-email/:email", async (req, res) => {
+    try {
+      const { email } = req.params;
+      const { checkEmailAvailability } = await import('./user-registration');
+      const result = await checkEmailAvailability(email);
+      return res.json(result);
+    } catch (error) {
+      console.error('Email check error:', error);
+      return res.status(500).json({ available: false });
+    }
+  });
+
+  // Usage statistics endpoint
+  app.get("/api/usage/stats", ensureAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User ID not found' });
+      }
+
+      const { getDashboardUsage } = await import('./usage-tracking');
+      const usage = await getDashboardUsage(userId);
+      
+      return res.json(usage);
+    } catch (error) {
+      console.error('Usage stats error:', error);
+      return res.status(500).json({ message: 'Failed to get usage statistics' });
     }
   });
 
