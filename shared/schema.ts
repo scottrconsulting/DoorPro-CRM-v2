@@ -311,6 +311,31 @@ export const messageTemplates = pgTable("message_templates", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Authentication tokens for secure API access and session management
+export const authTokens = pgTable("auth_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  tokenType: text("token_type").notNull(), // "session", "api", "password_reset", "email_verification"
+  expiresAt: timestamp("expires_at").notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  isRevoked: boolean("is_revoked").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Usage metrics for tracking tier limits
+export const usageMetrics = pgTable("usage_metrics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  metricType: text("metric_type").notNull(), // "contacts", "territories", "schedules", "api_requests"
+  metricValue: integer("metric_value").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Schema Validation
 export const insertTeamSchema = createInsertSchema(teams).omit({
   id: true,
@@ -379,6 +404,16 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
   updatedAt: true,
 });
 
+export const insertAuthTokenSchema = createInsertSchema(authTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUsageMetricSchema = createInsertSchema(usageMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type Team = typeof teams.$inferSelect;
@@ -412,6 +447,12 @@ export type Customization = typeof customizations.$inferSelect;
 
 export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type MessageTemplate = typeof messageTemplates.$inferSelect;
+
+export type InsertAuthToken = z.infer<typeof insertAuthTokenSchema>;
+export type AuthToken = typeof authTokens.$inferSelect;
+
+export type InsertUsageMetric = z.infer<typeof insertUsageMetricSchema>;
+export type UsageMetric = typeof usageMetrics.$inferSelect;
 
 // Chat models for team communication
 export const chatConversations = pgTable("chat_conversations", {
