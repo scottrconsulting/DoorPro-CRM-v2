@@ -650,11 +650,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Contact routes
-  app.get("/api/contacts", ensureAuthenticated, async (req, res) => {
+  // Contact routes with tenant isolation
+  app.get("/api/contacts", ensureAuthenticated, validateTenantAccess('contacts'), async (req: TenantRequest, res) => {
     try {
-      const user = req.user as any;
-      const contacts = await storage.getContactsByUser(user.id);
+      const contacts = await storage.getContactsByUser(req.userId!);
       return res.json(contacts);
     } catch (error) {
       return res.status(500).json({ message: "Failed to fetch contacts" });
@@ -743,7 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/contacts/:id", ensureAuthenticated, async (req, res) => {
+  app.get("/api/contacts/:id", ensureAuthenticated, validateTenantAccess('contacts'), async (req: TenantRequest, res) => {
     try {
       const contactId = parseInt(req.params.id, 10);
       const contact = await storage.getContact(contactId);
@@ -752,8 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      const user = req.user as any;
-      if (contact.userId !== user.id && user.role !== "admin") {
+      if (contact.userId !== req.userId && req.user?.role !== "admin") {
         return res.status(403).json({ message: "Not authorized to access this contact" });
       }
 
@@ -1144,8 +1142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Visit routes
-  app.get("/api/contacts/:contactId/visits", ensureAuthenticated, async (req, res) => {
+  // Visit routes with tenant isolation
+  app.get("/api/contacts/:contactId/visits", ensureAuthenticated, validateTenantAccess('visits'), async (req: TenantRequest, res) => {
     try {
       const contactId = parseInt(req.params.contactId, 10);
       const contact = await storage.getContact(contactId);
@@ -1154,8 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      const user = req.user as any;
-      if (contact.userId !== user.id && user.role !== "admin") {
+      if (contact.userId !== req.userId && req.user?.role !== "admin") {
         return res.status(403).json({ message: "Not authorized to access this contact's visits" });
       }
 
