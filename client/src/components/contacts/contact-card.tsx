@@ -938,8 +938,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                             <div className="flex justify-end mt-2 gap-2">
                               {!task.completed && (
                                 <Button 
-                                  size="sm" 
-                                  variant="outline" 
+                                  size="sm" variant="outline" 
                                   className="px-2 py-1 h-8 text-xs"
                                   onClick={() => handleCompleteTask(task.id)}
                                 >
@@ -995,10 +994,11 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       {contact && (
         <EditContactView
           initialContact={contact}
-          onSuccess={handleEditSuccess}
-          isEditMode={true}
           isOpen={showEditForm}
           onClose={() => setShowEditForm(false)}
+          onCancel={() => setShowEditForm(false)}
+          onSuccess={handleEditSuccess}
+          isEditMode={true}
         />
       )}
 

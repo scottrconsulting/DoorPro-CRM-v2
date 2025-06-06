@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { geocodeAddress } from "@/lib/maps";
 import { Contact } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { geocodeAddress } from "@/lib/maps";
 import { format } from "date-fns";
-import { ArrowLeft } from "lucide-react";
 
 // US States for dropdown
 const US_STATES = [
@@ -72,18 +72,18 @@ const US_STATES = [
 interface EditContactViewProps {
   contactId?: number;
   initialContact?: Contact;
-  onSuccess: (contact: Contact) => void;
-  isEditMode?: boolean;
-  isOpen?: boolean;
+  open: boolean;
+  onCancel: () => void;
+  onSuccess?: (contact: Contact) => void;
   onClose?: () => void;
 }
 
-export default function EditContactView({ 
-  contactId, 
-  initialContact, 
-  onSuccess, 
-  isEditMode = true,
-  isOpen,
+export default function EditContactView({
+  contactId,
+  initialContact,
+  open,
+  onCancel,
+  onSuccess,
   onClose
 }: EditContactViewProps) {
   const { toast } = useToast();
@@ -108,11 +108,15 @@ export default function EditContactView({
   const [homePhone, setHomePhone] = useState("");
   const [workPhone, setWorkPhone] = useState("");
 
-  // Fetch contact details
-  const { data: contact, isLoading } = useQuery<Contact>({
+  // Fetch contact data only if contactId is provided and no initialContact
+  const { data: fetchedContact, isLoading, error } = useQuery({
     queryKey: [`/api/contacts/${contactId}`],
-    enabled: !!contactId
+    queryFn: () => apiRequest(`/api/contacts/${contactId}`),
+    enabled: !!contactId && !initialContact,
   });
+
+  // Use initialContact if provided, otherwise use fetched contact
+  const contact = initialContact || fetchedContact;
 
   // Initialize form fields with contact data when it loads
   useEffect(() => {
@@ -151,31 +155,20 @@ export default function EditContactView({
     }
   }, [contact]);
 
-    // Handle cancel action
-  const onCancel = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  // Edit contact mutation
+  // Save contact mutation
   const editContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
-      const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, contactData);
+      const res = await apiRequest("PATCH", `/api/contacts/${contact?.id}`, contactData);
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contact?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
 
       toast({
         title: "Contact updated",
         description: "Contact information has been successfully updated",
       });
-
-      if (onClose) {
-        onClose();
-      }
 
       if (onSuccess) {
         onSuccess(data);
@@ -281,267 +274,255 @@ export default function EditContactView({
     );
   }
 
-  const formContent = (
-    <Card className={isOpen ? "border-0 shadow-none" : "max-w-4xl mx-auto"}>
-      <CardHeader className={isOpen ? "px-0 pt-0" : ""}>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onCancel}
-            className="h-9 w-9"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <CardTitle className="text-xl">Update Contact</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className={isOpen ? "px-0" : ""}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input 
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="First name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="middleName">Middle Name</Label>
-              <Input 
-                id="middleName"
-                value={middleName}
-                onChange={(e) => setMiddleName(e.target.value)}
-                placeholder="Middle name (optional)"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input 
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last name"
-              />
-            </div>
-          </div>
-
-          {/* Gender and Date of Birth */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
-              <Input 
-                id="dateOfBirth"
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input 
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Mobile Phone</Label>
-              <Input 
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(___) ___-____"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="homePhone">Home Phone</Label>
-              <Input 
-                id="homePhone"
-                value={homePhone}
-                onChange={(e) => setHomePhone(e.target.value)}
-                placeholder="(___) ___-____"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="workPhone">Work Phone</Label>
-              <Input 
-                id="workPhone"
-                value={workPhone}
-                onChange={(e) => setWorkPhone(e.target.value)}
-                placeholder="(___) ___-____"
-              />
-            </div>
-          </div>
-
-          {/* Address Information */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input 
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street address"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input 
-                  id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="City"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Select value={state} onValueChange={setState}>
-                  <SelectTrigger id="state">
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state.value} value={state.value}>
-                        {state.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">Zip Code</Label>
-              <Input 
-                id="zipCode"
-                value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                placeholder="Zip code"
-              />
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="company">Company/Organization</Label>
-              <Input 
-                id="company"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder="Company or organization"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="source">Lead Source</Label>
-              <Input 
-                id="source"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="How did you find this contact?"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no_contact">No Contact Yet</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="interested">Interested</SelectItem>
-                  <SelectItem value="not_interested">Not Interested</SelectItem>
-                  <SelectItem value="no_soliciting">No Soliciting</SelectItem>
-                  <SelectItem value="check_back">Check Back Later</SelectItem>
-                  <SelectItem value="presented">Presented</SelectItem>
-                  <SelectItem value="booked">Booked</SelectItem>
-                  <SelectItem value="sold">Sold</SelectItem>
-                  <SelectItem value="no_answer">No Answer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea 
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes about this contact"
-                rows={4}
-              />
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              className="flex-1"
-              disabled={editContactMutation.isPending || !fullName || !address}
-            >
-              {editContactMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-
-  return isOpen ? (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Contact</DialogTitle>
+          <DialogTitle>
+            <div className="flex items-center justify-between">
+              <span>Update Contact</span>
+              <Button variant="ghost" size="icon" onClick={onCancel}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogTitle>
         </DialogHeader>
-        {formContent}
+        <Card className="border-none shadow-none">
+          <CardContent className="px-0 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="middleName">Middle Name</Label>
+                  <Input
+                    id="middleName"
+                    value={middleName}
+                    onChange={(e) => setMiddleName(e.target.value)}
+                    placeholder="Middle name (optional)"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+
+              {/* Gender and Date of Birth */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email address"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Mobile Phone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(___) ___-____"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="homePhone">Home Phone</Label>
+                  <Input
+                    id="homePhone"
+                    value={homePhone}
+                    onChange={(e) => setHomePhone(e.target.value)}
+                    placeholder="(___) ___-____"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="workPhone">Work Phone</Label>
+                  <Input
+                    id="workPhone"
+                    value={workPhone}
+                    onChange={(e) => setWorkPhone(e.target.value)}
+                    placeholder="(___) ___-____"
+                  />
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Street address"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="City"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Select value={state} onValueChange={setState}>
+                      <SelectTrigger id="state">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zipCode">Zip Code</Label>
+                  <Input
+                    id="zipCode"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    placeholder="Zip code"
+                  />
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company/Organization</Label>
+                  <Input
+                    id="company"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Company or organization"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="source">Lead Source</Label>
+                  <Input
+                    id="source"
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                    placeholder="How did you find this contact?"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_contact">No Contact Yet</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="interested">Interested</SelectItem>
+                      <SelectItem value="not_interested">Not Interested</SelectItem>
+                      <SelectItem value="no_soliciting">No Soliciting</SelectItem>
+                      <SelectItem value="check_back">Check Back Later</SelectItem>
+                      <SelectItem value="presented">Presented</SelectItem>
+                      <SelectItem value="booked">Booked</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                      <SelectItem value="no_answer">No Answer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional notes about this contact"
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={editContactMutation.isPending || !fullName || !address}
+                >
+                  {editContactMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </DialogContent>
     </Dialog>
-  ) : (
-    formContent
   );
 }
