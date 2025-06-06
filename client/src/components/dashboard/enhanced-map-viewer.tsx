@@ -615,9 +615,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       setTimeout(() => {
         setIsProcessingClick(false);
       }, 500);
-    });
+    }); // Close the async function
 
-    // Return cleanup function
     return () => {
       mouseDownListener.remove();
       clickListener.remove();
