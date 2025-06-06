@@ -21,7 +21,7 @@ interface CustomTourProps {
   showDoneButton?: boolean;
 }
 
-const CustomTour: React.FC<CustomTourProps> = ({ 
+function CustomTourComponent({ 
   steps, 
   tourName = 'default', 
   isOpen, 
@@ -29,10 +29,10 @@ const CustomTour: React.FC<CustomTourProps> = ({
   onClose,
   showCloseButton = true,
   showDoneButton = true
-}) => {
+}: CustomTourProps) => {
   // Use either isOpen or open, to keep backward compatibility
   const isDialogOpen = isOpen !== undefined ? isOpen : (open !== undefined ? open : false);
-  
+
   // Debug the component's state
   useEffect(() => {
     console.log("CustomTour state:", { 
@@ -45,14 +45,14 @@ const CustomTour: React.FC<CustomTourProps> = ({
   }, [isOpen, open, isDialogOpen, tourName, steps.length]);
   const [currentStep, setCurrentStep] = useState(0);
   const { endTour } = useTour();
-  
+
   // Reset step counter when tour opens
   useEffect(() => {
     if (isDialogOpen) {
       setCurrentStep(0);
     }
   }, [isDialogOpen]);
-  
+
   // Complete the tour when all steps are done or when manually closed
   const completeTour = () => {
     endTour(tourName);
@@ -67,22 +67,22 @@ const CustomTour: React.FC<CustomTourProps> = ({
       completeTour();
     }
   };
-  
+
   // Move to previous step
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
-  
+
   // Skip the tour
   const handleSkip = () => {
     completeTour();
   };
-  
+
   // Current step details
   const step = steps[currentStep];
-  
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={(open) => !open && completeTour()}>
       <DialogContent className="sm:max-w-lg">
@@ -92,11 +92,11 @@ const CustomTour: React.FC<CustomTourProps> = ({
             Step {currentStep + 1} of {steps.length}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           {/* Tour content */}
           <div className="text-base">{step?.content}</div>
-          
+
           {/* Optional image */}
           {step?.image && (
             <div className="mt-4">
@@ -108,7 +108,7 @@ const CustomTour: React.FC<CustomTourProps> = ({
             </div>
           )}
         </div>
-        
+
         <DialogFooter className="flex items-center justify-between">
           <div>
             {currentStep > 0 && (
@@ -117,7 +117,7 @@ const CustomTour: React.FC<CustomTourProps> = ({
               </Button>
             )}
           </div>
-          
+
           <div>
             <Button variant="ghost" onClick={handleSkip} className="mr-2">
               Skip Tour
@@ -132,4 +132,5 @@ const CustomTour: React.FC<CustomTourProps> = ({
   );
 };
 
-export default CustomTour;
+export const CustomTour = CustomTourComponent;
+export default CustomTourComponent;
