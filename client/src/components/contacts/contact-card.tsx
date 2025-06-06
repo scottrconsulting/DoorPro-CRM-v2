@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import { ContactForm } from "./contact-form";
+import ContactForm from "./contact-form";
 
 interface ContactCardProps {
   contactId: number;

@@ -107,7 +107,7 @@ export default function ContactForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [showAppointmentFields, setShowAppointmentFields] = useState(false);
-  const [showSaleFields] = useState(false);
+  const [showSaleFields, setShowSaleFields] = useState(false);
 
   // Form setup
   const form = useForm<ContactFormValues>({
