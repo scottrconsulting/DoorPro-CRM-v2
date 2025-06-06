@@ -994,11 +994,10 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       {contact && (
         <EditContactView
           initialContact={contact}
-          isOpen={showEditForm}
-          onClose={() => setShowEditForm(false)}
+          open={showEditForm}
           onCancel={() => setShowEditForm(false)}
           onSuccess={handleEditSuccess}
-          isEditMode={true}
+          isModal={true}
         />
       )}
 
