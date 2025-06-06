@@ -873,31 +873,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           <span className="hidden sm:inline">Scroll Below</span>
         </button>
 
-        {/* Scroll button to jump above the map - positioned to avoid legend overlap */}
-        <button 
-          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
-          className="absolute bottom-20 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
-          aria-label="Scroll above map"
-        >
-          <span className="material-icons text-sm">arrow_upward</span>
-          <span className="hidden sm:inline">Scroll Above</span>
-        </button>
-      </div>
-
-      
-
-      {/* Scroll Up Button - Below the map, centered horizontally */}
-      <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 z-[1000]">
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
-        >
-          <ChevronUp className="h-4 w-4 mr-1" />
-          Scroll Above
-        </Button>
-      </div>
+        </div>
 
       {/* Loading overlay */}
       {loading && (
