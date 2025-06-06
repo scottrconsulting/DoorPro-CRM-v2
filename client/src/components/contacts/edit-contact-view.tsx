@@ -72,21 +72,19 @@ const US_STATES = [
 interface EditContactViewProps {
   contactId?: number;
   initialContact?: Contact;
-  open?: boolean;
+  open: boolean;
   onCancel: () => void;
   onSuccess?: (contact: Contact) => void;
   onClose?: () => void;
-  isModal?: boolean;
 }
 
 export default function EditContactView({
   contactId,
   initialContact,
-  open = true,
+  open,
   onCancel,
   onSuccess,
-  onClose,
-  isModal = false
+  onClose
 }: EditContactViewProps) {
   const { toast } = useToast();
 
@@ -276,22 +274,21 @@ export default function EditContactView({
     );
   }
 
-  // Render the form content
-  const formContent = (
-    <Card className={isModal ? "border-none shadow-none" : ""}>
-      <CardHeader className={isModal ? "px-0" : ""}>
-        <CardTitle>
-          <div className="flex items-center justify-between">
-            <span>Update Contact</span>
-            {isModal && (
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            <div className="flex items-center justify-between">
+              <span>Update Contact</span>
               <Button variant="ghost" size="icon" onClick={onCancel}>
                 <X className="h-4 w-4" />
               </Button>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className={isModal ? "px-0 space-y-4" : "space-y-4"}>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <Card className="border-none shadow-none">
+          <CardContent className="px-0 space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name fields */}
               <div className="space-y-4">
@@ -525,21 +522,7 @@ export default function EditContactView({
             </form>
           </CardContent>
         </Card>
+      </DialogContent>
+    </Dialog>
   );
-
-  // Return wrapped in Dialog if used as modal, otherwise return standalone
-  if (isModal) {
-    return (
-      <Dialog open={open} onOpenChange={onCancel}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Update Contact</DialogTitle>
-          </DialogHeader>
-          {formContent}
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  return formContent;
 }

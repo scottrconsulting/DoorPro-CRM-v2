@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import ContactForm from "./contact-form";
+import EditContactView from "./edit-contact-view";
 
 interface ContactCardProps {
   contactId: number;
@@ -509,10 +509,6 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     setShowEditForm(false);
     queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-    toast({
-      title: "Contact updated",
-      description: "Contact has been updated successfully",
-    });
   };
 
   // Format status for display
@@ -996,11 +992,12 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
 
       {/* Edit Contact Form */}
       {contact && (
-        <ContactForm
+        <EditContactView
+          initialContact={contact}
           isOpen={showEditForm}
           onClose={() => setShowEditForm(false)}
+          onCancel={() => setShowEditForm(false)}
           onSuccess={handleEditSuccess}
-          initialContact={contact}
           isEditMode={true}
         />
       )}
