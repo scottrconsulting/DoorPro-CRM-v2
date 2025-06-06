@@ -851,6 +851,19 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
   return (
     <div className="relative w-full h-full">
+      {/* Scroll Down Button - Above the map, centered horizontally */}
+      <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-[1000]">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          onClick={scrollToBottom}
+        >
+          <ChevronDown className="h-4 w-4 mr-1" />
+          Scroll Below
+        </Button>
+      </div>
+
 {/* Map Tour Guide is moved to end of component */}
 
       {/* Map container with improved touch behavior */}
@@ -885,27 +898,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </button>
       </div>
 
-      {/* Scroll Up Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-        onClick={scrollToTop}
-      >
-        <ChevronUp className="h-4 w-4 mr-1" />
-        Scroll Above
-      </Button>
+      
 
-      {/* Scroll Down Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-        onClick={scrollToBottom}
-      >
-        <ChevronDown className="h-4 w-4 mr-1" />
-        Scroll Below
-      </Button>
+      {/* Scroll Up Button - Below the map, centered horizontally */}
+      <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 z-[1000]">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          onClick={scrollToTop}
+        >
+          <ChevronUp className="h-4 w-4 mr-1" />
+          Scroll Above
+        </Button>
+      </div>
 
       {/* Loading overlay */}
       {loading && (
