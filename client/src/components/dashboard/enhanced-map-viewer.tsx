@@ -1,27 +1,69 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useGoogleMaps } from "@/hooks/use-maps";
+import { useLongPress } from "@/hooks/use-long-press";
+import { geocodeAddress, getMarkerIcon, getCurrentLocation, getUserAvatarIcon } from "@/lib/maps";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Contact, InsertContact, InsertVisit, InsertSchedule } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import CustomTour from "@/components/tour/custom-tour";
+import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
+import { useTour } from "@/contexts/tour-context";
 import ContactForm from "@/components/contacts/contact-form";
 import ContactCard from "@/components/contacts/contact-card";
-import { CustomTour } from "@/components/tour/custom-tour";
-import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
-import { getStatusColor, getStatusLabel } from "@/lib/status-helpers";
-import type { Contact, ContactStatus } from "@/shared/schema";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { getStatusColor, getColorStyle, getStatusLabel } from "@/lib/status-helpers";
+
+// Define the Customization type
+interface Customization {
+  id: number;
+  userId: number;
+  teamId: number | null;
+  pinColors: Record<string, string>;
+  statusLabels: Record<string, string>;
+  enabledWidgets: string[];
+  widgetOrder: string[];
+  defaultMapType: string;
+  quickActions: string[];
+  customStatuses: string[];
+  appointmentTypes: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Define the contact form state interface
+interface ContactFormState {
+  fullName: string;
+  address: string;
+  phone: string;
+  email: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  status: string;
+  notes: string;
+  appointment: string;
+}
+
+// Add Google Maps types
+declare global {
+  interface Window {
+    google: any;
+    initGoogleMaps?: () => void;
+    handleStartMapTour?: () => void;
+  }
+}
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 interface MapViewerProps {
   onSelectContact?: (contactId: number) => void;
@@ -30,362 +72,819 @@ interface MapViewerProps {
 export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  // Map and UI state
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap");
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showLegend, setShowLegend] = useState(true);
-
-  // Contact and interaction state
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [showContactCard, setShowContactCard] = useState(false);
   const [isAddingHouse, setIsAddingHouse] = useState(false);
-  const [newHouseMarker, setNewHouseMarker] = useState<google.maps.Marker | null>(null);
+  const [newHouseMarker, setNewHouseMarker] = useState<any | null>(null);
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
-  const [clickedLocation, setClickedLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
-
-  // Location and timing state
-  const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
+  const [userMarker, setUserMarker] = useState<any | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string>("not_visited");
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
   const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
-  const [activeStatus, setActiveStatus] = useState<ContactStatus>("not_visited");
   const [showSchedulingFields, setShowSchedulingFields] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showLegend, setShowLegend] = useState(true); // For legend toggle
+  const [inStreetView, setInStreetView] = useState(false); // Track street view state
+
+  // Function to handle contact deletion
+  const handleContactDelete = useCallback((contact: Contact) => {
+    setSelectedContact(contact);
+    setShowDeleteDialog(true);
+  }, []);
+
+  const [newContactForm, setNewContactForm] = useState<ContactFormState>({
+    fullName: "",
+    address: "",
+    phone: "",
+    email: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    status: activeStatus,
+    notes: "",
+    appointment: "",
+    // We'll use the appointment string format in the contact schema
+    // instead of separate appointmentDate and appointmentTime fields
+  });
+
+  // Work timer states and refs
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  const workTimerRef = useRef<number>(0);
+  const timerActiveRef = useRef<boolean>(false);
+  const lastActivityRef = useRef<number>(Date.now());
+  const firstHouseRecordedRef = useRef<boolean>(false);
+  const sessionsRef = useRef<{startTime: string; duration: number}[]>([]);
+
+  // Track if we've already attempted to locate the user
+  const hasLocatedUser = useRef<boolean>(false);
+
+  // Set up timer interval
+  useEffect(() => {
+    // Timer update interval - every second
+    const timerInterval = setInterval(() => {
+      if (timerActiveRef.current) {
+        workTimerRef.current += 1;
+        setTimerDisplay(workTimerRef.current);
+      }
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, []);
+
+  // For the time display in HH:MM:SS format
+  const formattedTime = useMemo(() => {
+    const hours = Math.floor(workTimerRef.current / 3600);
+    const minutes = Math.floor((workTimerRef.current % 3600) / 60);
+    const seconds = workTimerRef.current % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }, [timerDisplay]);
 
   // Fetch contacts
-  const { data: contacts = [], refetch: refetchContacts } = useQuery({
-    queryKey: ['/api/contacts'],
-    queryFn: async () => {
-      const response = await fetch('/api/contacts', {
-        credentials: 'include'
+  const { data: contacts = [], isLoading: isLoadingContacts } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts"],
+    enabled: !!user,
+  });
+
+  // Fetch user's customizations
+  const { data: customization } = useQuery<Customization>({
+    queryKey: ["/api/customizations/current"],
+  });
+
+  // Initialize map with default location (US center), but will immediately try to locate user
+  const {
+    mapRef,
+    map,
+    isLoaded,
+    loading,
+    setMapType: setGoogleMapType,
+    panTo,
+    addMarker,
+    clearMarkers,
+    isInStreetView,
+    exitStreetView
+  } = useGoogleMaps({
+    apiKey: GOOGLE_MAPS_API_KEY,
+    center: { lat: 39.8283, lng: -98.5795 },
+    zoom: 5,
+    mapTypeId: "roadmap"
+    // Removed custom mapId to use standard Google Maps appearance
+  });
+
+  // Create contact mutation
+  const createContactMutation = useMutation({
+    mutationFn: async (contactData: InsertContact) => {
+      const res = await apiRequest("POST", "/api/contacts", contactData);
+      return res.json();
+    },
+    onSuccess: (createdContact) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      if (newHouseMarker) {
+        newHouseMarker.setMap(null);
+        setNewHouseMarker(null);
+      }
+      setIsAddingHouse(false);
+
+      // Create a visit record for this contact interaction
+      if (createdContact?.id && user?.id) {
+        createVisitMutation.mutate({
+          contactId: createdContact.id,
+          userId: user.id,
+          visitType: "initial",
+          notes: `Initial contact - Status: ${createdContact.status}`,
+          outcome: createdContact.status === "booked" ? "positive" : 
+                   createdContact.status === "not_interested" ? "negative" : "neutral",
+          followUpNeeded: createdContact.status === "check_back" || createdContact.status === "booked",
+          visitDate: new Date()
+        });
+
+        // NOTE: We're now letting the contact form handle appointment creation
+        // to avoid creating duplicate appointment entries in the schedule.
+        // The visit record is still created here, but appointment scheduling
+        // is handled by the contact form component when adding/editing contacts.
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to create contact", error);
+      toast({
+        title: "Failed to create contact",
+        description: error.message,
+        variant: "destructive",
       });
-      if (!response.ok) throw new Error('Failed to fetch contacts');
-      return response.json();
+    },
+  });
+
+  // Create visit mutation
+  const createVisitMutation = useMutation({
+    mutationFn: async (visitData: InsertVisit) => {
+      const res = await apiRequest("POST", "/api/visits", visitData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/visits"] });
+    },
+    onError: (error) => {
+      console.error("Failed to create visit record", error);
     }
   });
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const initMap = async () => {
-      try {
-        const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
-
-        const mapInstance = new Map(mapRef.current!, {
-          zoom: 13,
-          center: { lat: 40.7128, lng: -74.0060 }, // Default to NYC
-          mapTypeId: mapType,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          zoomControl: true,
-          gestureHandling: 'greedy'
-        });
-
-        setMap(mapInstance);
-        setLoading(false);
-
-        // Add click listeners
-        mapInstance.addListener('click', handleMapClick);
-        mapInstance.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
-          setMouseDownTime(Date.now());
-        });
-
-        // Try to get user location
-        getCurrentLocation(mapInstance);
-
-      } catch (error) {
-        console.error('Error initializing map:', error);
-        setLoading(false);
-      }
-    };
-
-    initMap();
-  }, [mapType]);
-
-  // Handle map click for adding contacts
-  const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng || !map) return;
-
-    const clickTime = Date.now();
-    const isLongPress = mouseDownTime && (clickTime - mouseDownTime) > 500;
-
-    if (isLongPress || isAddingHouse) {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-
-      try {
-        // Geocode the coordinates to get address
-        const geocoder = new google.maps.Geocoder();
-        const result = await geocoder.geocode({ location: { lat, lng } });
-
-        if (result.results && result.results.length > 0) {
-          const address = result.results[0].formatted_address;
-
-          // Open ContactForm directly
-          setClickedLocation({ lat, lng, address });
-          setIsContactFormOpen(true);
-          setIsAddingHouse(false);
-
-          // Clear any existing new house marker
-          if (newHouseMarker) {
-            newHouseMarker.setMap(null);
-          }
-
-        } else {
-          toast({
-            title: "Address not found",
-            description: "Could not find address for this location",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error);
-        toast({
-          title: "Error",
-          description: "Could not get address for this location",
-          variant: "destructive"
-        });
-      }
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: number) => {
+      const res = await apiRequest("DELETE", `/api/contacts/${contactId}`);
+      return contactId;
+    },
+    onSuccess: (contactId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      toast({
+        title: "Contact deleted",
+        description: "The contact has been successfully deleted",
+      });
+      // Remove from selected contacts if needed
+      setSelectedContacts((prev) => prev.filter(id => id !== contactId));
+    },
+    onError: (error) => {
+      console.error("Failed to delete contact", error);
+      toast({
+        title: "Failed to delete contact",
+        description: error.message,
+        variant: "destructive",
+      });
     }
+  });
 
-    setMouseDownTime(null);
-    setMouseUpTime(clickTime);
-  }, [mouseDownTime, isAddingHouse, map, newHouseMarker, toast]);
-
-  // Handle contact marker click
-  const handleContactClick = useCallback((contact: Contact) => {
-    if (!isAddingHouse) {
-      setSelectedContact(contact);
-      setShowContactCard(true);
-      if (onSelectContact) {
-        onSelectContact(contact.id);
-      }
+  // Create schedule entry mutation
+  const createScheduleMutation = useMutation({
+    mutationFn: async (scheduleData: InsertSchedule) => {
+      const res = await apiRequest("POST", "/api/schedules", scheduleData);
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({
+        title: "Schedule Created",
+        description: variables.type === 'appointment' 
+          ? "Appointment has been added to your schedule" 
+          : "Follow-up has been added to your schedule",
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to create schedule entry", error);
+      toast({
+        title: "Schedule Creation Failed",
+        description: "There was an error creating the schedule entry",
+        variant: "destructive",
+      });
     }
-  }, [isAddingHouse, onSelectContact]);
+  });
 
-  // Get current location
-  const getCurrentLocation = useCallback((mapInstance: google.maps.Map) => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const pos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-
-          mapInstance.setCenter(pos);
-
-          // Add user location marker
-          if (userMarker) {
-            userMarker.setMap(null);
-          }
-
-          const marker = new google.maps.Marker({
-            position: pos,
-            map: mapInstance,
-            title: "Your Location",
-            icon: {
-              url: 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="%232563eb"%3E%3Ccircle cx="12" cy="12" r="8"/%3E%3C/svg%3E',
-              scaledSize: new google.maps.Size(20, 20),
-            }
-          });
-
-          setUserMarker(marker);
-        },
-        () => {
-          console.log("Location permission denied or unavailable");
-        }
-      );
-    }
-  }, [userMarker]);
+  // Helper function to create a schedule entry
+  const createScheduleEntry = (scheduleData: InsertSchedule) => {
+    createScheduleMutation.mutate(scheduleData);
+  };
 
   // Handle address search
-  const handleAddressSearch = useCallback(async () => {
-    if (!searchQuery.trim() || !map) return;
+  const handleAddressSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Search Error",
+        description: "Please enter an address to search",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await geocoder.geocode({ address: searchQuery });
+      const result = await geocodeAddress(searchQuery);
 
-      if (result.results && result.results.length > 0) {
-        const location = result.results[0].geometry.location;
-        map.setCenter(location);
-        map.setZoom(16);
+      if (result && map) {
+        const position = {
+          lat: parseFloat(result.latitude),
+          lng: parseFloat(result.longitude)
+        };
+
+        // Pan the map to the found location
+        panTo(position);
+        map.setZoom(17);
+
+        // Create a temporary marker at the searched location
+        if (newHouseMarker) {
+          newHouseMarker.setMap(null);
+        }
+
+        const marker = new window.google.maps.Marker({
+          position: position,
+          map: map,
+          animation: window.google.maps.Animation.DROP,
+          title: result.address
+        });
+
+        setNewHouseMarker(marker);
+        setNewContactAddress(result.address);
+        setNewContactCoords(position);
+
+        // Prefill the contact form with address details but reset the name field
+        setNewContactForm(prev => ({
+          ...prev,
+          fullName: "", // Explicitly reset name to prevent it showing previous contact's name
+          address: result.address,
+          city: result.city || '',
+          state: result.state || '',
+          zipCode: result.zipCode || ''
+        }));
+
+        toast({
+          title: "Location Found",
+          description: result.address,
+        });
       } else {
         toast({
-          title: "Address not found",
-          description: "Could not find the specified address",
-          variant: "destructive"
+          title: "Search Error",
+          description: "No results found for this address",
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error("Address search error:", error);
       toast({
-        title: "Search error",
-        description: "Could not search for address",
-        variant: "destructive"
+        title: "Search Error",
+        description: "Error finding this address",
+        variant: "destructive",
       });
     }
-  }, [searchQuery, map, toast]);
+  };
 
-  // Render contact markers
-  useEffect(() => {
-    if (!map || !contacts.length) return;
+  // Handle my location button click
+  const handleMyLocationClick = async () => {
+    try {
+      // No need for loading state as it might cause UI issues
+      console.log("Getting current location...");
+      const position = await getCurrentLocation();
+      console.log("Current location:", position);
 
-    const markers: google.maps.Marker[] = [];
+      if (position && map) {
+        // Animate to the user's location smoothly
+        panTo(position);
+        map.setZoom(15);
 
-    contacts.forEach((contact) => {
-      if (contact.latitude && contact.longitude) {
-        const statusColor = getStatusColor(contact.status as ContactStatus);
+        if (userMarker) {
+          // If marker exists, just update its position instead of recreating it
+          // This prevents the flickering effect
+          userMarker.setPosition(position);
+        } else {
+          // Create a special My Location marker only if it doesn't exist yet
+          const newUserMarker = new window.google.maps.Marker({
+            position: position,
+            map: map,
+            icon: {
+              // Create a pulsing blue dot like the one in Google Maps mobile app
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: "#4285F4", // Google Maps blue 
+              fillOpacity: 0.8,
+              strokeColor: "#FFFFFF", 
+              strokeWeight: 2,
+              scale: 12 // Not too large, not too small
+            },
+            title: "Your Location",
+            animation: window.google.maps.Animation.DROP, // Add a drop animation for visibility
+            zIndex: 1000 // Ensure it's above other markers
+          });
 
-        const marker = new google.maps.Marker({
-          position: { lat: contact.latitude, lng: contact.longitude },
-          map,
-          title: contact.name,
-          icon: {
-            url: `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${encodeURIComponent(statusColor.replace('bg-', '').replace('-500', ''))}"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/%3E%3C/svg%3E`,
-            scaledSize: new google.maps.Size(24, 24),
-          }
+          // Store the new marker reference
+          setUserMarker(newUserMarker);
+        }
+
+        // Show a success notification
+        toast({
+          title: "Location Found",
+          description: "Map centered on your current location",
         });
-
-        marker.addListener('click', () => handleContactClick(contact));
-        markers.push(marker);
       }
+    } catch (error) {
+      console.error("Location error:", error);
+      // Show a helpful error message
+      toast({
+        title: "Location Services Required",
+        description: "Please enable location services in your device settings to track your location",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add click functionality to map for adding new contacts
+  useEffect(() => {
+    if (!isLoaded || !map || !window.google) return;
+
+    // Track when the mouse is pressed down
+    const mouseDownListener = map.addListener("mousedown", (e: any) => {
+      if (!e.latLng) return;
+      setMouseDownTime(Date.now());
+    });
+
+    // Handle click with hold detection
+    const clickListener = map.addListener("click", async (e: any) => {
+      if (!e.latLng) return;
+      setMouseUpTime(Date.now());
+
+      // Calculate click duration
+      const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
+      const isLongClick = clickDuration > 500; // 500ms threshold for long press
+
+      // Create a marker at the clicked location with the current active status
+      const marker = addMarker(e.latLng.toJSON(), {
+        title: "New Contact",
+        draggable: true,
+        animation: window.google.maps.Animation.DROP,
+        icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
+      });
+
+      setNewHouseMarker(marker);
+      setIsAddingHouse(true); // Auto-enable adding mode
+
+      // Get the address from the coordinates
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: e.latLng.toJSON() }, (
+        results: any, 
+        status: any
+      ) => {
+        if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+          const address = results[0].formatted_address;
+          setNewContactAddress(address);
+          setNewContactCoords(e.latLng.toJSON());
+
+          // Extract address components for all contact creation paths
+          const streetNumber = results[0].address_components.find((c: any) => 
+            c.types.includes('street_number'))?.short_name || '';
+          const street = results[0].address_components.find((c: any) => 
+            c.types.includes('route'))?.short_name || '';
+          const city = results[0].address_components.find((c: any) => 
+            c.types.includes('locality'))?.short_name || '';
+          const state = results[0].address_components.find((c: any) => 
+            c.types.includes('administrative_area_level_1'))?.short_name || '';
+          const zipCode = results[0].address_components.find((c: any) => 
+            c.types.includes('postal_code'))?.short_name || '';
+
+          const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+
+          // Start work timer when first contact is added (if not already started)
+          if (!firstHouseRecordedRef.current) {
+            firstHouseRecordedRef.current = true;
+            timerActiveRef.current = true;
+
+            // Add first session to the sessions list
+            sessionsRef.current.push({
+              startTime: new Date().toISOString(),
+              duration: 0
+            });
+
+            // Toast notification removed per user request
+            // No notification will be shown
+          }
+
+          // Different behavior based on click duration
+          if (isLongClick) {
+            // Long press - show detailed contact form
+            const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
+
+            setNewContactForm(prev => ({
+              ...prev,
+              // Don't pre-fill the name at all - let user enter it themselves
+              fullName: "", 
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+            }));
+
+            // Set the scheduling fields visibility state first
+            setShowSchedulingFields(isAppointmentStatus);
+
+            // Show the form dialog for long press
+            setShowNewContactDialog(true);
+
+            // Log for debugging
+            console.log("Map pin contact form opened with status:", activeStatus, "- Should show appointment fields:", isAppointmentStatus);
+
+            // Toast notification removed per user request
+            // No notification will be shown
+          } else {
+            // Quick click - just add the contact with minimal info
+            createContactMutation.mutate({
+              userId: user?.id || 0,
+              fullName: autoName,
+              address: address,
+              city: city,
+              state: state,
+              zipCode: zipCode,
+              status: activeStatus,
+              latitude: e.latLng.lat().toString(),
+              longitude: e.latLng.lng().toString(),
+              notes: `Quick add: ${new Date().toLocaleString()}`
+            }, {
+              onSuccess: () => {
+                // Make sure to reset the form state after quick add too
+                setNewContactForm({
+                  fullName: "", // Critical: reset name to prevent persistence
+                  address: "",
+                  phone: "",
+                  email: "",
+                  city: "",
+                  state: "",
+                  zipCode: "",
+                  status: activeStatus, 
+                  notes: "",
+                  appointment: "",
+                });
+              }
+            });
+
+            // Toast notification removed per user request
+            // No notification will be shown
+          }
+        } else {
+          // Could not get the address
+          // Toast notification removed per user request
+          // No notification will be shown
+        }
+      });
     });
 
     return () => {
-      markers.forEach(marker => marker.setMap(null));
+      // Clean up the listeners when the component unmounts
+      window.google.maps.event.removeListener(mouseDownListener);
+      window.google.maps.event.removeListener(clickListener);
     };
-  }, [map, contacts, handleContactClick]);
+  }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
 
-  // Handle My Location button
-  const handleMyLocationClick = useCallback(() => {
-    if (map) {
-      getCurrentLocation(map);
+
+
+  // Function to silently locate the user without showing toast notifications
+  const locateUserSilently = useCallback(async () => {
+    if (!map) return;
+
+    try {
+      console.log("Silently getting current location...");
+      const position = await getCurrentLocation();
+      console.log("Auto-locate position:", position);
+
+      // Only update marker position without changing map zoom or center
+      // This provides real-time tracking without disrupting the user's map view
+
+      if (userMarker) {
+        // If marker exists, just update its position instead of recreating it
+        // This prevents the flickering effect
+        userMarker.setPosition(position);
+      } else {
+        // Create a special My Location marker only if it doesn't exist yet
+        const newUserMarker = new window.google.maps.Marker({
+          position: position,
+          map: map,
+          icon: {
+            // Create a blue dot like the one in Google Maps mobile app
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: "#4285F4", // Google Maps blue 
+            fillOpacity: 0.8,
+            strokeColor: "#FFFFFF", 
+            strokeWeight: 2,
+            scale: 12 // Not too large, not too small
+          },
+          title: "Your Location",
+          zIndex: 1000 // Ensure it's above other markers
+        });
+
+        // Store the new marker reference
+        setUserMarker(newUserMarker);
+      }
+
+      // Return the position for use by other functions
+      return position;
+    } catch (error) {
+      // Silently handle location errors without showing toasts
+      console.log("Location tracking error (silent):", error);
+      // Don't show error notifications for automatic background tracking
+      return null;
     }
-  }, [map, getCurrentLocation]);
+  }, [map, userMarker]);
 
-  
+  // Function to center the map on user's location (used on initial load)
+  const centerMapOnUserLocation = useCallback(async () => {
+    if (!map) return;
+
+    try {
+      // Get the user's location
+      const position = await locateUserSilently();
+
+      if (position && !hasLocatedUser.current) {
+        // Center the map on the user's location and set zoom
+        panTo(position);
+        map.setZoom(15);
+
+        // Mark that we've located the user so we don't do it again 
+        // until a new map session
+        hasLocatedUser.current = true;
+
+        console.log("Map automatically centered on user location");
+      }
+    } catch (error) {
+      console.error("Auto-centering map failed:", error);
+      // No notification for automatic centering
+    }
+  }, [map, locateUserSilently, panTo]);
+
+  // Set up real-time location tracking that continuously updates every minute
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    // First, center the map on user's location (automatic)
+    // This simulates clicking the "My Location" button automatically
+    centerMapOnUserLocation();
+
+    // Set up interval for continuous real-time tracking
+    const locationTrackingInterval = setInterval(() => {
+      // Re-request location every minute to keep location current
+      // A longer interval reduces flickering and battery usage
+      locateUserSilently();
+    }, 60000); // 60 seconds in milliseconds
+
+    // Clean up interval when component unmounts
+    return () => {
+      clearInterval(locationTrackingInterval);
+    };
+  }, [isLoaded, map, locateUserSilently, centerMapOnUserLocation]);
+
+  // Update markers when contacts or customization changes
+  useEffect(() => {
+    if (!isLoaded || !map || isLoadingContacts) return;
+
+    // Clear all existing markers before adding new ones
+    clearMarkers();
+
+    // Debug any contact status issues
+    const statusCounts: Record<string, number> = {};
+
+    // Process all contacts and create markers for each one with coordinates
+    contacts.forEach((contact) => {
+      // Skip contacts without coordinates
+      if (!contact.latitude || !contact.longitude) return;
+
+      // Count statuses for debugging
+      statusCounts[contact.status] = (statusCounts[contact.status] || 0) + 1;
+
+      // Parse coordinates
+      const position = {
+        lat: parseFloat(contact.latitude),
+        lng: parseFloat(contact.longitude),
+      };
+
+      // Get the proper marker icon based on status and customization settings
+      // This ensures consistent pin colors for all status types
+      const markerIcon = getMarkerIcon(contact.status, customization?.pinColors, customization?.statusLabels);
+
+      // Create the map marker with the correct icon
+      const marker = addMarker(position, {
+        title: contact.fullName,
+        icon: markerIcon,
+        // Adding animation for better visibility
+        animation: window.google.maps.Animation.DROP
+      });
+
+      if (marker) {
+        // Click handler for all contact types - opens contact details
+        // This has been standardized for all contact status types including call_back
+        marker.addListener("click", () => {
+          // Only trigger if not in adding mode
+          if (!isAddingHouse) {
+            // Set the selected contact for all pin types
+            setSelectedContact(contact);
+            // Call the onSelectContact for all pin types - makes behavior consistent
+            if (onSelectContact) {
+              onSelectContact(contact.id);
+
+              // Toast notification removed per user request
+              // No notification will be shown
+            }
+          }
+        });
+
+        // Long-press handler to show delete option
+        marker.addListener("mousedown", () => {
+          const startTime = Date.now();
+          const longPressTimeout = setTimeout(() => {
+            handleContactDelete(contact);
+          }, 800); // 800ms long-press
+
+          // Clear timeout if mouse is released before threshold
+          marker.addListener("mouseup", () => {
+            const duration = Date.now() - startTime;
+            if (duration < 800) {
+              clearTimeout(longPressTimeout);
+            }
+          });
+        });
+
+        // Right-click handler to show delete option (for desktop)
+        marker.addListener("rightclick", () => {
+          handleContactDelete(contact);
+        });
+      }
+    });
+
+    console.log("Status counts for debugging:", statusCounts);
+
+  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization, handleContactDelete]);
+
+  // Change map type when mapType state changes
+  useEffect(() => {
+    if (isLoaded && map) {
+      // Only exit street view when the button is clicked, not on initial render
+      setGoogleMapType(mapType);
+    }
+  }, [mapType, isLoaded, map, setGoogleMapType]);
+
+  // Monitor street view status changes
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    // Check every 750ms if we're in street view
+    const streetViewInterval = setInterval(() => {
+      const newInStreetViewState = isInStreetView();
+      if (newInStreetViewState !== inStreetView) {
+        setInStreetView(newInStreetViewState);
+      }
+    }, 750);
+
+    return () => clearInterval(streetViewInterval);
+  }, [isLoaded, map, isInStreetView, inStreetView]);
+
+  // Monitor when the dialog opens
+  useEffect(() => {
+    if (showNewContactDialog) {
+      console.log("Map pin contact form opened with status:", newContactForm.status, 
+        "- Should show appointment fields:", 
+        newContactForm.status === "booked" || newContactForm.status === "check_back",
+        "- Should show sale fields:", newContactForm.status === "sold");
+    }
+  }, [showNewContactDialog, newContactForm.status]);
+
+  // Monitor status changes in the form
+  useEffect(() => {
+    // Show/hide appointment scheduling fields based on status
+    const needsScheduling = 
+      newContactForm.status === "booked" || 
+      newContactForm.status === "check_back";
+
+    const needsSaleFields = newContactForm.status === "sold";
+
+    setShowSchedulingFields(needsScheduling);
+
+    // Clear scheduling fields if not needed
+    if (!needsScheduling) {
+      // Reset appointment fields (will be handled via appointment string in universal form)
+      setNewContactForm(prev => ({
+        ...prev
+        // appointment fields will be handled by the form component
+      }));
+    }
+
+    // If status needs scheduling and we're showing the dialog, ensure we flag the form
+    if ((needsScheduling || needsSaleFields) && showNewContactDialog) {
+      console.log(`Status ${newContactForm.status} requires extra fields, updating form...`);
+    }
+  }, [newContactForm.status, showNewContactDialog]);
+
+  // Update the form status when the active status changes
+  useEffect(() => {
+    setNewContactForm(prev => ({
+      ...prev,
+      status: activeStatus
+    }));
+  }, [activeStatus]);
+
+  // Custom Tour functionality
+  const { endTour } = useTour();
+  const [showMapTour, setShowMapTour] = useState(false);
+
+  // Function to start the map tour
+  const handleStartMapTour = () => {
+    console.log("Map tour button clicked - setting showMapTour to true");
+    setShowMapTour(true);
+    console.log("Current showMapTour state:", showMapTour); // This will show the previous state due to React's async state updates
+  };
+
+  // Expose the handleStartMapTour function to the window object
+  useEffect(() => {
+    window.handleStartMapTour = handleStartMapTour;
+
+    return () => {
+      // Clean up when component unmounts
+      delete window.handleStartMapTour;
+    };
+  }, []);
+
+  // Function to close the map tour
+  const handleCloseMapTour = () => {
+    setShowMapTour(false);
+  };
+
+    
 
   return (
     <div className="relative w-full h-full">
-      {/* Google Map Container */}
-      <div
-        ref={mapRef}
-        className="w-full h-full rounded-lg overflow-hidden shadow-lg"
-      />
-
-      {/* Map Type Controls - Top Right */}
-      <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("roadmap")}
+      {/* Scroll Navigation Buttons - Positioned after the map container */}
+      <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-[1000] flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
         >
-          Road
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("satellite")}
+          <ChevronUp className="h-4 w-4 mr-1" />
+          Scroll Above
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
         >
-          Satellite
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("hybrid")}
-        >
-          Hybrid
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
-          onClick={() => setMapType("terrain")}
-        >
-          Terrain
-        </button>
+          <ChevronDown className="h-4 w-4 mr-1" />
+          Scroll Below
+        </Button>
       </div>
 
-      {/* Address Search Bar - Top Center */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 w-64 md:w-80">
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Search address..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8 h-9 shadow-lg rounded-md"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleAddressSearch();
-              }
-            }}
-          />
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-0 top-0 h-9 w-9"
-            onClick={handleAddressSearch}
-          >
-            <span className="material-icons text-base">search</span>
-          </Button>
+{/* Map Tour Guide is moved to end of component */}
+
+      {/* Map container with improved touch behavior */}
+      <div 
+        ref={mapRef} 
+        className="w-full h-full map-container relative"
+        id="map-container"
+        data-tour="map-container"
+      >
+        {/* Invisible overlays for touch scroll help */}
+        <div className="absolute left-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
+        <div className="absolute right-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
+
+        {/* Scroll button to jump below the map - positioned to avoid map controls */}
+        <button 
+          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
+          className="absolute top-20 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
+          aria-label="Scroll below map"
+        >
+          <span className="material-icons text-sm">arrow_downward</span> 
+          <span className="hidden sm:inline">Scroll Below</span>
+        </button>
+
         </div>
-      </div>
 
-      {/* Control Panel - Right Side */}
-      <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
-        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMyLocationClick}
-          >
-            My Location
-          </Button>
-
-          <Button
-            variant={isAddingHouse ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsAddingHouse(!isAddingHouse)}
-          >
-            {isAddingHouse ? "Cancel Add" : "Add Contact"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Legend */}
-      {showLegend && (
-        <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg z-10 max-w-xs">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-sm">Contact Status</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLegend(false)}
-              className="h-6 w-6 p-0"
-            >
-              ×
-            </Button>
-          </div>
-          <div className="space-y-1 text-xs">
-            {(['not_visited', 'no_answer', 'presented', 'scheduled', 'sold'] as ContactStatus[]).map((status) => (
-              <div key={status} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(status)}`} />
-                <span>{getStatusLabel(status)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Loading Overlay */}
+      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg shadow-lg">
@@ -394,42 +893,324 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       )}
 
-      {/* Contact Form for adding new contacts */}
-      <ContactForm
-        isOpen={isContactFormOpen}
-        onClose={() => {
-          setIsContactFormOpen(false);
-          setClickedLocation(null);
-        }}
-        onSuccess={(newContact) => {
-          setIsContactFormOpen(false);
-          setClickedLocation(null);
-          setIsAddingHouse(false);
-          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-        }}
-        initialContact={clickedLocation ? {
-          address: clickedLocation.address || `${clickedLocation.lat.toFixed(6)}, ${clickedLocation.lng.toFixed(6)}`,
-          latitude: clickedLocation.lat.toString(),
-          longitude: clickedLocation.lng.toString(),
-        } : undefined}
-      />
+      {/* Search Controls and Map Options in a single bar at the top */}
+      <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2">
+        {/* Main search bar and controls - Responsive layout */}
+        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
+          {/* Search input and button - Always visible */}
+          <div className="flex-grow flex items-stretch gap-2 map-search" id="map-search-container" data-tour="map-search">
+            <Input
+              type="text"
+              placeholder="Search for an address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="min-w-[150px] flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddressSearch();
+              }}
+            />
+            <Button 
+              onClick={handleAddressSearch}
+              variant="secondary"
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              Search
+            </Button>
+          </div>
 
-      {/* Contact Card for viewing/editing existing contacts */}
-      {selectedContact && (
-        <ContactCard
-          contactId={selectedContact.id}
-          isOpen={showContactCard}
-          onClose={() => {
-            setShowContactCard(false);
-            setSelectedContact(null);
-          }}
-        />
+          {/* My Location button - Always visible */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMyLocationClick}
+              className="text-xs whitespace-nowrap flex-shrink-0 location-button"
+              id="my-location-button"
+              data-tour="my-location"
+            >
+              My Location
+            </Button>
+
+            {/* Map Type Controls - Responsive handling */}
+            <div className="hidden sm:flex items-stretch gap-0.5 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('roadmap');
+                }}
+              >
+                Map
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('satellite');
+                }}
+              >
+                Satellite
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('hybrid');
+                }}
+              >
+                Hybrid
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
+                onClick={() => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType('terrain');
+                }}
+              >
+                Terrain
+              </Button>
+            </div>
+
+            {/* Mobile dropdown for map type */}
+            <div className="flex sm:hidden items-center border-l pl-2">
+              <Select 
+                value={mapType}
+                onValueChange={(value: 'roadmap' | 'satellite' | 'hybrid' | 'terrain') => {
+                  if (inStreetView) {
+                    exitStreetView();
+                    setInStreetView(false);
+                  }
+                  setMapType(value);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[110px]">
+                  <SelectValue placeholder="Map Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="roadmap">Map</SelectItem>
+                  <SelectItem value="satellite">Satellite</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                  <SelectItem value="terrain">Terrain</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Street View Exit Button - Only shown when in street view */}
+      {inStreetView && (
+        <div className="absolute top-20 right-4 z-10 bg-white p-1.5 rounded-lg shadow-lg">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => {
+              exitStreetView();
+              setInStreetView(false);
+            }}
+          >
+            Exit Street View
+          </Button>
+        </div>
       )}
 
-      {/* Custom Map Tour */}
+      {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter" id="status-filter" data-tour="status-filter">
+        {/* Toggle button for showing/hiding the legend */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-full shrink-0"
+          onClick={() => setShowLegend(!showLegend)}
+          title={showLegend ? "Minimize legend" : "Maximize legend"}
+        >
+          <span className="material-icons text-sm">
+            {showLegend ? "remove" : "add"}
+          </span>
+        </Button>
+
+        {/* Only show the status buttons if legend is expanded */}
+        {showLegend && (
+          <>
+            {/* Status buttons matching colors in customize page */}
+            {[
+              { status: "no_answer", defaultLabel: "No Answer" },
+              { status: "presented", defaultLabel: "Presented" },
+              { status: "booked", defaultLabel: "Booked" },
+              { status: "sold", defaultLabel: "Sold" },
+              { status: "not_interested", defaultLabel: "Not Interested" },
+              { status: "no_soliciting", defaultLabel: "No Soliciting" },
+              { status: "check_back", defaultLabel: "Check Back" },
+            ].map(status => (
+              <Button
+                key={status.status}
+                variant="outline"
+                size="sm"
+                className={`h-8 px-2 py-1 text-xs ${activeStatus === status.status ? 'ring-2 ring-primary' : ''}`}
+                onClick={() => setActiveStatus(status.status)}
+              >
+                <span 
+                  className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status, customization?.pinColors)}`} 
+                  style={getColorStyle(status.status, customization?.pinColors)}
+                ></span>
+                {getStatusLabel(status.status, customization?.statusLabels)}
+              </Button>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* Map Type Controls have been moved to the main search bar at the top */}
+
+      {/* New Contact Dialog - Using our new consolidated Form Component */}
+      <ContactForm
+        isOpen={showNewContactDialog}
+        onClose={() => {
+          // Clear the form completely when closing the dialog to prevent conflicts on next open
+          setNewContactForm({
+            fullName: "", // Reset to empty to avoid auto-filling from previous contact
+            address: "",
+            phone: "",
+            email: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            status: activeStatus, // Keep the active status to match selected pin type
+            notes: "",
+            appointment: "", // Clear appointment data
+            // Clear any other fields that might be persisting
+          });
+          setShowNewContactDialog(false);
+        }}
+        initialContact={{
+          fullName: newContactForm.fullName,
+          address: newContactForm.address,
+          city: newContactForm.city,
+          state: newContactForm.state,
+          zipCode: newContactForm.zipCode,
+          phone: newContactForm.phone || "",
+          email: newContactForm.email || "",
+          status: newContactForm.status,
+          notes: newContactForm.notes || "",
+          latitude: newContactCoords?.lat.toString() || "",
+          longitude: newContactCoords?.lng.toString() || "",
+          // Add a field that triggers the appointment fields
+          // This ensures the form shows scheduling fields for booked or check_back
+          // This matches our form's showAppointmentFields state initialization
+        }}
+        onSuccess={(newContact: Contact) => {
+          // Log status for debugging
+          console.log("Contact created successfully:", newContact);
+
+          // Handle successful creation
+          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+
+          // Reset form completely to prevent data persisting to next contact
+          setNewContactForm({
+            fullName: "", // Make sure name is cleared for the next new contact
+            address: "",
+            phone: "",
+            email: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            status: activeStatus,
+            notes: "",
+            appointment: "",
+          });
+
+          // Cleanup map marker
+          if (newHouseMarker) {
+            newHouseMarker.setMap(null);
+            setNewHouseMarker(null);
+          }
+          setIsAddingHouse(false);
+
+          // Create a visit record for this contact interaction
+          if (newContact?.id && user?.id) {
+            createVisitMutation.mutate({
+              contactId: newContact.id,
+              userId: user.id,
+              visitType: "initial",
+              notes: `Initial contact - Status: ${newContact.status}`,
+              outcome: newContact.status === "booked" ? "positive" : 
+                     newContact.status === "not_interested" ? "negative" : "neutral",
+              followUpNeeded: newContact.status === "check_back" || newContact.status === "booked",
+              visitDate: new Date()
+            });
+
+            // Handle scheduling based on status
+            if (newContact.appointment) {
+              const [appointmentDate, appointmentTime] = newContact.appointment.split(' ');
+              if (appointmentDate && appointmentTime) {
+                if (newContact.status === "booked") {
+                  toast({
+                    title: "Appointment Scheduled",
+                    description: `Successfully scheduled for ${appointmentDate} at ${appointmentTime}`,
+                  });
+                } else if (newContact.status === "check_back") {
+                  toast({
+                    title: "Check Back Scheduled",
+                    description: `Reminder set for ${appointmentDate} at ${appointmentTime}`,
+                  });
+                }
+              }
+            }
+          }
+        }}
+      />
+
+      {/* Delete Contact Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this contact? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (selectedContact) {
+                deleteContactMutation.mutate(selectedContact.id);
+                setSelectedContact(null);
+              }
+              setShowDeleteDialog(false);
+            }}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Custom Map Tour Dialog - Placed as the last component */}
       <CustomTour 
         steps={customMapTourSteps} 
-        tourName="map" 
+        tourName="map"
+        isOpen={showMapTour}
+        onClose={handleCloseMapTour}
       />
     </div>
   );

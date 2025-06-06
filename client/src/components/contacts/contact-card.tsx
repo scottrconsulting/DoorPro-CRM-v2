@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import ContactForm from "./contact-form";
+import EditContactView from "./edit-contact-view";
 
 interface ContactCardProps {
   contactId: number;
@@ -35,7 +35,7 @@ interface ContactCardProps {
   onClose: () => void;
 }
 
-function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
+export default function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("notes");
@@ -992,11 +992,12 @@ function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
 
       {/* Edit Contact Form */}
       {contact && (
-        <ContactForm
+        <EditContactView
+          initialContact={contact}
           isOpen={showEditForm}
           onClose={() => setShowEditForm(false)}
+          onCancel={() => setShowEditForm(false)}
           onSuccess={handleEditSuccess}
-          initialContact={contact}
           isEditMode={true}
         />
       )}
@@ -1029,7 +1030,3 @@ function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
     </>
   );
 }
-
-// Export both named and default to support all import patterns
-export { ContactCard };
-export default ContactCard;

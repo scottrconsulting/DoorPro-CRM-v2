@@ -97,7 +97,7 @@ interface ContactFormProps {
   isEditMode?: boolean;
 }
 
-function ContactForm({
+export default function ContactForm({
   isOpen,
   onClose,
   onSuccess,
@@ -107,28 +107,32 @@ function ContactForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [showAppointmentFields, setShowAppointmentFields] = useState(false);
-  const [showSaleFields, setShowSaleFields] = useState(false);
+  const [showSaleFields] = useState(false);
 
   // Form setup
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      fullName: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      phone: "",
-      email: "",
-      status: "not_visited",
-      notes: "",
+      // Always use initialContact values or empty strings to prevent data persistence
+      fullName: initialContact?.fullName || "",
+      address: initialContact?.address || "",
+      city: initialContact?.city || "",
+      state: initialContact?.state || "",
+      zipCode: initialContact?.zipCode || "",
+      phone: initialContact?.phone || "",
+      email: initialContact?.email || "",
+      status: initialContact?.status || "not_visited",
+      notes: initialContact?.notes || "",
+      // Add scheduling checkbox
       scheduleFollowUp: false,
+      // Add appointment fields with default empty values
       appointmentTitle: "",
       appointmentDate: "",
       appointmentTime: "",
+      // Add sale fields with default empty values
       saleProduct: "",
       saleAmount: "",
-      saleDate: new Date().toISOString().split('T')[0],
+      saleDate: new Date().toISOString().split('T')[0], // Default to today
       saleNotes: "",
     },
   });
@@ -136,70 +140,86 @@ function ContactForm({
   // Add a ref to track initialization state
   const hasInitializedRef = useRef(false);
 
-  // Initialize form when dialog opens
+  // Only update conditional fields visibility when dialog opens - just once
   useEffect(() => {
-    if (isOpen) {
-      // Reset form with initial data
-      const formData = {
-        fullName: initialContact?.fullName || "",
-        address: initialContact?.address || "",
-        city: initialContact?.city || "",
-        state: initialContact?.state || "",
-        zipCode: initialContact?.zipCode || "",
-        phone: initialContact?.phone || "",
-        email: initialContact?.email || "",
-        status: initialContact?.status || "not_visited",
-        notes: initialContact?.notes || "",
-        scheduleFollowUp: false,
-        appointmentTitle: "",
-        appointmentDate: "",
-        appointmentTime: "",
-        saleProduct: "",
-        saleAmount: "",
-        saleDate: new Date().toISOString().split('T')[0],
-        saleNotes: "",
-      };
+    if (isOpen && !hasInitializedRef.current) {
+      try {
+        // Mark as initialized to prevent further resets
+        hasInitializedRef.current = true;
 
-      form.reset(formData);
+        // Check if there's an appointment in the initial contact
+        const hasAppointment = initialContact?.appointment ? true : false;
+        const currentStatus = initialContact?.status || "not_visited";
+
+      // Initialize form with all values at once using setValue instead of reset
+      form.setValue("fullName", initialContact?.fullName || "");
+      form.setValue("address", initialContact?.address || "");
+      form.setValue("city", initialContact?.city || "");
+      form.setValue("state", initialContact?.state || "");
+      form.setValue("zipCode", initialContact?.zipCode || "");
+      form.setValue("phone", initialContact?.phone || "");
+      form.setValue("email", initialContact?.email || "");
+      form.setValue("status", currentStatus);
+      form.setValue("notes", initialContact?.notes || "");
+      form.setValue("scheduleFollowUp", hasAppointment);
+
+      // Only set appointment fields if there's an appointment
+      if (hasAppointment && initialContact?.appointment) {
+        const appointmentParts = initialContact.appointment.split(" ");
+        if (appointmentParts.length >= 2) {
+          form.setValue("appointmentDate", appointmentParts[0]);
+          form.setValue("appointmentTime", appointmentParts[1]);
+        }
+      }
+
+      // Set default sale date for all forms
+      form.setValue("saleDate", new Date().toISOString().split('T')[0]);
 
       // Set visibility flags
-      setShowSaleFields(formData.status === "sold");
-      setShowAppointmentFields(false);
+        setShowSaleFields(currentStatus === "sold");
+        setShowAppointmentFields(hasAppointment);
 
-      console.log("Contact form initialized with:", formData);
+        console.log("Dialog opened with status:", currentStatus, 
+          "- Has appointment:", hasAppointment,
+          "- Shows sale fields:", currentStatus === "sold");
+      } catch (error) {
+        console.error("Error initializing contact form:", error);
+        toast({
+          title: "Form initialization error",
+          description: "There was an issue loading the contact form. Please try again.",
+          variant: "destructive",
+        });
+        onClose();
+      }
     }
-  }, [isOpen, initialContact, form]);
+
+    // Reset the initialization flag when the dialog closes
+    if (!isOpen) {
+      hasInitializedRef.current = false;
+    }
+  }, [isOpen, initialContact, form, toast, onClose]);
 
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
 
-  // Create/Update contact mutation
-  const saveContact = useMutation({
-    mutationFn: async (contactData: any) => {
-      const url = isEditMode && initialContact?.id 
-        ? `/api/contacts/${initialContact.id}` 
-        : '/api/contacts';
-
-      const method = isEditMode ? 'PATCH' : 'POST';
-
-      const response = await apiRequest(method, url, contactData);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} contact: ${errorText}`);
-      }
+  // Create contact mutation
+  const createContactMutation = useMutation({
+    mutationFn: async (data: InsertContact) => {
+      // Go back to using the apiRequest utility which handles auth properly
+      // Add our custom submission flag to the data itself since we can't add custom headers
+      const response = await apiRequest("POST", "/api/contacts", {
+        ...data,
+        isContactFormSubmission: true
+      });
 
       return response.json();
     },
     onSuccess: (newContact) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      if (isEditMode && initialContact?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/contacts/${initialContact.id}`] });
-      }
+      form.reset();
 
       toast({
         title: "Success",
-        description: `Contact has been ${isEditMode ? 'updated' : 'created'} successfully`,
+        description: "Contact has been created successfully",
       });
 
       if (onSuccess) {
@@ -209,13 +229,13 @@ function ContactForm({
       onClose();
     },
     onError: (error) => {
-      console.error("Error saving contact:", error);
+      console.error("Error creating contact:", error);
       toast({
         title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'create'} contact. Please try again.`,
+        description: "Failed to create contact. Please try again.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   // Update contact mutation
@@ -314,10 +334,6 @@ function ContactForm({
         email: formData.email || null,
         status: formData.status,
         notes: formData.notes || null,
-        // Include appointment information in ContactData format
-        appointment: formData.scheduleFollowUp
-          ? `${formData.appointmentDate} ${formData.appointmentTime}`
-          : undefined,
       };
 
       // Add appointment data if checkbox is checked and fields are filled
@@ -463,7 +479,7 @@ function ContactForm({
           usingContactForm: true
         };
 
-        saveContact.mutate(contactData as InsertContact, {
+        createContactMutation.mutate(contactFormData as InsertContact, {
           onSuccess: (newContact) => {
             // Create schedule entry if appointment is set
             if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime && newContact.id) {
@@ -536,8 +552,18 @@ function ContactForm({
                   <FormControl>
                     <Input 
                       placeholder="Enter name (required)" 
-                      {...field}
-                      autoFocus
+                      // Do NOT spread field props here as it would override our value
+                      // Don't use explicit value={field.value} - it causes reset conflicts
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      onChange={(e) => {
+                        // Simply pass the event value to field.onChange
+                        field.onChange(e.target.value);
+                      }}
+                      // Ensure the input shows what the user types, not what form.reset sets
+                      defaultValue={field.value || ""}
+                      autoFocus // Automatically focus this field for better UX
                     />
                   </FormControl>
                   <FormMessage />
@@ -901,9 +927,9 @@ function ContactForm({
                 Cancel
               </Button>
               <Button type="submit">
-                {saveContact.isPending 
-                  ? (isEditMode ? "Updating..." : "Adding...") 
-                  : (isEditMode ? "Update Contact" : "Add Contact")}
+                {createContactMutation.isPending || updateContactMutation.isPending
+                  ? "Saving..."
+                  : isEditMode ? "Update Contact" : "Add Contact"}
               </Button>
             </DialogFooter>
           </form>
@@ -912,7 +938,3 @@ function ContactForm({
     </Dialog>
   );
 }
-
-// Export both named and default to support different import patterns  
-export { ContactForm };
-export default ContactForm;
