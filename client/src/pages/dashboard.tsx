@@ -370,6 +370,8 @@ export default function Dashboard() {
         case "contacts":
           return (
             <div key="contacts" className="mb-6" data-tour="recent-contacts">
+              {/* Hidden anchor point for scroll navigation */}
+              <div id="below-map-anchor" className="scroll-anchor"></div>
               <ContactList 
                 title={widgetLabels["contacts"] || DASHBOARD_WIDGET_LABELS["contacts"]} 
               />

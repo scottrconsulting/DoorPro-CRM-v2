@@ -837,8 +837,17 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
   return (
     <div className="relative w-full h-full">
-      {/* Scroll Down Button - Above the map, centered horizontally */}
-      <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-[1000]">
+      {/* Scroll Navigation Buttons - Positioned after the map container */}
+      <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-[1000] flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
+          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
+        >
+          <ChevronUp className="h-4 w-4 mr-1" />
+          Scroll Above
+        </Button>
         <Button
           variant="outline"
           size="sm"
