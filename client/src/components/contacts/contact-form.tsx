@@ -151,37 +151,43 @@ export default function ContactForm({
         const hasAppointment = initialContact?.appointment ? true : false;
         const currentStatus = initialContact?.status || "not_visited";
 
-      // Initialize form with all values at once using setValue instead of reset
-      form.setValue("fullName", initialContact?.fullName || "");
-      form.setValue("address", initialContact?.address || "");
-      form.setValue("city", initialContact?.city || "");
-      form.setValue("state", initialContact?.state || "");
-      form.setValue("zipCode", initialContact?.zipCode || "");
-      form.setValue("phone", initialContact?.phone || "");
-      form.setValue("email", initialContact?.email || "");
-      form.setValue("status", currentStatus);
-      form.setValue("notes", initialContact?.notes || "");
-      form.setValue("scheduleFollowUp", hasAppointment);
+        // Reset form to clean state first
+        form.reset({
+          fullName: initialContact?.fullName || "",
+          address: initialContact?.address || "",
+          city: initialContact?.city || "",
+          state: initialContact?.state || "",
+          zipCode: initialContact?.zipCode || "",
+          phone: initialContact?.phone || "",
+          email: initialContact?.email || "",
+          status: currentStatus,
+          notes: initialContact?.notes || "",
+          scheduleFollowUp: hasAppointment,
+          appointmentTitle: "",
+          appointmentDate: "",
+          appointmentTime: "",
+          saleProduct: "",
+          saleAmount: "",
+          saleDate: new Date().toISOString().split('T')[0],
+          saleNotes: "",
+        });
 
-      // Only set appointment fields if there's an appointment
-      if (hasAppointment && initialContact?.appointment) {
-        const appointmentParts = initialContact.appointment.split(" ");
-        if (appointmentParts.length >= 2) {
-          form.setValue("appointmentDate", appointmentParts[0]);
-          form.setValue("appointmentTime", appointmentParts[1]);
+        // Only set appointment fields if there's an appointment
+        if (hasAppointment && initialContact?.appointment) {
+          const appointmentParts = initialContact.appointment.split(" ");
+          if (appointmentParts.length >= 2) {
+            form.setValue("appointmentDate", appointmentParts[0]);
+            form.setValue("appointmentTime", appointmentParts[1]);
+          }
         }
-      }
 
-      // Set default sale date for all forms
-      form.setValue("saleDate", new Date().toISOString().split('T')[0]);
-
-      // Set visibility flags
+        // Set visibility flags
         setShowSaleFields(currentStatus === "sold");
         setShowAppointmentFields(hasAppointment);
 
-        console.log("Dialog opened with status:", currentStatus, 
-          "- Has appointment:", hasAppointment,
-          "- Shows sale fields:", currentStatus === "sold");
+        console.log("Map pin contact form opened with status:", currentStatus, 
+          "- Should show appointment fields:", hasAppointment,
+          "- Should show sale fields:", currentStatus === "sold");
       } catch (error) {
         console.error("Error initializing contact form:", error);
         toast({

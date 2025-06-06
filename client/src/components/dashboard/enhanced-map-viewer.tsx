@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,7 +31,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // Map and UI state
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -40,7 +39,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLegend, setShowLegend] = useState(true);
-  
+
   // Contact and interaction state
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -51,7 +50,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [newContactAddress, setNewContactAddress] = useState("");
   const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [clickedLocation, setClickedLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+
   // Location and timing state
   const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
   const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
@@ -78,7 +79,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     const initMap = async () => {
       try {
         const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
-        
+
         const mapInstance = new Map(mapRef.current!, {
           zoom: 13,
           center: { lat: 40.7128, lng: -74.0060 }, // Default to NYC
@@ -126,21 +127,21 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         // Geocode the coordinates to get address
         const geocoder = new google.maps.Geocoder();
         const result = await geocoder.geocode({ location: { lat, lng } });
-        
+
         if (result.results && result.results.length > 0) {
           const address = result.results[0].formatted_address;
-          
+
           // Set up for new contact creation
           setNewContactAddress(address);
           setNewContactCoords({ lat, lng });
           setShowNewContactDialog(true);
           setIsAddingHouse(false);
-          
+
           // Clear any existing new house marker
           if (newHouseMarker) {
             newHouseMarker.setMap(null);
           }
-          
+
         } else {
           toast({
             title: "Address not found",
@@ -182,14 +183,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           };
-          
+
           mapInstance.setCenter(pos);
-          
+
           // Add user location marker
           if (userMarker) {
             userMarker.setMap(null);
           }
-          
+
           const marker = new google.maps.Marker({
             position: pos,
             map: mapInstance,
@@ -199,7 +200,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               scaledSize: new google.maps.Size(20, 20),
             }
           });
-          
+
           setUserMarker(marker);
         },
         () => {
@@ -216,7 +217,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     try {
       const geocoder = new google.maps.Geocoder();
       const result = await geocoder.geocode({ address: searchQuery });
-      
+
       if (result.results && result.results.length > 0) {
         const location = result.results[0].geometry.location;
         map.setCenter(location);
@@ -247,7 +248,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     contacts.forEach((contact) => {
       if (contact.latitude && contact.longitude) {
         const statusColor = getStatusColor(contact.status as ContactStatus);
-        
+
         const marker = new google.maps.Marker({
           position: { lat: contact.latitude, lng: contact.longitude },
           map,
@@ -274,6 +275,57 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       getCurrentLocation(map);
     }
   }, [map, getCurrentLocation]);
+
+  // New map click handler
+  const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng || !map) return;
+
+    const clickTime = Date.now();
+    const isLongPress = mouseDownTime && (clickTime - mouseDownTime) > 500;
+
+    if (isLongPress || isAddingHouse) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+
+      try {
+        // Geocode the coordinates to get address
+        const geocoder = new google.maps.Geocoder();
+        const result = await geocoder.geocode({ location: { lat, lng } });
+
+        if (result.results && result.results.length > 0) {
+          const address = result.results[0].formatted_address;
+
+          // Set up for new contact creation
+          setNewContactAddress(address);
+          setNewContactCoords({ lat, lng });
+          setShowNewContactDialog(true);
+          setIsAddingHouse(false);
+
+          // Clear any existing new house marker
+          if (newHouseMarker) {
+            newHouseMarker.setMap(null);
+          }
+
+        } else {
+          toast({
+            title: "Address not found",
+            description: "Could not find address for this location",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        toast({
+          title: "Error",
+          description: "Could not get address for this location",
+          variant: "destructive"
+        });
+      }
+    }
+
+    setMouseDownTime(null);
+    setMouseUpTime(clickTime);
+  }, [mouseDownTime, isAddingHouse, map, newHouseMarker, toast]);
 
   return (
     <div className="relative w-full h-full">
@@ -347,7 +399,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           >
             My Location
           </Button>
-          
+
           <Button
             variant={isAddingHouse ? "default" : "outline"}
             size="sm"
@@ -392,48 +444,28 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         </div>
       )}
 
-      {/* Contact Form Dialog for Adding New Contacts */}
-      {showNewContactDialog && newContactCoords && (
-        <ContactForm
-          isOpen={showNewContactDialog}
-          onClose={() => {
-            setShowNewContactDialog(false);
-            setNewContactAddress("");
-            setNewContactCoords(null);
-            if (newHouseMarker) {
-              newHouseMarker.setMap(null);
-              setNewHouseMarker(null);
-            }
-          }}
-          onSuccess={() => {
-            setShowNewContactDialog(false);
-            setNewContactAddress("");
-            setNewContactCoords(null);
-            if (newHouseMarker) {
-              newHouseMarker.setMap(null);
-              setNewHouseMarker(null);
-            }
-            refetchContacts();
-            toast({
-              title: "Contact added",
-              description: "Contact has been successfully added to the map",
-            });
-          }}
-          initialContact={{
-            name: "",
-            address: newContactAddress,
-            latitude: newContactCoords.lat,
-            longitude: newContactCoords.lng,
-            status: activeStatus,
-            notes: "",
-            phone: "",
-            email: "",
-          }}
-        />
-      )}
+      {/* Contact Form for adding new contacts */}
+      <ContactForm
+        isOpen={isContactFormOpen}
+        onClose={() => {
+          setIsContactFormOpen(false);
+          setClickedLocation(null);
+        }}
+        onSuccess={(newContact) => {
+          setIsContactFormOpen(false);
+          setClickedLocation(null);
+          setIsAddingHouse(false);
+          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+        }}
+        initialContact={clickedLocation ? {
+          address: clickedLocation.address || `${clickedLocation.lat.toFixed(6)}, ${clickedLocation.lng.toFixed(6)}`,
+          latitude: clickedLocation.lat.toString(),
+          longitude: clickedLocation.lng.toString(),
+        } : undefined}
+      />
 
-      {/* Contact Card for Editing Existing Contacts */}
-      {selectedContact && showContactCard && (
+      {/* Contact Card for viewing/editing existing contacts */}
+      {selectedContact && (
         <ContactCard
           contactId={selectedContact.id}
           isOpen={showContactCard}
