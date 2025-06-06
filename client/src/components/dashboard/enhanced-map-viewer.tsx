@@ -616,3 +616,10 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         setIsProcessingClick(false);
       }, 500);
     });
+
+    // Return cleanup function
+    return () => {
+      mouseDownListener.remove();
+      clickListener.remove();
+    };
+  }, [map, isLoaded, activeStatus, createContactMutation, toast, user, customization]);
