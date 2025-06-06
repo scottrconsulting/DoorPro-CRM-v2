@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ContactForm } from "@/components/contacts/contact-form";
+import ContactForm from "@/components/contacts/contact-form";
 import { ContactCard } from "@/components/contacts/contact-card";
 import { CustomTour } from "@/components/tour/custom-tour";
 import { customMapTourSteps } from "@/tours/custom-map-tour-steps";

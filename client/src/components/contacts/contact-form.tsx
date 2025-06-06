@@ -113,26 +113,22 @@ export default function ContactForm({
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      // Always use initialContact values or empty strings to prevent data persistence
-      fullName: initialContact?.fullName || "",
-      address: initialContact?.address || "",
-      city: initialContact?.city || "",
-      state: initialContact?.state || "",
-      zipCode: initialContact?.zipCode || "",
-      phone: initialContact?.phone || "",
-      email: initialContact?.email || "",
-      status: initialContact?.status || "not_visited",
-      notes: initialContact?.notes || "",
-      // Add scheduling checkbox
+      fullName: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      phone: "",
+      email: "",
+      status: "not_visited",
+      notes: "",
       scheduleFollowUp: false,
-      // Add appointment fields with default empty values
       appointmentTitle: "",
       appointmentDate: "",
       appointmentTime: "",
-      // Add sale fields with default empty values
       saleProduct: "",
       saleAmount: "",
-      saleDate: new Date().toISOString().split('T')[0], // Default to today
+      saleDate: new Date().toISOString().split('T')[0],
       saleNotes: "",
     },
   });
@@ -140,77 +136,46 @@ export default function ContactForm({
   // Add a ref to track initialization state
   const hasInitializedRef = useRef(false);
 
-  // Only update conditional fields visibility when dialog opens - just once
+  // Initialize form when dialog opens
   useEffect(() => {
-    if (isOpen && !hasInitializedRef.current) {
-      try {
-        // Mark as initialized to prevent further resets
-        hasInitializedRef.current = true;
+    if (isOpen) {
+      // Reset form with initial data
+      const formData = {
+        fullName: initialContact?.fullName || "",
+        address: initialContact?.address || "",
+        city: initialContact?.city || "",
+        state: initialContact?.state || "",
+        zipCode: initialContact?.zipCode || "",
+        phone: initialContact?.phone || "",
+        email: initialContact?.email || "",
+        status: initialContact?.status || "not_visited",
+        notes: initialContact?.notes || "",
+        scheduleFollowUp: false,
+        appointmentTitle: "",
+        appointmentDate: "",
+        appointmentTime: "",
+        saleProduct: "",
+        saleAmount: "",
+        saleDate: new Date().toISOString().split('T')[0],
+        saleNotes: "",
+      };
 
-        // Check if there's an appointment in the initial contact
-        const hasAppointment = initialContact?.appointment ? true : false;
-        const currentStatus = initialContact?.status || "not_visited";
+      form.reset(formData);
 
-        // Reset form to clean state first
-        form.reset({
-          fullName: initialContact?.fullName || "",
-          address: initialContact?.address || "",
-          city: initialContact?.city || "",
-          state: initialContact?.state || "",
-          zipCode: initialContact?.zipCode || "",
-          phone: initialContact?.phone || "",
-          email: initialContact?.email || "",
-          status: currentStatus,
-          notes: initialContact?.notes || "",
-          scheduleFollowUp: hasAppointment,
-          appointmentTitle: "",
-          appointmentDate: "",
-          appointmentTime: "",
-          saleProduct: "",
-          saleAmount: "",
-          saleDate: new Date().toISOString().split('T')[0],
-          saleNotes: "",
-        });
+      // Set visibility flags
+      setShowSaleFields(formData.status === "sold");
+      setShowAppointmentFields(false);
 
-        // Only set appointment fields if there's an appointment
-        if (hasAppointment && initialContact?.appointment) {
-          const appointmentParts = initialContact.appointment.split(" ");
-          if (appointmentParts.length >= 2) {
-            form.setValue("appointmentDate", appointmentParts[0]);
-            form.setValue("appointmentTime", appointmentParts[1]);
-          }
-        }
-
-        // Set visibility flags
-        setShowSaleFields(currentStatus === "sold");
-        setShowAppointmentFields(hasAppointment);
-
-        console.log("Map pin contact form opened with status:", currentStatus, 
-          "- Should show appointment fields:", hasAppointment,
-          "- Should show sale fields:", currentStatus === "sold");
-      } catch (error) {
-        console.error("Error initializing contact form:", error);
-        toast({
-          title: "Form initialization error",
-          description: "There was an issue loading the contact form. Please try again.",
-          variant: "destructive",
-        });
-        onClose();
-      }
+      console.log("Contact form initialized with:", formData);
     }
-
-    // Reset the initialization flag when the dialog closes
-    if (!isOpen) {
-      hasInitializedRef.current = false;
-    }
-  }, [isOpen, initialContact, form, toast, onClose]);
+  }, [isOpen, initialContact, form]);
 
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
 
   // Create/Update contact mutation
   const saveContact = useMutation({
-    mutationFn: async (contactData: Partial<Contact>) => {
+    mutationFn: async (contactData: any) => {
       const url = isEditMode && initialContact?.id 
         ? `/api/contacts/${initialContact.id}` 
         : '/api/contacts';
@@ -220,7 +185,8 @@ export default function ContactForm({
       const response = await apiRequest(method, url, contactData);
 
       if (!response.ok) {
-        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} contact`);
+        const errorText = await response.text();
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} contact: ${errorText}`);
       }
 
       return response.json();
@@ -231,11 +197,9 @@ export default function ContactForm({
         queryClient.invalidateQueries({ queryKey: [`/api/contacts/${initialContact.id}`] });
       }
 
-      form.reset();
-
       toast({
         title: "Success",
-        description: "Contact has been created successfully",
+        description: `Contact has been ${isEditMode ? 'updated' : 'created'} successfully`,
       });
 
       if (onSuccess) {
@@ -245,10 +209,10 @@ export default function ContactForm({
       onClose();
     },
     onError: (error) => {
-      console.error("Error creating contact:", error);
+      console.error("Error saving contact:", error);
       toast({
         title: "Error",
-        description: "Failed to create contact. Please try again.",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} contact. Please try again.`,
         variant: "destructive",
       });
     }
@@ -572,18 +536,8 @@ export default function ContactForm({
                   <FormControl>
                     <Input 
                       placeholder="Enter name (required)" 
-                      // Do NOT spread field props here as it would override our value
-                      // Don't use explicit value={field.value} - it causes reset conflicts
-                      name={field.name}
-                      ref={field.ref}
-                      onBlur={field.onBlur}
-                      onChange={(e) => {
-                        // Simply pass the event value to field.onChange
-                        field.onChange(e.target.value);
-                      }}
-                      // Ensure the input shows what the user types, not what form.reset sets
-                      defaultValue={field.value || ""}
-                      autoFocus // Automatically focus this field for better UX
+                      {...field}
+                      autoFocus
                     />
                   </FormControl>
                   <FormMessage />
