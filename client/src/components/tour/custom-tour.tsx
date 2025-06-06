@@ -29,7 +29,7 @@ function CustomTourComponent({
   onClose,
   showCloseButton = true,
   showDoneButton = true
-}: CustomTourProps) => {
+}: CustomTourProps) {
   // Use either isOpen or open, to keep backward compatibility
   const isDialogOpen = isOpen !== undefined ? isOpen : (open !== undefined ? open : false);
 

@@ -1030,5 +1030,6 @@ function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
   );
 }
 
-export default ContactCard;
+// Export both named and default to support all import patterns
 export { ContactCard };
+export default ContactCard;
