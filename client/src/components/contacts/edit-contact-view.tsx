@@ -76,6 +76,7 @@ interface EditContactViewProps {
   onCancel: () => void;
   onSuccess?: (contact: Contact) => void;
   onClose?: () => void;
+  isEditMode?: boolean;
 }
 
 export default function EditContactView({
@@ -84,7 +85,8 @@ export default function EditContactView({
   open,
   onCancel,
   onSuccess,
-  onClose
+  onClose,
+  isEditMode = false
 }: EditContactViewProps) {
   const { toast } = useToast();
 
@@ -173,6 +175,9 @@ export default function EditContactView({
       if (onSuccess) {
         onSuccess(data);
       }
+
+      // Close the modal after successful update
+      onCancel();
     },
     onError: (error) => {
       toast({
@@ -274,21 +279,15 @@ export default function EditContactView({
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center justify-between">
-              <span>Update Contact</span>
-              <Button variant="ghost" size="icon" onClick={onCancel}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-        <Card className="border-none shadow-none">
-          <CardContent className="px-0 space-y-4">
+  // Render form content directly when used as modal in ContactCard
+  const formContent = (
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Update Contact</h3>
+        <Button variant="ghost" size="icon" onClick={onCancel}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name fields */}
               <div className="space-y-4">
@@ -520,6 +519,24 @@ export default function EditContactView({
                 </Button>
               </div>
             </form>
+    </div>
+  );
+
+  // If used in edit mode (from ContactCard), return form content directly
+  if (isEditMode) {
+    return formContent;
+  }
+
+  // Otherwise, wrap in Dialog for standalone usage
+  return (
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Update Contact</DialogTitle>
+        </DialogHeader>
+        <Card className="border-none shadow-none">
+          <CardContent className="px-0">
+            {formContent}
           </CardContent>
         </Card>
       </DialogContent>

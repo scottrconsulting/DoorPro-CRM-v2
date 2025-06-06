@@ -991,15 +991,18 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
       </Dialog>
 
       {/* Edit Contact Form */}
-      {contact && (
-        <EditContactView
-          initialContact={contact}
-          isOpen={showEditForm}
-          onClose={() => setShowEditForm(false)}
-          onCancel={() => setShowEditForm(false)}
-          onSuccess={handleEditSuccess}
-          isEditMode={true}
-        />
+      {contact && showEditForm && (
+        <Dialog open={showEditForm} onOpenChange={(open) => !open && setShowEditForm(false)}>
+          <DialogContent className="sm:max-w-[500px]">
+            <EditContactView
+              initialContact={contact}
+              open={showEditForm}
+              onCancel={() => setShowEditForm(false)}
+              onSuccess={handleEditSuccess}
+              isEditMode={true}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Delete Confirmation Dialog */}
