@@ -131,10 +131,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         if (result.results && result.results.length > 0) {
           const address = result.results[0].formatted_address;
 
-          // Set up for new contact creation
-          setNewContactAddress(address);
-          setNewContactCoords({ lat, lng });
-          setShowNewContactDialog(true);
+          // Open ContactForm directly
+          setClickedLocation({ lat, lng, address });
+          setIsContactFormOpen(true);
           setIsAddingHouse(false);
 
           // Clear any existing new house marker
@@ -276,56 +275,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     }
   }, [map, getCurrentLocation]);
 
-  // New map click handler
-  const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng || !map) return;
-
-    const clickTime = Date.now();
-    const isLongPress = mouseDownTime && (clickTime - mouseDownTime) > 500;
-
-    if (isLongPress || isAddingHouse) {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-
-      try {
-        // Geocode the coordinates to get address
-        const geocoder = new google.maps.Geocoder();
-        const result = await geocoder.geocode({ location: { lat, lng } });
-
-        if (result.results && result.results.length > 0) {
-          const address = result.results[0].formatted_address;
-
-          // Set up for new contact creation
-          setNewContactAddress(address);
-          setNewContactCoords({ lat, lng });
-          setShowNewContactDialog(true);
-          setIsAddingHouse(false);
-
-          // Clear any existing new house marker
-          if (newHouseMarker) {
-            newHouseMarker.setMap(null);
-          }
-
-        } else {
-          toast({
-            title: "Address not found",
-            description: "Could not find address for this location",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error);
-        toast({
-          title: "Error",
-          description: "Could not get address for this location",
-          variant: "destructive"
-        });
-      }
-    }
-
-    setMouseDownTime(null);
-    setMouseUpTime(clickTime);
-  }, [mouseDownTime, isAddingHouse, map, newHouseMarker, toast]);
+  
 
   return (
     <div className="relative w-full h-full">
