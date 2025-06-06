@@ -428,132 +428,178 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     // Handle click with hold detection
     const clickListener = map.addListener("click", async (e: any) => {
       if (!e.latLng) return;
-      setMouseUpTime(Date.now());
+      
+      const clickEndTime = Date.now();
+      setMouseUpTime(clickEndTime);
 
       // Calculate click duration
-      const clickDuration = mouseDownTime ? Date.now() - mouseDownTime : 0;
+      const clickDuration = mouseDownTime ? clickEndTime - mouseDownTime : 0;
       const isLongClick = clickDuration > 500; // 500ms threshold for long press
 
-      // Create a marker at the clicked location with the current active status
-      const marker = addMarker(e.latLng.toJSON(), {
-        title: "New Contact",
-        draggable: true,
-        animation: window.google.maps.Animation.DROP,
-        icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
-      });
+      console.log("Map click detected - Duration:", clickDuration, "ms, IsLongClick:", isLongClick);
 
-      setNewHouseMarker(marker);
-      setIsAddingHouse(true); // Auto-enable adding mode
-
-      // Get the address from the coordinates
+      // Get the address from the coordinates first
       const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location: e.latLng.toJSON() }, (
-        results: any, 
-        status: any
-      ) => {
-        if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
-          const address = results[0].formatted_address;
-          setNewContactAddress(address);
-          setNewContactCoords(e.latLng.toJSON());
+      
+      try {
+        const geocodePromise = new Promise((resolve, reject) => {
+          geocoder.geocode({ location: e.latLng.toJSON() }, (results: any, status: any) => {
+            if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+              resolve(results[0]);
+            } else {
+              reject(new Error("Geocoding failed"));
+            }
+          });
+        });
 
-          // Extract address components for all contact creation paths
-          const streetNumber = results[0].address_components.find((c: any) => 
-            c.types.includes('street_number'))?.short_name || '';
-          const street = results[0].address_components.find((c: any) => 
-            c.types.includes('route'))?.short_name || '';
-          const city = results[0].address_components.find((c: any) => 
-            c.types.includes('locality'))?.short_name || '';
-          const state = results[0].address_components.find((c: any) => 
-            c.types.includes('administrative_area_level_1'))?.short_name || '';
-          const zipCode = results[0].address_components.find((c: any) => 
-            c.types.includes('postal_code'))?.short_name || '';
+        const result: any = await geocodePromise;
+        const address = result.formatted_address;
+        
+        // Extract address components
+        const streetNumber = result.address_components.find((c: any) => 
+          c.types.includes('street_number'))?.short_name || '';
+        const street = result.address_components.find((c: any) => 
+          c.types.includes('route'))?.short_name || '';
+        const city = result.address_components.find((c: any) => 
+          c.types.includes('locality'))?.short_name || '';
+        const state = result.address_components.find((c: any) => 
+          c.types.includes('administrative_area_level_1'))?.short_name || '';
+        const zipCode = result.address_components.find((c: any) => 
+          c.types.includes('postal_code'))?.short_name || '';
 
-          const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+        const autoName = streetNumber && street ? `${streetNumber} ${street}` : 'New Contact';
+        const coords = e.latLng.toJSON();
 
-          // Start work timer when first contact is added (if not already started)
-          if (!firstHouseRecordedRef.current) {
-            firstHouseRecordedRef.current = true;
-            timerActiveRef.current = true;
-
-            // Add first session to the sessions list
-            sessionsRef.current.push({
-              startTime: new Date().toISOString(),
-              duration: 0
-            });
-
-            // Toast notification removed per user request
-            // No notification will be shown
-          }
-
-          // Different behavior based on click duration
-          if (isLongClick) {
-            // Long press - show detailed contact form
-            const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
-
-            setNewContactForm(prev => ({
-              ...prev,
-              // Don't pre-fill the name at all - let user enter it themselves
-              fullName: "", 
-              address: address,
-              city: city,
-              state: state,
-              zipCode: zipCode,
-              status: activeStatus,
-              latitude: e.latLng.lat().toString(),
-              longitude: e.latLng.lng().toString(),
-            }));
-
-            // Set the scheduling fields visibility state first
-            setShowSchedulingFields(isAppointmentStatus);
-
-            // Show the form dialog for long press
-            setShowNewContactDialog(true);
-
-            // Log for debugging
-            console.log("Map pin contact form opened with status:", activeStatus, "- Should show appointment fields:", isAppointmentStatus);
-
-            // Toast notification removed per user request
-            // No notification will be shown
-          } else {
-            // Quick click - just add the contact with minimal info
-            createContactMutation.mutate({
-              userId: user?.id || 0,
-              fullName: autoName,
-              address: address,
-              city: city,
-              state: state,
-              zipCode: zipCode,
-              status: activeStatus,
-              latitude: e.latLng.lat().toString(),
-              longitude: e.latLng.lng().toString(),
-              notes: `Quick add: ${new Date().toLocaleString()}`
-            }, {
-              onSuccess: () => {
-                // Make sure to reset the form state after quick add too
-                setNewContactForm({
-                  fullName: "", // Critical: reset name to prevent persistence
-                  address: "",
-                  phone: "",
-                  email: "",
-                  city: "",
-                  state: "",
-                  zipCode: "",
-                  status: activeStatus, 
-                  notes: "",
-                  appointment: "",
-                });
-              }
-            });
-
-            // Toast notification removed per user request
-            // No notification will be shown
-          }
-        } else {
-          // Could not get the address
-          // Toast notification removed per user request
-          // No notification will be shown
+        // Start work timer when first contact is added (if not already started)
+        if (!firstHouseRecordedRef.current) {
+          firstHouseRecordedRef.current = true;
+          timerActiveRef.current = true;
+          sessionsRef.current.push({
+            startTime: new Date().toISOString(),
+            duration: 0
+          });
         }
-      });
+
+        if (isLongClick) {
+          // Long press - show detailed contact form
+          console.log("Long press detected - showing contact form");
+          
+          // Create a marker at the clicked location
+          const marker = addMarker(coords, {
+            title: "New Contact",
+            draggable: true,
+            animation: window.google.maps.Animation.DROP,
+            icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
+          });
+
+          // Store marker and coordinates
+          setNewHouseMarker(marker);
+          setNewContactAddress(address);
+          setNewContactCoords(coords);
+          setIsAddingHouse(true);
+
+          const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
+
+          // Prepare the contact form data
+          const formData = {
+            fullName: "", // Don't pre-fill name
+            address: address,
+            city: city,
+            state: state,
+            zipCode: zipCode,
+            phone: "",
+            email: "",
+            status: activeStatus,
+            notes: "",
+            appointment: "",
+            latitude: coords.lat.toString(),
+            longitude: coords.lng.toString(),
+          };
+
+          // Set form data and show dialog
+          setNewContactForm(formData);
+          setShowSchedulingFields(isAppointmentStatus);
+          
+          // Use a small delay to ensure state is properly set before opening dialog
+          setTimeout(() => {
+            setShowNewContactDialog(true);
+            console.log("Contact form dialog opened for long press");
+          }, 50);
+
+        } else {
+          // Quick click - just add the contact with minimal info
+          console.log("Quick click detected - creating contact directly");
+          
+          createContactMutation.mutate({
+            userId: user?.id || 0,
+            fullName: autoName,
+            address: address,
+            city: city,
+            state: state,
+            zipCode: zipCode,
+            status: activeStatus,
+            latitude: coords.lat.toString(),
+            longitude: coords.lng.toString(),
+            notes: `Quick add: ${new Date().toLocaleString()}`
+          }, {
+            onSuccess: () => {
+              // Reset form state after quick add
+              setNewContactForm({
+                fullName: "",
+                address: "",
+                phone: "",
+                email: "",
+                city: "",
+                state: "",
+                zipCode: "",
+                status: activeStatus, 
+                notes: "",
+                appointment: "",
+              });
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error("Error geocoding address:", error);
+        // For failed geocoding, still allow contact creation with coordinates only
+        const coords = e.latLng.toJSON();
+        
+        if (isLongClick) {
+          // Create marker and show form even without address
+          const marker = addMarker(coords, {
+            title: "New Contact",
+            draggable: true,
+            animation: window.google.maps.Animation.DROP,
+            icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
+          });
+
+          setNewHouseMarker(marker);
+          setNewContactAddress("Address unavailable");
+          setNewContactCoords(coords);
+          setIsAddingHouse(true);
+
+          const formData = {
+            fullName: "",
+            address: "Address unavailable",
+            city: "",
+            state: "",
+            zipCode: "",
+            phone: "",
+            email: "",
+            status: activeStatus,
+            notes: "",
+            appointment: "",
+            latitude: coords.lat.toString(),
+            longitude: coords.lng.toString(),
+          };
+
+          setNewContactForm(formData);
+          setTimeout(() => {
+            setShowNewContactDialog(true);
+          }, 50);
+        }
+      }
     });
 
     return () => {
@@ -561,7 +607,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       window.google.maps.event.removeListener(mouseDownListener);
       window.google.maps.event.removeListener(clickListener);
     };
-  }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, toast, user?.id, createContactMutation]);
+  }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, user?.id, createContactMutation, customization]);
 
 
 
@@ -1091,21 +1137,36 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
       <ContactForm
         isOpen={showNewContactDialog}
         onClose={() => {
-          // Clear the form completely when closing the dialog to prevent conflicts on next open
-          setNewContactForm({
-            fullName: "", // Reset to empty to avoid auto-filling from previous contact
-            address: "",
-            phone: "",
-            email: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            status: activeStatus, // Keep the active status to match selected pin type
-            notes: "",
-            appointment: "", // Clear appointment data
-            // Clear any other fields that might be persisting
-          });
-          setShowNewContactDialog(false);
+          console.log("Contact form dialog closing - cleaning up marker and state");
+          
+          // Only clean up if dialog is actually open to prevent double cleanup
+          if (showNewContactDialog) {
+            // Clear the form completely when closing the dialog
+            setNewContactForm({
+              fullName: "",
+              address: "",
+              phone: "",
+              email: "",
+              city: "",
+              state: "",
+              zipCode: "",
+              status: activeStatus,
+              notes: "",
+              appointment: "",
+            });
+            
+            // Clean up map marker if it exists
+            if (newHouseMarker) {
+              newHouseMarker.setMap(null);
+              setNewHouseMarker(null);
+            }
+            
+            // Reset states
+            setIsAddingHouse(false);
+            setNewContactAddress("");
+            setNewContactCoords(null);
+            setShowNewContactDialog(false);
+          }
         }}
         initialContact={{
           fullName: newContactForm.fullName,
