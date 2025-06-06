@@ -892,7 +892,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           variant="outline"
           size="sm"
           className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
         >
           <ChevronUp className="h-4 w-4 mr-1" />
           Scroll Above
