@@ -497,7 +497,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
           // Prepare the contact form data
           const formData = {
-            fullName: "", // Don't pre-fill name
+            fullName: "",
             address: address,
             city: city,
             state: state,
@@ -511,24 +511,20 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             longitude: coords.lng.toString(),
           };
 
-          // Sequential state updates to prevent race conditions
-          console.log("Setting up contact form with proper sequencing...");
-
-          // Step 1: Set marker and coordinates
+          // Set all state at once to prevent race conditions
+          console.log("Opening contact form with data:", formData);
+          
           setNewHouseMarker(marker);
           setNewContactAddress(address);
           setNewContactCoords(coords);
-
-          // Step 2: Set form data
           setNewContactForm(formData);
           setShowSchedulingFields(isAppointmentStatus);
           setIsAddingHouse(true);
-
-          // Step 3: Open dialog with longer delay to ensure all state is set
-          setTimeout(() => {
-            console.log("Opening contact form dialog...");
+          
+          // Use requestAnimationFrame to ensure DOM updates are complete
+          requestAnimationFrame(() => {
             setShowNewContactDialog(true);
-          }, 150);
+          });
 
         } else {
           // Quick click - just add the contact with minimal info
