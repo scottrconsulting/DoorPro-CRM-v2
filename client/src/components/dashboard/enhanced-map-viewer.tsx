@@ -833,21 +833,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     setShowMapTour(false);
   };
 
-    // Function to scroll to top
-    const scrollToTop = () => {
-      window.scrollTo({
-          top: 0,
-          behavior: 'smooth' // for smooth scrolling
-      });
-    };
-
-    // Function to scroll to bottom
-    const scrollToBottom = () => {
-        window.scrollTo({
-            top: document.documentElement.scrollHeight,
-            behavior: 'smooth' // for smooth scrolling
-        });
-    };
+    
 
   return (
     <div className="relative w-full h-full">
@@ -857,7 +843,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           variant="outline"
           size="sm"
           className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={scrollToBottom}
+          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
         >
           <ChevronDown className="h-4 w-4 mr-1" />
           Scroll Below
@@ -906,7 +892,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           variant="outline"
           size="sm"
           className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={scrollToTop}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <ChevronUp className="h-4 w-4 mr-1" />
           Scroll Above
