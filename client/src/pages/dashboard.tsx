@@ -342,7 +342,7 @@ export default function Dashboard() {
           );
         case "map":
           return (
-              <div key="map" id="map-view" className="mb-12 scroll-anchor" data-tour="map-view">
+              <div key="map" id="map-view" className="mb-20 scroll-anchor" data-tour="map-view">
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
                   <Button 
