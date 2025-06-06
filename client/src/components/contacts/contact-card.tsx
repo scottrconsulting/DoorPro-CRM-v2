@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import EditContactView from "./edit-contact-view";
+import ContactForm from "./contact-form";
 
 interface ContactCardProps {
   contactId: number;
@@ -992,12 +992,11 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
 
       {/* Edit Contact Form */}
       {contact && (
-        <EditContactView
-          initialContact={contact}
+        <ContactForm
           isOpen={showEditForm}
           onClose={() => setShowEditForm(false)}
-          onCancel={() => setShowEditForm(false)}
           onSuccess={handleEditSuccess}
+          initialContact={contact}
           isEditMode={true}
         />
       )}
