@@ -342,56 +342,56 @@ export default function Dashboard() {
           );
         case "map":
           return (
-            <div key="map" id="map-view" className="mb-6 scroll-anchor" data-tour="map-view">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => {
-                    // Use the global function exposed from the EnhancedMapViewer component
-                    if (typeof window.handleStartMapTour === 'function') {
-                      window.handleStartMapTour();
-                    }
-                  }}
-                  aria-label="Map Help"
-                  className="h-8 w-8"
-                >
-                  <HelpCircle size={20} className="text-muted-foreground" />
-                </Button>
-              </div>
-              <div className="relative">
-                {/* Scroll button to jump below the map - more visible and better positioned */}
-                <button 
-                  onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
-                  className="absolute top-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
-                  aria-label="Scroll below map"
-                >
-                  <span className="material-icons text-sm">arrow_downward</span> 
-                  <span className="hidden sm:inline">Scroll Below</span>
-                </button>
-
-                <div className="rounded-lg h-[500px]">
-                  <EnhancedMapViewer 
-                    onSelectContact={(contactId) => setSelectedContactId(contactId)} 
-                  />
+              <div key="map" id="map-view" className="mb-12 scroll-anchor" data-tour="map-view">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="font-semibold text-xl">{widgetLabels["map"] || DASHBOARD_WIDGET_LABELS["map"]}</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      // Use the global function exposed from the EnhancedMapViewer component
+                      if (typeof window.handleStartMapTour === 'function') {
+                        window.handleStartMapTour();
+                      }
+                    }}
+                    aria-label="Map Help"
+                    className="h-8 w-8"
+                  >
+                    <HelpCircle size={20} className="text-muted-foreground" />
+                  </Button>
                 </div>
+                <div className="relative">
+                  {/* Scroll button to jump below the map - more visible and better positioned */}
+                  <button 
+                    onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
+                    className="absolute top-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
+                    aria-label="Scroll below map"
+                  >
+                    <span className="material-icons text-sm">arrow_downward</span> 
+                    <span className="hidden sm:inline">Scroll Below</span>
+                  </button>
 
-                {/* Anchor for scroll target */}
-                <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
+                  <div className="rounded-lg h-[500px]">
+                    <EnhancedMapViewer 
+                      onSelectContact={(contactId) => setSelectedContactId(contactId)} 
+                    />
+                  </div>
 
-                {/* Scroll button to jump above the map - positioned to not interfere with other controls */}
-                <button 
-                  onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
-                  className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
-                  aria-label="Scroll above map"
-                >
-                  <span className="material-icons text-sm">arrow_upward</span>
-                  <span className="hidden sm:inline">Scroll Above</span>
-                </button>
+                  {/* Anchor for scroll target */}
+                  <div id="below-map-anchor" className="-mt-12 pt-12 invisible"></div>
+
+                  {/* Scroll button to jump above the map - positioned to not interfere with other controls */}
+                  <button 
+                    onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
+                    className="absolute bottom-2 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
+                    aria-label="Scroll above map"
+                  >
+                    <span className="material-icons text-sm">arrow_upward</span>
+                    <span className="hidden sm:inline">Scroll Above</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          );
+            );
         case "contacts":
           return (
             <div key="contacts" className="mb-6" data-tour="recent-contacts">
