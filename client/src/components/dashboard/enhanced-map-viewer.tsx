@@ -89,6 +89,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showLegend, setShowLegend] = useState(true); // For legend toggle
   const [inStreetView, setInStreetView] = useState(false); // Track street view state
+  const [isProcessingClick, setIsProcessingClick] = useState(false); // Add processing flag
 
   // Function to handle contact deletion
   const handleContactDelete = useCallback((contact: Contact) => {
@@ -428,7 +429,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
     // Handle click with hold detection
     const clickListener = map.addListener("click", async (e: any) => {
       if (!e.latLng) return;
-      
+
       const clickEndTime = Date.now();
       setMouseUpTime(clickEndTime);
 
@@ -440,7 +441,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
       // Get the address from the coordinates first
       const geocoder = new window.google.maps.Geocoder();
-      
+
       try {
         const geocodePromise = new Promise((resolve, reject) => {
           geocoder.geocode({ location: e.latLng.toJSON() }, (results: any, status: any) => {
@@ -454,7 +455,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
         const result: any = await geocodePromise;
         const address = result.formatted_address;
-        
+
         // Extract address components
         const streetNumber = result.address_components.find((c: any) => 
           c.types.includes('street_number'))?.short_name || '';
@@ -483,7 +484,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         if (isLongClick) {
           // Long press - show detailed contact form
           console.log("Long press detected - showing contact form");
-          
+
           // Create a marker at the clicked location
           const marker = addMarker(coords, {
             title: "New Contact",
@@ -512,17 +513,17 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
           // Sequential state updates to prevent race conditions
           console.log("Setting up contact form with proper sequencing...");
-          
+
           // Step 1: Set marker and coordinates
           setNewHouseMarker(marker);
           setNewContactAddress(address);
           setNewContactCoords(coords);
-          
+
           // Step 2: Set form data
           setNewContactForm(formData);
           setShowSchedulingFields(isAppointmentStatus);
           setIsAddingHouse(true);
-          
+
           // Step 3: Open dialog with longer delay to ensure all state is set
           setTimeout(() => {
             console.log("Opening contact form dialog...");
@@ -532,7 +533,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         } else {
           // Quick click - just add the contact with minimal info
           console.log("Quick click detected - creating contact directly");
-          
+
           createContactMutation.mutate({
             userId: user?.id || 0,
             fullName: autoName,
@@ -565,9 +566,16 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
 
       } catch (error) {
         console.error("Error geocoding address:", error);
+        toast({
+          title: "Search Error",
+          description: "Error finding this address",
+          variant: "destructive",
+        });
+      } catch (error) {
+        console.error("Error geocoding address:", error);
         // For failed geocoding, still allow contact creation with coordinates only
         const coords = e.latLng.toJSON();
-        
+
         if (isLongClick) {
           // Create marker and show form even without address
           const marker = addMarker(coords, {
@@ -603,687 +611,9 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           }, 50);
         }
       }
+
+      // Always reset processing flag
+      setTimeout(() => {
+        setIsProcessingClick(false);
+      }, 500);
     });
-
-    return () => {
-      // Clean up the listeners when the component unmounts
-      window.google.maps.event.removeListener(mouseDownListener);
-      window.google.maps.event.removeListener(clickListener);
-    };
-  }, [isLoaded, map, addMarker, mouseDownTime, activeStatus, user?.id, createContactMutation, customization]);
-
-
-
-  // Function to silently locate the user without showing toast notifications
-  const locateUserSilently = useCallback(async () => {
-    if (!map) return;
-
-    try {
-      console.log("Silently getting current location...");
-      const position = await getCurrentLocation();
-      console.log("Auto-locate position:", position);
-
-      // Only update marker position without changing map zoom or center
-      // This provides real-time tracking without disrupting the user's map view
-
-      if (userMarker) {
-        // If marker exists, just update its position instead of recreating it
-        // This prevents the flickering effect
-        userMarker.setPosition(position);
-      } else {
-        // Create a special My Location marker only if it doesn't exist yet
-        const newUserMarker = new window.google.maps.Marker({
-          position: position,
-          map: map,
-          icon: {
-            // Create a blue dot like the one in Google Maps mobile app
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: "#4285F4", // Google Maps blue 
-            fillOpacity: 0.8,
-            strokeColor: "#FFFFFF", 
-            strokeWeight: 2,
-            scale: 12 // Not too large, not too small
-          },
-          title: "Your Location",
-          zIndex: 1000 // Ensure it's above other markers
-        });
-
-        // Store the new marker reference
-        setUserMarker(newUserMarker);
-      }
-
-      // Return the position for use by other functions
-      return position;
-    } catch (error) {
-      // Silently handle location errors without showing toasts
-      console.log("Location tracking error (silent):", error);
-      // Don't show error notifications for automatic background tracking
-      return null;
-    }
-  }, [map, userMarker]);
-
-  // Function to center the map on user's location (used on initial load)
-  const centerMapOnUserLocation = useCallback(async () => {
-    if (!map) return;
-
-    try {
-      // Get the user's location
-      const position = await locateUserSilently();
-
-      if (position && !hasLocatedUser.current) {
-        // Center the map on the user's location and set zoom
-        panTo(position);
-        map.setZoom(15);
-
-        // Mark that we've located the user so we don't do it again 
-        // until a new map session
-        hasLocatedUser.current = true;
-
-        console.log("Map automatically centered on user location");
-      }
-    } catch (error) {
-      console.error("Auto-centering map failed:", error);
-      // No notification for automatic centering
-    }
-  }, [map, locateUserSilently, panTo]);
-
-  // Set up real-time location tracking that continuously updates every minute
-  useEffect(() => {
-    if (!isLoaded || !map) return;
-
-    // First, center the map on user's location (automatic)
-    // This simulates clicking the "My Location" button automatically
-    centerMapOnUserLocation();
-
-    // Set up interval for continuous real-time tracking
-    const locationTrackingInterval = setInterval(() => {
-      // Re-request location every minute to keep location current
-      // A longer interval reduces flickering and battery usage
-      locateUserSilently();
-    }, 60000); // 60 seconds in milliseconds
-
-    // Clean up interval when component unmounts
-    return () => {
-      clearInterval(locationTrackingInterval);
-    };
-  }, [isLoaded, map, locateUserSilently, centerMapOnUserLocation]);
-
-  // Update markers when contacts or customization changes
-  useEffect(() => {
-    if (!isLoaded || !map || isLoadingContacts) return;
-
-    // Clear all existing markers before adding new ones
-    clearMarkers();
-
-    // Debug any contact status issues
-    const statusCounts: Record<string, number> = {};
-
-    // Process all contacts and create markers for each one with coordinates
-    contacts.forEach((contact) => {
-      // Skip contacts without coordinates
-      if (!contact.latitude || !contact.longitude) return;
-
-      // Count statuses for debugging
-      statusCounts[contact.status] = (statusCounts[contact.status] || 0) + 1;
-
-      // Parse coordinates
-      const position = {
-        lat: parseFloat(contact.latitude),
-        lng: parseFloat(contact.longitude),
-      };
-
-      // Get the proper marker icon based on status and customization settings
-      // This ensures consistent pin colors for all status types
-      const markerIcon = getMarkerIcon(contact.status, customization?.pinColors, customization?.statusLabels);
-
-      // Create the map marker with the correct icon
-      const marker = addMarker(position, {
-        title: contact.fullName,
-        icon: markerIcon,
-        // Adding animation for better visibility
-        animation: window.google.maps.Animation.DROP
-      });
-
-      if (marker) {
-        // Click handler for all contact types - opens contact details
-        // This has been standardized for all contact status types including call_back
-        marker.addListener("click", () => {
-          // Only trigger if not in adding mode
-          if (!isAddingHouse) {
-            // Set the selected contact for all pin types
-            setSelectedContact(contact);
-            // Call the onSelectContact for all pin types - makes behavior consistent
-            if (onSelectContact) {
-              onSelectContact(contact.id);
-
-              // Toast notification removed per user request
-              // No notification will be shown
-            }
-          }
-        });
-
-        // Long-press handler to show delete option
-        marker.addListener("mousedown", () => {
-          const startTime = Date.now();
-          const longPressTimeout = setTimeout(() => {
-            handleContactDelete(contact);
-          }, 800); // 800ms long-press
-
-          // Clear timeout if mouse is released before threshold
-          marker.addListener("mouseup", () => {
-            const duration = Date.now() - startTime;
-            if (duration < 800) {
-              clearTimeout(longPressTimeout);
-            }
-          });
-        });
-
-        // Right-click handler to show delete option (for desktop)
-        marker.addListener("rightclick", () => {
-          handleContactDelete(contact);
-        });
-      }
-    });
-
-    console.log("Status counts for debugging:", statusCounts);
-
-  }, [contacts, isLoaded, map, clearMarkers, addMarker, isLoadingContacts, onSelectContact, toast, isAddingHouse, customization, handleContactDelete]);
-
-  // Change map type when mapType state changes
-  useEffect(() => {
-    if (isLoaded && map) {
-      // Only exit street view when the button is clicked, not on initial render
-      setGoogleMapType(mapType);
-    }
-  }, [mapType, isLoaded, map, setGoogleMapType]);
-
-  // Monitor street view status changes
-  useEffect(() => {
-    if (!isLoaded || !map) return;
-
-    // Check every 750ms if we're in street view
-    const streetViewInterval = setInterval(() => {
-      const newInStreetViewState = isInStreetView();
-      if (newInStreetViewState !== inStreetView) {
-        setInStreetView(newInStreetViewState);
-      }
-    }, 750);
-
-    return () => clearInterval(streetViewInterval);
-  }, [isLoaded, map, isInStreetView, inStreetView]);
-
-  // Monitor when the dialog opens
-  useEffect(() => {
-    if (showNewContactDialog) {
-      console.log("=== DIALOG OPENED ===");
-      console.log("Map pin contact form opened with status:", newContactForm.status);
-      console.log("Should show appointment fields:", newContactForm.status === "booked" || newContactForm.status === "check_back");
-      console.log("Should show sale fields:", newContactForm.status === "sold");
-      console.log("Form data:", newContactForm);
-      console.log("===================");
-    } else {
-      console.log("=== DIALOG CLOSED ===");
-    }
-  }, [showNewContactDialog, newContactForm.status]);
-
-  // Monitor status changes in the form
-  useEffect(() => {
-    // Show/hide appointment scheduling fields based on status
-    const needsScheduling = 
-      newContactForm.status === "booked" || 
-      newContactForm.status === "check_back";
-
-    const needsSaleFields = newContactForm.status === "sold";
-
-    setShowSchedulingFields(needsScheduling);
-
-    // Clear scheduling fields if not needed
-    if (!needsScheduling) {
-      // Reset appointment fields (will be handled via appointment string in universal form)
-      setNewContactForm(prev => ({
-        ...prev
-        // appointment fields will be handled by the form component
-      }));
-    }
-
-    // If status needs scheduling and we're showing the dialog, ensure we flag the form
-    if ((needsScheduling || needsSaleFields) && showNewContactDialog) {
-      console.log(`Status ${newContactForm.status} requires extra fields, updating form...`);
-    }
-  }, [newContactForm.status, showNewContactDialog]);
-
-  // Update the form status when the active status changes
-  useEffect(() => {
-    setNewContactForm(prev => ({
-      ...prev,
-      status: activeStatus
-    }));
-  }, [activeStatus]);
-
-  // Custom Tour functionality
-  const { endTour } = useTour();
-  const [showMapTour, setShowMapTour] = useState(false);
-
-  // Function to start the map tour
-  const handleStartMapTour = () => {
-    console.log("Map tour button clicked - setting showMapTour to true");
-    setShowMapTour(true);
-    console.log("Current showMapTour state:", showMapTour); // This will show the previous state due to React's async state updates
-  };
-
-  // Expose the handleStartMapTour function to the window object
-  useEffect(() => {
-    window.handleStartMapTour = handleStartMapTour;
-
-    return () => {
-      // Clean up when component unmounts
-      delete window.handleStartMapTour;
-    };
-  }, []);
-
-  // Function to close the map tour
-  const handleCloseMapTour = () => {
-    setShowMapTour(false);
-  };
-
-    
-
-  return (
-    <div className="relative w-full h-full">
-      {/* Scroll Below Button - Positioned above the map */}
-      <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 z-[1000]">
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
-        >
-          <ChevronDown className="h-4 w-4 mr-1" />
-          Scroll Below
-        </Button>
-      </div>
-
-      {/* Scroll Above Button - Positioned below the map */}
-      <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 z-[1000]">
-        <Button
-          variant="outline"
-          size="sm"
-          className="bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white"
-          onClick={() => document.getElementById('dashboard-top')?.scrollIntoView({behavior: 'smooth'})}
-        >
-          <ChevronUp className="h-4 w-4 mr-1" />
-          Scroll Above
-        </Button>
-      </div>
-
-{/* Map Tour Guide is moved to end of component */}
-
-      {/* Map container with improved touch behavior */}
-      <div 
-        ref={mapRef} 
-        className="w-full h-full map-container relative"
-        id="map-container"
-        data-tour="map-container"
-      >
-        {/* Invisible overlays for touch scroll help */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
-        <div className="absolute right-0 top-0 bottom-0 w-6 z-20 touch-pan-y" style={{ pointerEvents: 'auto' }}></div>
-
-        {/* Scroll button to jump below the map - positioned to avoid map controls */}
-        <button 
-          onClick={() => document.getElementById('below-map-anchor')?.scrollIntoView({behavior: 'smooth'})}
-          className="absolute top-20 right-2 z-30 bg-white hover:bg-primary hover:text-white flex items-center gap-1 py-1.5 px-3 rounded-md shadow-md text-sm transition-colors"
-          aria-label="Scroll below map"
-        >
-          <span className="material-icons text-sm">arrow_downward</span> 
-          <span className="hidden sm:inline">Scroll Below</span>
-        </button>
-
-        </div>
-
-      {/* Loading overlay */}
-      {loading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-lg font-semibold">Loading map...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Search Controls and Map Options in a single bar at the top */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex flex-col gap-2">
-        {/* Main search bar and controls - Responsive layout */}
-        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col sm:flex-row items-stretch gap-2 w-full">
-          {/* Search input and button - Always visible */}
-          <div className="flex-grow flex items-stretch gap-2 map-search" id="map-search-container" data-tour="map-search">
-            <Input
-              type="text"
-              placeholder="Search for an address..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="min-w-[150px] flex-1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddressSearch();
-              }}
-            />
-            <Button 
-              onClick={handleAddressSearch}
-              variant="secondary"
-              size="sm"
-              className="whitespace-nowrap"
-            >
-              Search
-            </Button>
-          </div>
-
-          {/* My Location button - Always visible */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMyLocationClick}
-              className="text-xs whitespace-nowrap flex-shrink-0 location-button"
-              id="my-location-button"
-              data-tour="my-location"
-            >
-              My Location
-            </Button>
-
-            {/* Map Type Controls - Responsive handling */}
-            <div className="hidden sm:flex items-stretch gap-0.5 ml-2 border-l pl-2 map-controls" id="map-controls" data-tour="map-controls">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : ''}`}
-                onClick={() => {
-                  if (inStreetView) {
-                    exitStreetView();
-                    setInStreetView(false);
-                  }
-                  setMapType('roadmap');
-                }}
-              >
-                Map
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : ''}`}
-                onClick={() => {
-                  if (inStreetView) {
-                    exitStreetView();
-                    setInStreetView(false);
-                  }
-                  setMapType('satellite');
-                }}
-              >
-                Satellite
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : ''}`}
-                onClick={() => {
-                  if (inStreetView) {
-                    exitStreetView();
-                    setInStreetView(false);
-                  }
-                  setMapType('hybrid');
-                }}
-              >
-                Hybrid
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`min-w-[50px] px-1.5 py-1 h-8 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : ''}`}
-                onClick={() => {
-                  if (inStreetView) {
-                    exitStreetView();
-                    setInStreetView(false);
-                  }
-                  setMapType('terrain');
-                }}
-              >
-                Terrain
-              </Button>
-            </div>
-
-            {/* Mobile dropdown for map type */}
-            <div className="flex sm:hidden items-center border-l pl-2">
-              <Select 
-                value={mapType}
-                onValueChange={(value: 'roadmap' | 'satellite' | 'hybrid' | 'terrain') => {
-                  if (inStreetView) {
-                    exitStreetView();
-                    setInStreetView(false);
-                  }
-                  setMapType(value);
-                }}
-              >
-                <SelectTrigger className="h-8 w-[110px]">
-                  <SelectValue placeholder="Map Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="roadmap">Map</SelectItem>
-                  <SelectItem value="satellite">Satellite</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                  <SelectItem value="terrain">Terrain</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Street View Exit Button - Only shown when in street view */}
-      {inStreetView && (
-        <div className="absolute top-20 right-4 z-10 bg-white p-1.5 rounded-lg shadow-lg">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => {
-              exitStreetView();
-              setInStreetView(false);
-            }}
-          >
-            Exit Street View
-          </Button>
-        </div>
-      )}
-
-      {/* Status Selection Controls - Bottom with Minimize/Maximize button */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-1 rounded-lg shadow-lg flex items-center gap-1 flex-wrap justify-center z-10 status-filter" id="status-filter" data-tour="status-filter">
-        {/* Toggle button for showing/hiding the legend */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 rounded-full shrink-0"
-          onClick={() => setShowLegend(!showLegend)}
-          title={showLegend ? "Minimize legend" : "Maximize legend"}
-        >
-          <span className="material-icons text-sm">
-            {showLegend ? "remove" : "add"}
-          </span>
-        </Button>
-
-        {/* Only show the status buttons if legend is expanded */}
-        {showLegend && (
-          <>
-            {/* Status buttons matching colors in customize page */}
-            {[
-              { status: "no_answer", defaultLabel: "No Answer" },
-              { status: "presented", defaultLabel: "Presented" },
-              { status: "booked", defaultLabel: "Booked" },
-              { status: "sold", defaultLabel: "Sold" },
-              { status: "not_interested", defaultLabel: "Not Interested" },
-              { status: "no_soliciting", defaultLabel: "No Soliciting" },
-              { status: "check_back", defaultLabel: "Check Back" },
-            ].map(status => (
-              <Button
-                key={status.status}
-                variant="outline"
-                size="sm"
-                className={`h-8 px-2 py-1 text-xs ${activeStatus === status.status ? 'ring-2 ring-primary' : ''}`}
-                onClick={() => setActiveStatus(status.status)}
-              >
-                <span 
-                  className={`inline-block w-3 h-3 rounded-full mr-1 ${getStatusColor(status.status, customization?.pinColors)}`} 
-                  style={getColorStyle(status.status, customization?.pinColors)}
-                ></span>
-                {getStatusLabel(status.status, customization?.statusLabels)}
-              </Button>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Map Type Controls have been moved to the main search bar at the top */}
-
-      {/* New Contact Dialog - Using our new consolidated Form Component */}
-      <ContactForm
-        isOpen={showNewContactDialog}
-        onClose={() => {
-          console.log("Contact form dialog closing - cleaning up marker and state");
-          
-          // Add a small delay to prevent race conditions with form initialization
-          setTimeout(() => {
-            // Clear the form completely when closing the dialog
-            setNewContactForm({
-              fullName: "",
-              address: "",
-              phone: "",
-              email: "",
-              city: "",
-              state: "",
-              zipCode: "",
-              status: activeStatus,
-              notes: "",
-              appointment: "",
-            });
-            
-            // Clean up map marker if it exists
-            if (newHouseMarker) {
-              newHouseMarker.setMap(null);
-              setNewHouseMarker(null);
-            }
-            
-            // Reset states in sequence
-            setIsAddingHouse(false);
-            setNewContactAddress("");
-            setNewContactCoords(null);
-            setShowNewContactDialog(false);
-          }, 100);
-        }}
-        initialContact={{
-          fullName: newContactForm.fullName,
-          address: newContactForm.address,
-          city: newContactForm.city,
-          state: newContactForm.state,
-          zipCode: newContactForm.zipCode,
-          phone: newContactForm.phone || "",
-          email: newContactForm.email || "",
-          status: newContactForm.status,
-          notes: newContactForm.notes || "",
-          latitude: newContactCoords?.lat.toString() || "",
-          longitude: newContactCoords?.lng.toString() || "",
-          // Add a field that triggers the appointment fields
-          // This ensures the form shows scheduling fields for booked or check_back
-          // This matches our form's showAppointmentFields state initialization
-        }}
-        onSuccess={(newContact: Contact) => {
-          // Log status for debugging
-          console.log("Contact created successfully:", newContact);
-
-          // Handle successful creation
-          queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-
-          // Reset form completely to prevent data persisting to next contact
-          setNewContactForm({
-            fullName: "", // Make sure name is cleared for the next new contact
-            address: "",
-            phone: "",
-            email: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            status: activeStatus,
-            notes: "",
-            appointment: "",
-          });
-
-          // Cleanup map marker
-          if (newHouseMarker) {
-            newHouseMarker.setMap(null);
-            setNewHouseMarker(null);
-          }
-          setIsAddingHouse(false);
-
-          // Create a visit record for this contact interaction
-          if (newContact?.id && user?.id) {
-            createVisitMutation.mutate({
-              contactId: newContact.id,
-              userId: user.id,
-              visitType: "initial",
-              notes: `Initial contact - Status: ${newContact.status}`,
-              outcome: newContact.status === "booked" ? "positive" : 
-                     newContact.status === "not_interested" ? "negative" : "neutral",
-              followUpNeeded: newContact.status === "check_back" || newContact.status === "booked",
-              visitDate: new Date()
-            });
-
-            // Handle scheduling based on status
-            if (newContact.appointment) {
-              const [appointmentDate, appointmentTime] = newContact.appointment.split(' ');
-              if (appointmentDate && appointmentTime) {
-                if (newContact.status === "booked") {
-                  toast({
-                    title: "Appointment Scheduled",
-                    description: `Successfully scheduled for ${appointmentDate} at ${appointmentTime}`,
-                  });
-                } else if (newContact.status === "check_back") {
-                  toast({
-                    title: "Check Back Scheduled",
-                    description: `Reminder set for ${appointmentDate} at ${appointmentTime}`,
-                  });
-                }
-              }
-            }
-          }
-        }}
-      />
-
-      {/* Delete Contact Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this contact? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (selectedContact) {
-                deleteContactMutation.mutate(selectedContact.id);
-                setSelectedContact(null);
-              }
-              setShowDeleteDialog(false);
-            }}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Custom Map Tour Dialog - Placed as the last component */}
-      <CustomTour 
-        steps={customMapTourSteps} 
-        tourName="map"
-        isOpen={showMapTour}
-        onClose={handleCloseMapTour}
-      />
-    </div>
-  );
-}

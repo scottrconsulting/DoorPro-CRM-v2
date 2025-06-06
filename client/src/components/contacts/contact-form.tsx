@@ -140,14 +140,21 @@ export default function ContactForm({
   // Add a ref to track initialization state
   const hasInitializedRef = useRef(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Consolidated form initialization - single source of truth
   useEffect(() => {
     if (isOpen && !hasInitializedRef.current && !isInitializing) {
+      console.log("=== STARTING FORM INITIALIZATION ===");
       setIsInitializing(true);
       
-      // Add a small delay to ensure React has finished batching state updates
-      const initializeForm = async () => {
+      // Clear any existing timeout
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+      
+      // Add a delay to ensure React has finished batching state updates
+      initializationTimeoutRef.current = setTimeout(() => {
         try {
           console.log("Initializing contact form with data:", initialContact);
           
@@ -159,7 +166,7 @@ export default function ContactForm({
           const currentStatus = initialContact?.status || "not_visited";
 
           // Use form.reset with all values at once to prevent conflicts
-          form.reset({
+          const formData = {
             fullName: initialContact?.fullName || "",
             address: initialContact?.address || "",
             city: initialContact?.city || "",
@@ -179,42 +186,54 @@ export default function ContactForm({
             saleAmount: "",
             saleDate: new Date().toISOString().split('T')[0],
             saleNotes: "",
-          });
+          };
 
-          // Set visibility flags after form reset
-          setShowSaleFields(currentStatus === "sold");
-          setShowAppointmentFields(hasAppointment);
+          console.log("Setting form data:", formData);
+          form.reset(formData);
 
-          console.log("Form initialized successfully with status:", currentStatus, 
-            "- Has appointment:", hasAppointment,
-            "- Shows sale fields:", currentStatus === "sold");
+          // Set visibility flags after form reset with a small delay
+          setTimeout(() => {
+            setShowSaleFields(currentStatus === "sold");
+            setShowAppointmentFields(hasAppointment);
+            setIsInitializing(false);
+            console.log("Form initialization complete - Status:", currentStatus, 
+              "- Has appointment:", hasAppointment,
+              "- Shows sale fields:", currentStatus === "sold");
+          }, 50);
             
         } catch (error) {
           console.error("Error initializing contact form:", error);
+          setIsInitializing(false);
           toast({
             title: "Form initialization error",
             description: "There was an issue loading the contact form. Please try again.",
             variant: "destructive",
           });
           onClose();
-        } finally {
-          setIsInitializing(false);
         }
-      };
-
-      // Small delay to let React finish state updates
-      setTimeout(initializeForm, 100);
+      }, 150); // Increased delay to prevent race conditions
     }
 
     // Reset the initialization flag when the dialog closes
-    if (!isOpen) {
+    if (!isOpen && hasInitializedRef.current) {
+      console.log("=== RESETTING FORM STATE ===");
       hasInitializedRef.current = false;
       setIsInitializing(false);
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+        initializationTimeoutRef.current = null;
+      }
     }
-  }, [isOpen, initialContact, form, toast, onClose, isInitializing]);
+  }, [isOpen, initialContact, form, toast, onClose]);
 
-  // We've moved the reset logic to the dialog open useEffect above
-  // This helps avoid conflicts between multiple form resets
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Create contact mutation
   const createContactMutation = useMutation({
@@ -544,8 +563,24 @@ export default function ContactForm({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !isInitializing && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Prevent closing during initialization
+        if (!open && !isInitializing) {
+          console.log("Dialog closing via onOpenChange");
+          onClose();
+        } else if (!open && isInitializing) {
+          console.log("Prevented dialog close during initialization");
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => {
+        // Prevent closing on outside click during initialization
+        if (isInitializing) {
+          e.preventDefault();
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
           <DialogDescription>
