@@ -571,8 +571,7 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
           description: "Error finding this address",
           variant: "destructive",
         });
-      } catch (error) {
-        console.error("Error geocoding address:", error);
+        
         // For failed geocoding, still allow contact creation with coordinates only
         const coords = e.latLng.toJSON();
 
