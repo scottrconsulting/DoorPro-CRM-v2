@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getStatusBadgeConfig } from "@/lib/status-helpers";
 import { format, parseISO } from "date-fns";
 import { X, Edit, MapPin, Phone, Mail, CalendarClock, DollarSign, FileText } from "lucide-react";
-import ContactForm from "./contact-form";
+import { ContactForm } from "./contact-form";
 
 interface ContactCardProps {
   contactId: number;
@@ -938,6 +938,7 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
                             <div className="flex justify-end mt-2 gap-2">
                               {!task.completed && (
                                 <Button 
+```text
                                   size="sm" variant="outline" 
                                   className="px-2 py-1 h-8 text-xs"
                                   onClick={() => handleCompleteTask(task.id)}

@@ -1,76 +1,454 @@
-# Instructions.md
 
-## Debugging Plan for Map Viewer Component
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ContactForm } from "@/components/contacts/contact-form";
+import { ContactCard } from "@/components/contacts/contact-card";
+import { CustomTour } from "@/components/tour/custom-tour";
+import { customMapTourSteps } from "@/tours/custom-map-tour-steps";
+import { getStatusColor, getStatusLabel } from "@/lib/status-helpers";
+import type { Contact, ContactStatus } from "@/shared/schema";
 
-This document outlines a plan to address the following issues reported in the `EnhancedMapViewer` component:
+interface MapViewerProps {
+  onSelectContact?: (contactId: number) => void;
+}
 
-1.  **Add Contact Card Not Appearing on Pin Click/Hold:** When attempting to add a new contact by clicking or long-pressing on the map, the contact form/card is not consistently displayed.
-2.  **Edit Contact Functionality:** Ensure that the Edit Contact functionality is working correctly, allowing users to modify existing contact details.
+export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Map and UI state
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid" | "terrain">("roadmap");
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showLegend, setShowLegend] = useState(true);
+  
+  // Contact and interaction state
+  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showContactCard, setShowContactCard] = useState(false);
+  const [isAddingHouse, setIsAddingHouse] = useState(false);
+  const [newHouseMarker, setNewHouseMarker] = useState<google.maps.Marker | null>(null);
+  const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+  const [newContactAddress, setNewContactAddress] = useState("");
+  const [newContactCoords, setNewContactCoords] = useState<{lat: number; lng: number} | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Location and timing state
+  const [userMarker, setUserMarker] = useState<google.maps.Marker | null>(null);
+  const [mouseDownTime, setMouseDownTime] = useState<number | null>(null);
+  const [mouseUpTime, setMouseUpTime] = useState<number | null>(null);
+  const [activeStatus, setActiveStatus] = useState<ContactStatus>("not_visited");
+  const [showSchedulingFields, setShowSchedulingFields] = useState(false);
 
-### 1. Root Cause Analysis
+  // Fetch contacts
+  const { data: contacts = [], refetch: refetchContacts } = useQuery({
+    queryKey: ['/api/contacts'],
+    queryFn: async () => {
+      const response = await fetch('/api/contacts', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch contacts');
+      return response.json();
+    }
+  });
 
-To effectively resolve these issues, we need to investigate the following areas:
+  // Initialize map
+  useEffect(() => {
+    if (!mapRef.current) return;
 
-#### 1.1 Add Contact Card Issue
+    const initMap = async () => {
+      try {
+        const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+        
+        const mapInstance = new Map(mapRef.current!, {
+          zoom: 13,
+          center: { lat: 40.7128, lng: -74.0060 }, // Default to NYC
+          mapTypeId: mapType,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          zoomControl: true,
+          gestureHandling: 'greedy'
+        });
 
-*   **Event Listeners:** Verify that the `click` and `mousedown` event listeners are correctly attached to the map and that the `click` event is not being intercepted or prevented by other elements.
-*   **Long Press Detection:** Examine the logic for detecting long presses, ensuring that the `mousedownTime`, `mouseUpTime`, and threshold values are accurate and that the `showNewContactDialog` state is being correctly updated.
-*   **State Management:** Check the state variables `isAddingHouse`, `newHouseMarker`, `showNewContactDialog`, and `newContactAddress` to confirm that they are being updated appropriately when a user interacts with the map.
-*   **Geocoder Service:** Investigate the geocoding service to ensure it's working correctly and returning accurate address information based on the clicked coordinates.
-*   **Form Component:** Scrutinize the `ContactForm` component to ensure that it's correctly receiving and displaying the initial contact data and that there are no issues preventing it from rendering.
+        setMap(mapInstance);
+        setLoading(false);
 
-#### 1.2 Edit Contact Functionality
+        // Add click listeners
+        mapInstance.addListener('click', handleMapClick);
+        mapInstance.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
+          setMouseDownTime(Date.now());
+        });
 
-*   **Selected Contact:** Verify that the `selectedContact` state is being correctly set when a user clicks on an existing contact marker.
-*   **Contact Form Props:** Ensure that the `ContactForm` component is receiving the correct contact data as props when editing an existing contact.
-*   **Update Mutation:** Examine the update mutation logic to confirm that it's correctly sending the updated contact data to the API and that the UI is being updated accordingly upon success.
+        // Try to get user location
+        getCurrentLocation(mapInstance);
 
-### 2. Debugging Steps
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        setLoading(false);
+      }
+    };
 
-To address the identified issues, we will follow these steps:
+    initMap();
+  }, [mapType]);
 
-#### 2.1 Add Contact Card Issue
+  // Handle map click for adding contacts
+  const handleMapClick = useCallback(async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng || !map) return;
 
-1.  **Console Logging:** Add extensive console logging to the `click` and `mousedown` event listeners to track the timestamps, click duration, and state variable updates.
-2.  **Breakpoint Debugging:** Use browser developer tools to set breakpoints in the event listeners and step through the code to examine the values of variables and the flow of execution.
-3.  **Geocoder Validation:** Test the geocoder service independently to ensure it's returning accurate address information for various coordinates.
-4.  **UI Inspection:** Use the browser's element inspector to examine the DOM structure and CSS styles to identify any elements that might be intercepting the click events.
-5.  **State Variable Inspection:** Use the React Developer Tools to inspect the component's state variables and confirm that they are being updated as expected.
+    const clickTime = Date.now();
+    const isLongPress = mouseDownTime && (clickTime - mouseDownTime) > 500;
 
-#### 2.2 Edit Contact Functionality
+    if (isLongPress || isAddingHouse) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
 
-1.  **Console Logging:** Add console logging to the contact marker click handler to verify that the `selectedContact` state is being correctly set.
-2.  **Contact Form Props Validation:** Use the React Developer Tools to inspect the props being passed to the `ContactForm` component when editing an existing contact.
-3.  **API Request Inspection:** Use the browser's network tab to inspect the API requests being sent when updating a contact, ensuring that the data is correctly formatted and that the request is successful.
-4.  **Error Handling:** Implement error handling in the update mutation to catch any errors that might be occurring and to display appropriate error messages to the user.
+      try {
+        // Geocode the coordinates to get address
+        const geocoder = new google.maps.Geocoder();
+        const result = await geocoder.geocode({ location: { lat, lng } });
+        
+        if (result.results && result.results.length > 0) {
+          const address = result.results[0].formatted_address;
+          
+          // Set up for new contact creation
+          setNewContactAddress(address);
+          setNewContactCoords({ lat, lng });
+          setShowNewContactDialog(true);
+          setIsAddingHouse(false);
+          
+          // Clear any existing new house marker
+          if (newHouseMarker) {
+            newHouseMarker.setMap(null);
+          }
+          
+        } else {
+          toast({
+            title: "Address not found",
+            description: "Could not find address for this location",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        toast({
+          title: "Error",
+          description: "Could not get address for this location",
+          variant: "destructive"
+        });
+      }
+    }
 
-### 3. Proposed Solutions
+    setMouseDownTime(null);
+    setMouseUpTime(clickTime);
+  }, [mouseDownTime, isAddingHouse, map, newHouseMarker, toast]);
 
-Based on the debugging steps, we will implement the following solutions:
+  // Handle contact marker click
+  const handleContactClick = useCallback((contact: Contact) => {
+    if (!isAddingHouse) {
+      setSelectedContact(contact);
+      setShowContactCard(true);
+      if (onSelectContact) {
+        onSelectContact(contact.id);
+      }
+    }
+  }, [isAddingHouse, onSelectContact]);
 
-#### 3.1 Add Contact Card Issue
+  // Get current location
+  const getCurrentLocation = useCallback((mapInstance: google.maps.Map) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          
+          mapInstance.setCenter(pos);
+          
+          // Add user location marker
+          if (userMarker) {
+            userMarker.setMap(null);
+          }
+          
+          const marker = new google.maps.Marker({
+            position: pos,
+            map: mapInstance,
+            title: "Your Location",
+            icon: {
+              url: 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="%232563eb"%3E%3Ccircle cx="12" cy="12" r="8"/%3E%3C/svg%3E',
+              scaledSize: new google.maps.Size(20, 20),
+            }
+          });
+          
+          setUserMarker(marker);
+        },
+        () => {
+          console.log("Location permission denied or unavailable");
+        }
+      );
+    }
+  }, [userMarker]);
 
-*   **Event Listener Adjustments:** Adjust the event listeners to ensure that the `click` event is being correctly captured and that the long press detection logic is accurate.
-*   **State Variable Synchronization:** Synchronize the state variables to ensure that they are being updated consistently and that the `showNewContactDialog` state is being correctly set.
-*   **Geocoder Error Handling:** Implement error handling in the geocoder service to gracefully handle any errors that might occur and to display appropriate error messages to the user.
-*   **Form Component Adjustments:** Adjust the `ContactForm` component to ensure that it's correctly receiving and displaying the initial contact data and that there are no issues preventing it from rendering.
+  // Handle address search
+  const handleAddressSearch = useCallback(async () => {
+    if (!searchQuery.trim() || !map) return;
 
-#### 3.2 Edit Contact Functionality
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ address: searchQuery });
+      
+      if (result.results && result.results.length > 0) {
+        const location = result.results[0].geometry.location;
+        map.setCenter(location);
+        map.setZoom(16);
+      } else {
+        toast({
+          title: "Address not found",
+          description: "Could not find the specified address",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search error",
+        description: "Could not search for address",
+        variant: "destructive"
+      });
+    }
+  }, [searchQuery, map, toast]);
 
-*   **Contact Selection Fix:** Ensure that the `selectedContact` state is being correctly set when a user clicks on an existing contact marker.
-*   **Contact Form Props Fix:** Ensure that the `ContactForm` component is receiving the correct contact data as props when editing an existing contact.
-*   **Update Mutation Fix:** Examine the update mutation logic to confirm that it's correctly sending the updated contact data to the API and that the UI is being updated accordingly upon success.
+  // Render contact markers
+  useEffect(() => {
+    if (!map || !contacts.length) return;
 
-### 4. Implementation Plan
+    const markers: google.maps.Marker[] = [];
 
-1.  **Create a Debugging Branch:** Create a new branch in the repository for debugging purposes.
-2.  **Implement Debugging Steps:** Implement the debugging steps outlined above, adding console logging, breakpoints, and error handling as needed.
-3.  **Identify Root Causes:** Analyze the debugging output to identify the root causes of the issues.
-4.  **Implement Solutions:** Implement the proposed solutions, making the necessary code changes to address the identified issues.
-5.  **Test Thoroughly:** Test the functionality thoroughly to ensure that the issues have been resolved and that there are no new issues.
-6.  **Create a Pull Request:** Create a pull request with the changes, including a detailed description of the issues and the solutions implemented.
-7.  **Review and Merge:** Have the pull request reviewed by another developer and merge it into the main branch.
+    contacts.forEach((contact) => {
+      if (contact.latitude && contact.longitude) {
+        const statusColor = getStatusColor(contact.status as ContactStatus);
+        
+        const marker = new google.maps.Marker({
+          position: { lat: contact.latitude, lng: contact.longitude },
+          map,
+          title: contact.name,
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${encodeURIComponent(statusColor.replace('bg-', '').replace('-500', ''))}"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/%3E%3C/svg%3E`,
+            scaledSize: new google.maps.Size(24, 24),
+          }
+        });
 
-### 5. Conclusion
+        marker.addListener('click', () => handleContactClick(contact));
+        markers.push(marker);
+      }
+    });
 
-By following this plan, we should be able to effectively debug and resolve the reported issues in the `EnhancedMapViewer` component, ensuring that the Add Contact Card functionality is working correctly and that users can edit existing contact details without any problems.
+    return () => {
+      markers.forEach(marker => marker.setMap(null));
+    };
+  }, [map, contacts, handleContactClick]);
+
+  // Handle My Location button
+  const handleMyLocationClick = useCallback(() => {
+    if (map) {
+      getCurrentLocation(map);
+    }
+  }, [map, getCurrentLocation]);
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Google Map Container */}
+      <div
+        ref={mapRef}
+        className="w-full h-full rounded-lg overflow-hidden shadow-lg"
+      />
+
+      {/* Map Type Controls - Top Right */}
+      <div className="absolute top-2 right-2 z-10 flex bg-white rounded overflow-hidden border border-gray-200 shadow-sm">
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'roadmap' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("roadmap")}
+        >
+          Road
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'satellite' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("satellite")}
+        >
+          Satellite
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'hybrid' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("hybrid")}
+        >
+          Hybrid
+        </button>
+        <button
+          className={`py-1 px-2 text-xs ${mapType === 'terrain' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
+          onClick={() => setMapType("terrain")}
+        >
+          Terrain
+        </button>
+      </div>
+
+      {/* Address Search Bar - Top Center */}
+      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 w-64 md:w-80">
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="Search address..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-8 h-9 shadow-lg rounded-md"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleAddressSearch();
+              }
+            }}
+          />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute right-0 top-0 h-9 w-9"
+            onClick={handleAddressSearch}
+          >
+            <span className="material-icons text-base">search</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Control Panel - Right Side */}
+      <div className="absolute top-14 right-4 flex flex-col gap-2 z-10">
+        <div className="bg-white p-2 rounded-lg shadow-lg flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMyLocationClick}
+          >
+            My Location
+          </Button>
+          
+          <Button
+            variant={isAddingHouse ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsAddingHouse(!isAddingHouse)}
+          >
+            {isAddingHouse ? "Cancel Add" : "Add Contact"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Legend */}
+      {showLegend && (
+        <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg z-10 max-w-xs">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold text-sm">Contact Status</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowLegend(false)}
+              className="h-6 w-6 p-0"
+            >
+              ×
+            </Button>
+          </div>
+          <div className="space-y-1 text-xs">
+            {(['not_visited', 'no_answer', 'presented', 'scheduled', 'sold'] as ContactStatus[]).map((status) => (
+              <div key={status} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(status)}`} />
+                <span>{getStatusLabel(status)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Loading map...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Form Dialog for Adding New Contacts */}
+      {showNewContactDialog && newContactCoords && (
+        <ContactForm
+          isOpen={showNewContactDialog}
+          onClose={() => {
+            setShowNewContactDialog(false);
+            setNewContactAddress("");
+            setNewContactCoords(null);
+            if (newHouseMarker) {
+              newHouseMarker.setMap(null);
+              setNewHouseMarker(null);
+            }
+          }}
+          onSuccess={() => {
+            setShowNewContactDialog(false);
+            setNewContactAddress("");
+            setNewContactCoords(null);
+            if (newHouseMarker) {
+              newHouseMarker.setMap(null);
+              setNewHouseMarker(null);
+            }
+            refetchContacts();
+            toast({
+              title: "Contact added",
+              description: "Contact has been successfully added to the map",
+            });
+          }}
+          initialContact={{
+            name: "",
+            address: newContactAddress,
+            latitude: newContactCoords.lat,
+            longitude: newContactCoords.lng,
+            status: activeStatus,
+            notes: "",
+            phone: "",
+            email: "",
+          }}
+        />
+      )}
+
+      {/* Contact Card for Editing Existing Contacts */}
+      {selectedContact && showContactCard && (
+        <ContactCard
+          contactId={selectedContact.id}
+          isOpen={showContactCard}
+          onClose={() => {
+            setShowContactCard(false);
+            setSelectedContact(null);
+          }}
+        />
+      )}
+
+      {/* Custom Map Tour */}
+      <CustomTour 
+        steps={customMapTourSteps} 
+        tourName="map" 
+      />
+    </div>
+  );
+}

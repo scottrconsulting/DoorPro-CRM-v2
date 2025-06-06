@@ -202,19 +202,29 @@ export default function ContactForm({
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
 
-  // Create contact mutation
-  const createContactMutation = useMutation({
-    mutationFn: async (data: InsertContact) => {
-      // Go back to using the apiRequest utility which handles auth properly
-      // Add our custom submission flag to the data itself since we can't add custom headers
-      const response = await apiRequest("POST", "/api/contacts", {
-        ...data,
-        isContactFormSubmission: true
-      });
+  // Create/Update contact mutation
+  const saveContact = useMutation({
+    mutationFn: async (contactData: Partial<Contact>) => {
+      const url = isEditMode && initialContact?.id 
+        ? `/api/contacts/${initialContact.id}` 
+        : '/api/contacts';
+
+      const method = isEditMode ? 'PATCH' : 'POST';
+
+      const response = await apiRequest(method, url, contactData);
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'create'} contact`);
+      }
 
       return response.json();
     },
     onSuccess: (newContact) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      if (isEditMode && initialContact?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/contacts/${initialContact.id}`] });
+      }
+
       form.reset();
 
       toast({
@@ -235,7 +245,7 @@ export default function ContactForm({
         description: "Failed to create contact. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   // Update contact mutation
@@ -334,6 +344,10 @@ export default function ContactForm({
         email: formData.email || null,
         status: formData.status,
         notes: formData.notes || null,
+        // Include appointment information in ContactData format
+        appointment: formData.scheduleFollowUp
+          ? `${formData.appointmentDate} ${formData.appointmentTime}`
+          : undefined,
       };
 
       // Add appointment data if checkbox is checked and fields are filled
@@ -479,7 +493,7 @@ export default function ContactForm({
           usingContactForm: true
         };
 
-        createContactMutation.mutate(contactFormData as InsertContact, {
+        saveContact.mutate(contactData as InsertContact, {
           onSuccess: (newContact) => {
             // Create schedule entry if appointment is set
             if (formData.scheduleFollowUp && formData.appointmentDate && formData.appointmentTime && newContact.id) {
@@ -927,9 +941,9 @@ export default function ContactForm({
                 Cancel
               </Button>
               <Button type="submit">
-                {createContactMutation.isPending || updateContactMutation.isPending
-                  ? "Saving..."
-                  : isEditMode ? "Update Contact" : "Add Contact"}
+                {saveContact.isPending 
+                  ? (isEditMode ? "Updating..." : "Adding...") 
+                  : (isEditMode ? "Update Contact" : "Add Contact")}
               </Button>
             </DialogFooter>
           </form>
