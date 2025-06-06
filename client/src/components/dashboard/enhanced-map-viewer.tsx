@@ -492,12 +492,6 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             icon: getMarkerIcon(activeStatus, customization?.pinColors, customization?.statusLabels),
           });
 
-          // Store marker and coordinates
-          setNewHouseMarker(marker);
-          setNewContactAddress(address);
-          setNewContactCoords(coords);
-          setIsAddingHouse(true);
-
           const isAppointmentStatus = activeStatus === "booked" || activeStatus === "check_back";
 
           // Prepare the contact form data
@@ -516,15 +510,24 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
             longitude: coords.lng.toString(),
           };
 
-          // Set form data and show dialog
+          // Sequential state updates to prevent race conditions
+          console.log("Setting up contact form with proper sequencing...");
+          
+          // Step 1: Set marker and coordinates
+          setNewHouseMarker(marker);
+          setNewContactAddress(address);
+          setNewContactCoords(coords);
+          
+          // Step 2: Set form data
           setNewContactForm(formData);
           setShowSchedulingFields(isAppointmentStatus);
+          setIsAddingHouse(true);
           
-          // Use a small delay to ensure state is properly set before opening dialog
+          // Step 3: Open dialog with longer delay to ensure all state is set
           setTimeout(() => {
+            console.log("Opening contact form dialog...");
             setShowNewContactDialog(true);
-            console.log("Contact form dialog opened for long press");
-          }, 50);
+          }, 150);
 
         } else {
           // Quick click - just add the contact with minimal info
@@ -812,10 +815,14 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
   // Monitor when the dialog opens
   useEffect(() => {
     if (showNewContactDialog) {
-      console.log("Map pin contact form opened with status:", newContactForm.status, 
-        "- Should show appointment fields:", 
-        newContactForm.status === "booked" || newContactForm.status === "check_back",
-        "- Should show sale fields:", newContactForm.status === "sold");
+      console.log("=== DIALOG OPENED ===");
+      console.log("Map pin contact form opened with status:", newContactForm.status);
+      console.log("Should show appointment fields:", newContactForm.status === "booked" || newContactForm.status === "check_back");
+      console.log("Should show sale fields:", newContactForm.status === "sold");
+      console.log("Form data:", newContactForm);
+      console.log("===================");
+    } else {
+      console.log("=== DIALOG CLOSED ===");
     }
   }, [showNewContactDialog, newContactForm.status]);
 
@@ -1139,8 +1146,8 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
         onClose={() => {
           console.log("Contact form dialog closing - cleaning up marker and state");
           
-          // Only clean up if dialog is actually open to prevent double cleanup
-          if (showNewContactDialog) {
+          // Add a small delay to prevent race conditions with form initialization
+          setTimeout(() => {
             // Clear the form completely when closing the dialog
             setNewContactForm({
               fullName: "",
@@ -1161,12 +1168,12 @@ export default function EnhancedMapViewer({ onSelectContact }: MapViewerProps) {
               setNewHouseMarker(null);
             }
             
-            // Reset states
+            // Reset states in sequence
             setIsAddingHouse(false);
             setNewContactAddress("");
             setNewContactCoords(null);
             setShowNewContactDialog(false);
-          }
+          }, 100);
         }}
         initialContact={{
           fullName: newContactForm.fullName,

@@ -139,65 +139,79 @@ export default function ContactForm({
 
   // Add a ref to track initialization state
   const hasInitializedRef = useRef(false);
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  // Only update conditional fields visibility when dialog opens - just once
+  // Consolidated form initialization - single source of truth
   useEffect(() => {
-    if (isOpen && !hasInitializedRef.current) {
-      try {
-        // Mark as initialized to prevent further resets
-        hasInitializedRef.current = true;
+    if (isOpen && !hasInitializedRef.current && !isInitializing) {
+      setIsInitializing(true);
+      
+      // Add a small delay to ensure React has finished batching state updates
+      const initializeForm = async () => {
+        try {
+          console.log("Initializing contact form with data:", initialContact);
+          
+          // Mark as initialized to prevent further resets
+          hasInitializedRef.current = true;
 
-        // Check if there's an appointment in the initial contact
-        const hasAppointment = initialContact?.appointment ? true : false;
-        const currentStatus = initialContact?.status || "not_visited";
+          // Check if there's an appointment in the initial contact
+          const hasAppointment = initialContact?.appointment ? true : false;
+          const currentStatus = initialContact?.status || "not_visited";
 
-      // Initialize form with all values at once using setValue instead of reset
-      form.setValue("fullName", initialContact?.fullName || "");
-      form.setValue("address", initialContact?.address || "");
-      form.setValue("city", initialContact?.city || "");
-      form.setValue("state", initialContact?.state || "");
-      form.setValue("zipCode", initialContact?.zipCode || "");
-      form.setValue("phone", initialContact?.phone || "");
-      form.setValue("email", initialContact?.email || "");
-      form.setValue("status", currentStatus);
-      form.setValue("notes", initialContact?.notes || "");
-      form.setValue("scheduleFollowUp", hasAppointment);
+          // Use form.reset with all values at once to prevent conflicts
+          form.reset({
+            fullName: initialContact?.fullName || "",
+            address: initialContact?.address || "",
+            city: initialContact?.city || "",
+            state: initialContact?.state || "",
+            zipCode: initialContact?.zipCode || "",
+            phone: initialContact?.phone || "",
+            email: initialContact?.email || "",
+            status: currentStatus,
+            notes: initialContact?.notes || "",
+            scheduleFollowUp: hasAppointment,
+            appointmentTitle: "",
+            appointmentDate: hasAppointment && initialContact?.appointment ? 
+              initialContact.appointment.split(" ")[0] || "" : "",
+            appointmentTime: hasAppointment && initialContact?.appointment ? 
+              initialContact.appointment.split(" ")[1] || "" : "",
+            saleProduct: "",
+            saleAmount: "",
+            saleDate: new Date().toISOString().split('T')[0],
+            saleNotes: "",
+          });
 
-      // Only set appointment fields if there's an appointment
-      if (hasAppointment && initialContact?.appointment) {
-        const appointmentParts = initialContact.appointment.split(" ");
-        if (appointmentParts.length >= 2) {
-          form.setValue("appointmentDate", appointmentParts[0]);
-          form.setValue("appointmentTime", appointmentParts[1]);
+          // Set visibility flags after form reset
+          setShowSaleFields(currentStatus === "sold");
+          setShowAppointmentFields(hasAppointment);
+
+          console.log("Form initialized successfully with status:", currentStatus, 
+            "- Has appointment:", hasAppointment,
+            "- Shows sale fields:", currentStatus === "sold");
+            
+        } catch (error) {
+          console.error("Error initializing contact form:", error);
+          toast({
+            title: "Form initialization error",
+            description: "There was an issue loading the contact form. Please try again.",
+            variant: "destructive",
+          });
+          onClose();
+        } finally {
+          setIsInitializing(false);
         }
-      }
+      };
 
-      // Set default sale date for all forms
-      form.setValue("saleDate", new Date().toISOString().split('T')[0]);
-
-      // Set visibility flags
-        setShowSaleFields(currentStatus === "sold");
-        setShowAppointmentFields(hasAppointment);
-
-        console.log("Dialog opened with status:", currentStatus, 
-          "- Has appointment:", hasAppointment,
-          "- Shows sale fields:", currentStatus === "sold");
-      } catch (error) {
-        console.error("Error initializing contact form:", error);
-        toast({
-          title: "Form initialization error",
-          description: "There was an issue loading the contact form. Please try again.",
-          variant: "destructive",
-        });
-        onClose();
-      }
+      // Small delay to let React finish state updates
+      setTimeout(initializeForm, 100);
     }
 
     // Reset the initialization flag when the dialog closes
     if (!isOpen) {
       hasInitializedRef.current = false;
+      setIsInitializing(false);
     }
-  }, [isOpen, initialContact, form, toast, onClose]);
+  }, [isOpen, initialContact, form, toast, onClose, isInitializing]);
 
   // We've moved the reset logic to the dialog open useEffect above
   // This helps avoid conflicts between multiple form resets
@@ -530,16 +544,27 @@ export default function ContactForm({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isInitializing && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? "Update the contact details below." 
-              : "Enter the contact details below to add a new contact to your database."}
+            {isInitializing 
+              ? "Loading contact form..." 
+              : isEditMode 
+                ? "Update the contact details below." 
+                : "Enter the contact details below to add a new contact to your database."}
           </DialogDescription>
         </DialogHeader>
+
+        {isInitializing ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Initializing form...</p>
+            </div>
+          </div>
+        ) : (
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -923,10 +948,10 @@ export default function ContactForm({
             />
 
             <DialogFooter className="pt-4">
-              <Button variant="outline" type="button" onClick={onClose}>
+              <Button variant="outline" type="button" onClick={onClose} disabled={isInitializing}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={isInitializing}>
                 {createContactMutation.isPending || updateContactMutation.isPending
                   ? "Saving..."
                   : isEditMode ? "Update Contact" : "Add Contact"}
@@ -934,6 +959,7 @@ export default function ContactForm({
             </DialogFooter>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
