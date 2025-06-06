@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { geocodeAddress } from "@/lib/maps";
 import { Contact } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { geocodeAddress } from "@/lib/maps";
 import { format } from "date-fns";
 import { ArrowLeft } from "lucide-react";
 
@@ -69,18 +70,24 @@ const US_STATES = [
 ];
 
 interface EditContactViewProps {
-  contactId: number;
-  onCancel: () => void;
-  onSuccess?: (contact: Contact) => void;
+  contactId?: number;
+  initialContact?: Contact;
+  onSuccess: (contact: Contact) => void;
+  isEditMode?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function EditContactView({
-  contactId,
-  onCancel,
-  onSuccess
+export default function EditContactView({ 
+  contactId, 
+  initialContact, 
+  onSuccess, 
+  isEditMode = true,
+  isOpen,
+  onClose
 }: EditContactViewProps) {
   const { toast } = useToast();
-  
+
   // Form state
   const [fullName, setFullName] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -106,12 +113,12 @@ export default function EditContactView({
     queryKey: [`/api/contacts/${contactId}`],
     enabled: !!contactId
   });
-  
+
   // Initialize form fields with contact data when it loads
   useEffect(() => {
     if (contact) {
       setFullName(contact.fullName || "");
-      
+
       // Split full name into parts (best effort)
       const nameParts = contact.fullName.split(" ");
       if (nameParts.length === 1) {
@@ -124,7 +131,7 @@ export default function EditContactView({
         setMiddleName(nameParts.slice(1, -1).join(" "));
         setLastName(nameParts[nameParts.length - 1]);
       }
-      
+
       setAddress(contact.address || "");
       setCity(contact.city || "");
       setState(contact.state || "");
@@ -135,7 +142,7 @@ export default function EditContactView({
       setStatus(contact.status || "");
       setCompany(contact.company || "");
       setSource(contact.source || "");
-      
+
       // Additional fields (these might be null if not in your schema)
       setGender("");
       setDateOfBirth("");
@@ -144,7 +151,14 @@ export default function EditContactView({
     }
   }, [contact]);
 
-  // Save contact mutation
+    // Handle cancel action
+  const onCancel = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  // Edit contact mutation
   const editContactMutation = useMutation({
     mutationFn: async (contactData: Partial<Contact>) => {
       const res = await apiRequest("PATCH", `/api/contacts/${contactId}`, contactData);
@@ -153,12 +167,16 @@ export default function EditContactView({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${contactId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      
+
       toast({
         title: "Contact updated",
         description: "Contact information has been successfully updated",
       });
-      
+
+      if (onClose) {
+        onClose();
+      }
+
       if (onSuccess) {
         onSuccess(data);
       }
@@ -178,7 +196,7 @@ export default function EditContactView({
     if (firstName) parts.push(firstName);
     if (middleName) parts.push(middleName);
     if (lastName) parts.push(lastName);
-    
+
     if (parts.length > 0) {
       setFullName(parts.join(" "));
     }
@@ -187,7 +205,7 @@ export default function EditContactView({
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!fullName.trim() || !address.trim()) {
       toast({
         title: "Missing required fields",
@@ -230,7 +248,7 @@ export default function EditContactView({
       try {
         const fullAddress = `${contactData.address}, ${contactData.city || ""}, ${contactData.state || ""} ${contactData.zipCode || ""}`;
         const geocodeResult = await geocodeAddress(fullAddress);
-        
+
         if (geocodeResult) {
           contactData.latitude = geocodeResult.latitude;
           contactData.longitude = geocodeResult.longitude;
@@ -263,9 +281,9 @@ export default function EditContactView({
     );
   }
 
-  return (
-    <Card className="border-none shadow-none">
-      <CardHeader className="px-0 pt-0">
+  const formContent = (
+    <Card className={isOpen ? "border-0 shadow-none" : "max-w-4xl mx-auto"}>
+      <CardHeader className={isOpen ? "px-0 pt-0" : ""}>
         <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
@@ -278,7 +296,7 @@ export default function EditContactView({
           <CardTitle className="text-xl">Update Contact</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="px-0 space-y-4">
+      <CardContent className={isOpen ? "px-0" : ""}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name fields */}
           <div className="space-y-4">
@@ -291,7 +309,7 @@ export default function EditContactView({
                 placeholder="First name"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="middleName">Middle Name</Label>
               <Input 
@@ -301,7 +319,7 @@ export default function EditContactView({
                 placeholder="Middle name (optional)"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input 
@@ -312,7 +330,7 @@ export default function EditContactView({
               />
             </div>
           </div>
-          
+
           {/* Gender and Date of Birth */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -329,7 +347,7 @@ export default function EditContactView({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth">Date of Birth</Label>
               <Input 
@@ -340,7 +358,7 @@ export default function EditContactView({
               />
             </div>
           </div>
-          
+
           {/* Contact Information */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -353,7 +371,7 @@ export default function EditContactView({
                 placeholder="Email address"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="phone">Mobile Phone</Label>
               <Input 
@@ -363,7 +381,7 @@ export default function EditContactView({
                 placeholder="(___) ___-____"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="homePhone">Home Phone</Label>
               <Input 
@@ -373,7 +391,7 @@ export default function EditContactView({
                 placeholder="(___) ___-____"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="workPhone">Work Phone</Label>
               <Input 
@@ -384,7 +402,7 @@ export default function EditContactView({
               />
             </div>
           </div>
-          
+
           {/* Address Information */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -396,7 +414,7 @@ export default function EditContactView({
                 placeholder="Street address"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
@@ -407,7 +425,7 @@ export default function EditContactView({
                   placeholder="City"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="state">State</Label>
                 <Select value={state} onValueChange={setState}>
@@ -424,7 +442,7 @@ export default function EditContactView({
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="zipCode">Zip Code</Label>
               <Input 
@@ -435,7 +453,7 @@ export default function EditContactView({
               />
             </div>
           </div>
-          
+
           {/* Additional Information */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -447,7 +465,7 @@ export default function EditContactView({
                 placeholder="Company or organization"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="source">Lead Source</Label>
               <Input 
@@ -457,7 +475,7 @@ export default function EditContactView({
                 placeholder="How did you find this contact?"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={setStatus}>
@@ -478,7 +496,7 @@ export default function EditContactView({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea 
@@ -490,7 +508,7 @@ export default function EditContactView({
               />
             </div>
           </div>
-          
+
           {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <Button 
@@ -512,5 +530,18 @@ export default function EditContactView({
         </form>
       </CardContent>
     </Card>
+  );
+
+  return isOpen ? (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Contact</DialogTitle>
+        </DialogHeader>
+        {formContent}
+      </DialogContent>
+    </Dialog>
+  ) : (
+    formContent
   );
 }
