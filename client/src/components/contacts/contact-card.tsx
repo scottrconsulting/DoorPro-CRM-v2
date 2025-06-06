@@ -35,7 +35,7 @@ interface ContactCardProps {
   onClose: () => void;
 }
 
-export default function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
+function ContactCard({ contactId, isOpen, onClose }: ContactCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("notes");
@@ -1029,3 +1029,6 @@ export default function ContactCard({ contactId, isOpen, onClose }: ContactCardP
     </>
   );
 }
+
+export default ContactCard;
+export { ContactCard };

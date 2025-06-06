@@ -97,7 +97,7 @@ interface ContactFormProps {
   isEditMode?: boolean;
 }
 
-export default function ContactForm({
+function ContactForm({
   isOpen,
   onClose,
   onSuccess,
@@ -912,3 +912,7 @@ export default function ContactForm({
     </Dialog>
   );
 }
+
+// Export both named and default to support different import patterns
+export { ContactForm };
+export default ContactForm;
